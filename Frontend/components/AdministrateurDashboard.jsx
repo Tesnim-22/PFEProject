@@ -1,24 +1,31 @@
 import React, { useEffect, useState } from "react";
 import "../styles/AdministrateurDashboard.css";
 
-
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [message, setMessage] = useState("");
 
-  // Fetch all users
+  // Fetch all users (no filters)
   const fetchUsers = async () => {
-    const res = await fetch("http://localhost:5001/admin/users");
-    const data = await res.json();
-    setUsers(data);
+    try {
+      const res = await fetch("http://localhost:5001/users");
+      const data = await res.json();
+      setUsers(data);
+    } catch (error) {
+      console.error("Erreur récupération utilisateurs:", error);
+    }
   };
 
   // Fetch all notifications
   const fetchNotifications = async () => {
-    const res = await fetch("http://localhost:5001/admin/notifications");
-    const data = await res.json();
-    setNotifications(data);
+    try {
+      const res = await fetch("http://localhost:5001/admin/notifications");
+      const data = await res.json();
+      setNotifications(data);
+    } catch (error) {
+      console.error("Erreur récupération notifications:", error);
+    }
   };
 
   useEffect(() => {
@@ -26,7 +33,7 @@ const AdminDashboard = () => {
     fetchNotifications();
   }, []);
 
-  // Update user
+  // Update user role
   const updateUser = async (id, newRole) => {
     await fetch(`http://localhost:5001/admin/users/${id}`, {
       method: "PUT",
@@ -59,17 +66,17 @@ const AdminDashboard = () => {
       <h2>👨‍💼 Admin Dashboard</h2>
 
       <div className="admin-section">
-        <h3>👥 Manage Users</h3>
+        <h3>👥 Tous les utilisateurs</h3>
         <table>
           <thead>
-            <tr><th>Email</th><th>Role</th><th>Actions</th></tr>
+            <tr><th>Email</th><th>Rôle</th><th>Actions</th></tr>
           </thead>
           <tbody>
             {users.map(user => (
               <tr key={user._id}>
                 <td>{user.email}</td>
                 <td>
-                  <select value={user.role} onChange={(e) => updateUser(user._id, e.target.value)}>
+                  <select value={user.roles[0]} onChange={(e) => updateUser(user._id, e.target.value)}>
                     <option value="Patient">Patient</option>
                     <option value="Doctor">Doctor</option>
                     <option value="Labs">Labs</option>
@@ -80,7 +87,7 @@ const AdminDashboard = () => {
                   </select>
                 </td>
                 <td>
-                  <button onClick={() => deleteUser(user._id)}>🗑️ Delete</button>
+                  <button onClick={() => deleteUser(user._id)}>🗑️ Supprimer</button>
                 </td>
               </tr>
             ))}
@@ -89,11 +96,11 @@ const AdminDashboard = () => {
       </div>
 
       <div className="admin-section">
-        <h3>📢 Send Notification</h3>
-        <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Type a message..." />
-        <button onClick={sendNotification}>Send</button>
+        <h3>📢 Envoyer une notification</h3>
+        <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Ecrire un message..." />
+        <button onClick={sendNotification}>Envoyer</button>
 
-        <h4>📜 Notification History</h4>
+        <h4>📜 Historique des notifications</h4>
         <ul>
           {notifications.map((n, index) => (
             <li key={index}>{n.message}</li>

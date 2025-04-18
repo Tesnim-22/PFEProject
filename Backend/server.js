@@ -116,31 +116,26 @@ app.post('/signup', async(req, res) => {
 // Login
 app.post('/login', async(req, res) => {
     const { email, password } = req.body;
-    console.log('👉 Login reçu :', req.body);
 
-    if (!email || !password) return res.status(400).json({ message: "Champs manquants." });
-
-    try {
-        const user = await User.findOne({ email: email.toLowerCase() });
-        if (!user) return res.status(400).json({ message: "Utilisateur non trouvé." });
-
-        const isValid = await bcrypt.compare(password, user.password);
-        if (!isValid) return res.status(400).json({ message: "Mot de passe incorrect." });
-
-        console.log("✅ Utilisateur authentifié :", user);
-
-        res.status(200).json({
-            message: "Connexion réussie !",
-            role: user.roles[0],
-            userId: user._id,
-            profileCompleted: user.profileCompleted
-        });
-
-    } catch (error) {
-        console.error("❌ Erreur de connexion :", error);
-        res.status(500).json({ message: "Erreur serveur." });
+    if (!email || !password) {
+        return res.status(400).json({ message: "Champs manquants." });
     }
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) return res.status(400).json({ message: "Utilisateur non trouvé." });
+
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) return res.status(400).json({ message: "Mot de passe incorrect." });
+
+    // ✅ si tout est bon
+    res.status(200).json({
+        message: "Connexion réussie !",
+        role: user.roles[0],
+        userId: user._id,
+        profileCompleted: user.profileCompleted
+    });
 });
+
 
 // Patient Profile Update
 app.put('/patient/profile/:id', upload.single('photo'), async(req, res) => {
@@ -353,6 +348,112 @@ app.post('/ambulancier-info', upload.single('diploma'), async(req, res) => {
     } catch (error) {
         console.error("❌ Erreur enregistrement ambulancier :", error);
         res.status(500).json({ message: "Erreur serveur lors de l'enregistrement ambulancier." });
+    }
+});
+
+app.get('/users', async(req, res) => {
+    try {
+        const allUsers = await User.find().select('nom prenom email roles _id');
+        res.status(200).json(allUsers);
+    } catch (error) {
+        console.error("❌ Erreur récupération de tous les utilisateurs :", error);
+        res.status(500).json({ message: "Erreur serveur lors de la récupération des utilisateurs." });
+    }
+});
+
+
+app.get('/admin/notifications', async(req, res) => {
+    try {
+        const allNotifications = await Notification.find().sort({ date: -1 }); // tri du plus récent
+        res.status(200).json(allNotifications);
+    } catch (error) {
+        console.error("❌ Erreur récupération des notifications :", error);
+        res.status(500).json({ message: "Erreur serveur lors de la récupération des notifications." });
+    }
+});
+
+app.post('/admin/notify', async(req, res) => {
+    const { message } = req.body;
+
+    if (!message || message.trim() === '') {
+        return res.status(400).json({ message: "Le message est requis." });
+    }
+
+    try {
+        const notif = new Notification({ message });
+        await notif.save();
+        res.status(201).json({ message: "✅ Notification envoyée !" });
+    } catch (error) {
+        console.error("❌ Erreur envoi notification :", error);
+        res.status(500).json({ message: "Erreur serveur." });
+    }
+});
+
+app.delete('/admin/users/:id', async(req, res) => {
+    const { id } = req.params;
+
+    try {
+        const deletedUser = await User.findByIdAndDelete(id);
+
+        if (!deletedUser) {
+            return res.status(404).json({ message: "Utilisateur introuvable." });
+        }
+
+        res.status(200).json({ message: "✅ Utilisateur supprimé avec succès." });
+    } catch (error) {
+        console.error("❌ Erreur suppression utilisateur :", error);
+        res.status(500).json({ message: "Erreur serveur lors de la suppression." });
+    }
+});
+
+app.put('/admin/users/:id', async(req, res) => {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    if (!role) {
+        return res.status(400).json({ message: "Le rôle est requis." });
+    }
+
+    try {
+        const updated = await User.findByIdAndUpdate(
+            id, { roles: [role] }, { new: true }
+        );
+
+        if (!updated) {
+            return res.status(404).json({ message: "Utilisateur non trouvé." });
+        }
+
+        res.status(200).json({ message: "✅ Rôle mis à jour avec succès.", user: updated });
+    } catch (error) {
+        console.error("❌ Erreur modification rôle :", error);
+        res.status(500).json({ message: "Erreur serveur lors de la mise à jour du rôle." });
+    }
+});
+
+
+// ⚠️ Route temporaire à utiliser une seule fois puis supprimer
+app.put('/admin/update-password', async(req, res) => {
+    const { email, newPassword } = req.body;
+
+    if (!email || !newPassword) {
+        return res.status(400).json({ message: 'Email et nouveau mot de passe requis.' });
+    }
+
+    try {
+        const user = await User.findOne({ email: email.toLowerCase() });
+
+        if (!user) {
+            return res.status(404).json({ message: "Admin introuvable." });
+        }
+
+        const hashed = await bcrypt.hash(newPassword, 10);
+        user.password = hashed;
+        await user.save();
+
+        res.status(200).json({ message: "✅ Mot de passe admin mis à jour avec succès !" });
+    } catch (error) {
+        console.error("❌ Erreur lors de la mise à jour du mot de passe :", error);
+        res.status(500).json({ message: "Erreur serveur." });
     }
 });
 

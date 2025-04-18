@@ -62,9 +62,9 @@ const Login = () => {
           case 'ambulancier':
             window.location.href = '/dashboard_ambulancier';
             break;
-          case 'administrateur':
-            window.location.href = '/dashboard_admin';
-            break;
+            case 'administrateur':
+              window.location.href = '/admin-dashboard';
+              break;            
           default:
             console.warn("❓ Rôle inconnu :", role);
             window.location.href = '/';
