@@ -1,0 +1,43 @@
+/* General Dashboard Container */
+
+.dashboard-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 80vh;
+}
+
+
+/* Common Dashboard Card Styling */
+
+.dashboard-card {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    width: 500px;
+    text-align: center;
+}
+
+
+/* Personalized styling per dashboard */
+
+.patient-dashboard .dashboard-card {
+    border-top: 5px solid #4caf50;
+}
+
+.doctor-dashboard .dashboard-card {
+    border-top: 5px solid #2196F3;
+}
+
+.labs-dashboard .dashboard-card {
+    border-top: 5px solid #9C27B0;
+}
+
+.hospital-dashboard .dashboard-card {
+    border-top: 5px solid #FF9800;
+}
+
+.cabinet-dashboard .dashboard-card {
+    border-top: 5px solid #FF5722;
+}

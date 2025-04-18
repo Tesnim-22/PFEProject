@@ -1,0 +1,51 @@
+.ambulance-dashboard {
+    padding: 50px 20px;
+    min-height: 100vh;
+    background-color: #f4fbfd;
+    text-align: center;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.ambulance-dashboard h2 {
+    font-size: 2.4rem;
+    color: #05445E;
+    margin-bottom: 40px;
+    font-weight: 700;
+}
+
+.dashboard-card-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 25px;
+}
+
+.dashboard-card {
+    background-color: #ffffff;
+    width: 280px;
+    padding: 25px 20px;
+    border-radius: 16px;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    text-align: center;
+    text-decoration: none;
+    color: inherit;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+}
+
+.dashboard-card h3 {
+    color: #0e746b;
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.dashboard-card p {
+    font-size: 0.95rem;
+    color: #444;
+    line-height: 1.5;
+}

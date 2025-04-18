@@ -1,0 +1,58 @@
+/* Navbar container styling */
+
+.navbar {
+    background-color: #227C70;
+    /* Your chosen color */
+    padding: 1rem;
+}
+
+
+/* Navigation links styling */
+
+.nav-links {
+    list-style: none;
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    /* Center the links */
+    margin: 0;
+    padding: 0;
+}
+
+
+/* Individual navigation items */
+
+.nav-links li a {
+    color: white;
+    text-decoration: none;
+    font-size: 1rem;
+    transition: color 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.nav-links li a:hover {
+    color: #C8E6C9;
+    /* Slightly lighter color for hover effect */
+}
+
+
+/* Logout button styling */
+
+.logout-button {
+    background-color: white;
+    color: #227C70;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+
+.logout-button:hover {
+    background-color: #1B5B53;
+    /* Darker shade of the main color */
+    color: white;
+}

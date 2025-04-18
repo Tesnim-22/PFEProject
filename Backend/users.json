@@ -1,0 +1,10 @@
+[
+
+    {
+        "email": "bbbbbbbbbbb@hhhhhhh.com",
+        "password": "$2b$10$5JUGGUdCoGEY12S0bbuz3ewFi.bnG4jbw1skck2TMnUqi5UxDxEXe",
+        "roles": [
+            "Patient"
+        ]
+    }
+]

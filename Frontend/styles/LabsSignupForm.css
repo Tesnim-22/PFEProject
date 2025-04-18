@@ -1,0 +1,82 @@
+.labs-form-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 90vh;
+    background: linear-gradient(135deg, #f3fbfa, #ffffff);
+    animation: fadeIn 0.4s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.labs-form-card {
+    background: #fff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+    width: 100%;
+    max-width: 460px;
+    font-family: 'Segoe UI', sans-serif;
+    text-align: center;
+}
+
+.labs-form-card h2 {
+    color: #0e746b;
+    margin-bottom: 10px;
+}
+
+.labs-form-card p {
+    font-size: 0.95rem;
+    color: #555;
+    margin-bottom: 20px;
+}
+
+.labs-form-card form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.labs-form-card input[type="file"] {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1rem;
+    background: #fff;
+}
+
+.labs-form-card button {
+    padding: 12px;
+    background-color: #0e746b;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s ease;
+}
+
+.labs-form-card button:hover {
+    background-color: #09514a;
+}
+
+.message {
+    font-weight: 500;
+}
+
+.success {
+    color: green;
+}
+
+.error {
+    color: red;
+}

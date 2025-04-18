@@ -1,0 +1,34 @@
+# Node modules
+**/node_modules/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE config
+.vscode/
+.idea/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Build outputs (si jamais tu ajoutes un dossier "build" ou "dist")
+build/
+dist/
+
+# Uploads
+Backend/uploads/
+
+# Compiled files
+*.log
+*.lock
+
+# Optional: ignore package-lock if using yarn only
+# package-lock.json

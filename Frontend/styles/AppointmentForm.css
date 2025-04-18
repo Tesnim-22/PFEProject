@@ -1,0 +1,75 @@
+.appointment-form-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 90vh;
+    background: #f5faf9;
+}
+
+.appointment-form-card {
+    background: #fff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 480px;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.appointment-form-card h2 {
+    text-align: center;
+    color: #0e746b;
+    margin-bottom: 20px;
+}
+
+.appointment-form-card form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.appointment-form-card label {
+    display: flex;
+    flex-direction: column;
+    font-weight: 500;
+    color: #333;
+}
+
+.appointment-form-card input,
+.appointment-form-card select,
+.appointment-form-card textarea {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1rem;
+    margin-top: 5px;
+}
+
+.appointment-form-card button {
+    padding: 12px;
+    background-color: #0e746b;
+    color: white;
+    font-size: 1rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background-color 0.3s ease;
+}
+
+.appointment-form-card button:hover {
+    background-color: #09514a;
+}
+
+.message {
+    text-align: center;
+    font-weight: 500;
+}
+
+.success {
+    color: green;
+}
+
+.error {
+    color: red;
+}

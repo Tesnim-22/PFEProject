@@ -1,0 +1,82 @@
+.ambulancier-form-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 90vh;
+    background: linear-gradient(135deg, #eef9f7, #ffffff);
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.ambulancier-form-card {
+    background: #fff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 500px;
+    font-family: 'Segoe UI', sans-serif;
+    text-align: center;
+}
+
+.ambulancier-form-card h2 {
+    color: #0e746b;
+    margin-bottom: 10px;
+}
+
+.ambulancier-form-card p {
+    font-size: 0.95rem;
+    color: #555;
+    margin-bottom: 20px;
+}
+
+.ambulancier-form-card form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.ambulancier-form-card input,
+.ambulancier-form-card select {
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+}
+
+.ambulancier-form-card button {
+    padding: 12px;
+    background-color: #0e746b;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s ease;
+}
+
+.ambulancier-form-card button:hover {
+    background-color: #09514a;
+}
+
+.message {
+    font-weight: 500;
+}
+
+.success {
+    color: green;
+}
+
+.error {
+    color: red;
+}

@@ -1,0 +1,57 @@
+.location-container {
+    padding: 40px 20px;
+    text-align: center;
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #f4fbfd;
+}
+
+.location-container h2 {
+    font-size: 2rem;
+    color: #05445E;
+    margin-bottom: 20px;
+}
+
+.location-container button {
+    background-color: #0e746b;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    font-size: 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.3s ease;
+}
+
+.location-container button:hover {
+    background-color: #09514a;
+}
+
+.map-wrapper {
+    margin-top: 20px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.1);
+}
+
+.address-bar {
+    background-color: #ffffff;
+    margin: 20px auto 10px;
+    padding: 12px 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    max-width: 800px;
+    font-size: 0.95rem;
+    color: #333;
+    text-align: center;
+}
+
+.address-bar {
+    margin-top: 15px;
+    padding: 12px 18px;
+    background-color: #f9f9f9;
+    border-left: 5px solid #0e746b;
+    border-radius: 8px;
+    font-size: 1rem;
+    color: #333;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
