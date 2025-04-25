@@ -18,7 +18,7 @@ const ChatBotButton = () => {
     setLoading(true);
 
     try {
-      const res = await fetch('http://localhost:8000/api/chat', {
+      const res = await fetch('http://localhost:5000/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: input })
@@ -36,9 +36,14 @@ const ChatBotButton = () => {
 
   return (
     <>
-      <button className="chatbot-button" onClick={toggleChat}>
+      <button
+        className="chatbot-button"
+        onClick={() => (window.location.href = 'http://localhost:5000/')}
+      >
         <FaComments size={28} />
       </button>
+
+
 
       {open && (
         <div className="chatbot-popup">
@@ -53,7 +58,7 @@ const ChatBotButton = () => {
           <div className="chat-input">
             <input
               type="text"
-              placeholder="Écris quelque chose..."
+              placeholder="Écris tes symptômes (ex: fièvre, toux)..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
