@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import '../styles/Login.css';
 
 const Login = () => {
@@ -8,6 +8,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,50 +32,51 @@ const Login = () => {
       });
 
       const data = await response.json();
+      console.log("✅ Données reçues au login :", data);
+
 
       if (response.ok) {
-        setMessage('Connexion réussie !');
-        console.log("✅ Données reçues :", data);
-
+        // ✅ Enregistrement complet des données utilisateur
         localStorage.setItem('userRole', data.role);
         localStorage.setItem('userId', data.userId);
+        localStorage.setItem('userEmail', data.email); // ✅ ESSENTIEL
         localStorage.setItem('loggedIn', 'true');
 
-        // Nettoyage du rôle pour éviter les bugs
         const role = (data.role || "").trim().toLowerCase();
+        const normalizedRole = role.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-        switch (role) {
-          case 'patient':
-            window.location.href = '/dashboard_patient';
-            break;
-          case 'doctor':
-            window.location.href = '/dashboard_doctor';
-            break;
-          case 'labs':
-            window.location.href = '/dashboard_labs';
-            break;
-          case 'hospital':
-            window.location.href = '/dashboard_hospital';
-            break;
-          case 'cabinet':
-            window.location.href = '/dashboard_cabinet';
-            break;
-          case 'ambulancier':
-            window.location.href = '/dashboard_ambulancier';
-            break;
-            case 'administrateur':
-              window.location.href = '/admin-dashboard';
-              break;            
-          default:
-            console.warn("❓ Rôle inconnu :", role);
-            window.location.href = '/';
+        if (!data.profileCompleted) {
+          switch (normalizedRole) {
+            case 'patient': navigate('/signup/patient'); break;
+            case 'doctor': navigate('/signup/doctor'); break;
+            case 'labs':
+            case 'laboratoire': navigate('/signup/labs'); break;
+            case 'hospital':
+            case 'hopital': navigate('/signup/hospital'); break;
+            case 'cabinet': navigate('/signup/cabinet'); break;
+            case 'ambulancier': navigate('/signup/ambulancier'); break;
+            case 'admin': navigate('/signup/admin'); break;
+            default: setMessage("Rôle non reconnu pour la redirection.");
+          }
+        } else {
+          switch (normalizedRole) {
+            case 'patient': navigate('/patient-dashboard'); break;
+            case 'doctor': navigate('/doctor-dashboard'); break;
+            case 'laboratoire':
+            case 'labs': navigate('/labs-dashboard'); break;
+            case 'cabinet': navigate('/cabinet-dashboard'); break;
+            case 'ambulancier': navigate('/ambulancier-dashboard'); break;
+            case 'hospital':
+            case 'hopital': navigate('/hospital-dashboard'); break;
+            case 'admin': navigate('/dashboard-admin'); break;
+            default: setMessage("Rôle non reconnu pour la redirection.");
+          }
         }
-
       } else {
         setMessage(data.message || 'Échec de la connexion.');
       }
     } catch (error) {
-      console.error('Erreur de connexion :', error);
+      console.error('❌ Erreur de connexion :', error);
       setMessage('Une erreur est survenue. Veuillez réessayer.');
     } finally {
       setLoading(false);

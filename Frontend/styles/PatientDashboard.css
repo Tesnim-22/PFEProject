@@ -1,173 +1,156 @@
-/* Updated Patient Dashboard CSS - Clean & Professional Style without profile image in sidebar */
+/* GLOBAL */
 
 body {
     margin: 0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f8f9fb;
+    font-family: 'Segoe UI', sans-serif;
+    background: #fefaf6;
 }
 
-.patient-dashboard-layout {
+
+/* WRAPPER */
+
+.dashboard-wrapper {
     display: flex;
-    height: 100vh;
 }
+
+
+/* SIDEBAR */
 
 .sidebar {
-    background-color: #0e746b;
-    color: white;
-    width: 240px;
-    padding: 40px 20px;
+    width: 220px;
+    height: 100vh;
+    background: #6D4C41;
+    padding: 2rem 1rem;
+    color: #fff7f0;
+    position: fixed;
+    top: 0;
+    left: 0;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    border-top-left-radius: 18px;
-    border-bottom-left-radius: 18px;
-    box-shadow: 2px 0 6px rgba(0, 0, 0, 0.05);
 }
 
-.sidebar nav ul {
-    list-style: none;
-    padding: 0;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.sidebar nav ul li {
-    padding: 12px 16px;
-    margin: 4px 0;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.3s ease, transform 0.2s ease;
-}
-
-.sidebar nav ul li:hover {
-    background-color: rgba(255, 255, 255, 0.15);
-    transform: translateX(4px);
-}
-
-.sidebar nav ul li.active {
-    background-color: #ffffff33;
+.sidebar-header {
+    font-size: 1.4rem;
     font-weight: bold;
-    color: #fff;
+    margin-bottom: 2rem;
+    text-align: center;
 }
 
-.dashboard-main {
-    flex: 1;
-    padding: 40px;
-    overflow-y: auto;
-}
-
-.profile-section {
+.sidebar-menu {
     display: flex;
     flex-direction: column;
-    gap: 30px;
+    gap: 1rem;
 }
 
-.profile-card,
-.info-card {
-    background-color: #fff;
-    border-radius: 12px;
-    padding: 20px 30px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-}
-
-.profile-details {
-    display: flex;
-    gap: 20px;
-    align-items: center;
-}
-
-.profile-details img {
-    width: 70px;
-    height: 70px;
-    border-radius: 50%;
-    object-fit: cover;
-}
-
-.profile-info h2 {
-    font-size: 1.2rem;
-    margin: 0 0 5px 0;
-}
-
-.profile-info p {
-    margin: 0;
-    color: #666;
-    font-size: 0.9rem;
-}
-
-.card-title {
-    font-weight: 600;
-    font-size: 1rem;
-    margin-bottom: 20px;
-    color: #222;
-    width: 100%;
-}
-
-.info-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 20px;
-    width: 100%;
-}
-
-.info-field label {
-    display: block;
-    font-weight: 500;
-    margin-bottom: 5px;
-    color: #555;
-}
-
-.info-field p,
-.info-field input {
-    background-color: #f1f1f1;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 0.95rem;
+.sidebar-menu button {
+    background: none;
+    color: #fff7f0;
     border: none;
-    width: 100%;
-}
-
-.info-field input {
-    background-color: #fff;
-    border: 1px solid #ccc;
-}
-
-.edit-btn,
-.save-btn {
-    background-color: white;
-    color: #0e746b;
-    border: 1px solid #0e746b;
-    padding: 6px 14px;
-    font-size: 0.9rem;
+    padding: 0.6rem 1rem;
+    text-align: left;
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    font-size: 1rem;
+    transition: 0.2s;
+}
+
+.sidebar-menu button:hover,
+.sidebar-menu button.active {
+    background-color: #5D4037;
+}
+
+
+/* MAIN DASHBOARD */
+
+.dashboard {
+    margin-left: 220px;
+    padding: 3rem 2rem;
+    width: 100%;
+}
+
+
+/* TITRES */
+
+h2 {
+    font-size: 1.6rem;
+    color: #4E342E;
+    margin-bottom: 1rem;
+}
+
+
+/* MESSAGES */
+
+.msg {
+    background: #fff3e0;
+    border-left: 5px solid #A1887F;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 6px;
+    color: #5D4037;
+}
+
+
+/* PROFIL */
+
+.profile-card {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 2rem;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.05);
+}
+
+.profile-card img {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+    margin: 0 auto 2rem auto;
+    border: 3px solid #A1887F;
+}
+
+.profile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.profile-grid p {
+    background: #fffaf0;
+    padding: 1rem;
+    border-left: 4px solid #A1887F;
+    border-radius: 8px;
+    color: #333;
+}
+
+
+/* FORM */
+
+.form {
     display: flex;
-    align-items: center;
-    gap: 6px;
+    flex-wrap: wrap;
+    gap: 1rem;
 }
 
-.edit-btn:hover,
-.save-btn:hover {
-    background-color: #0e746b;
+.form input {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    border: 1px solid #d7ccc8;
+    flex: 1 1 200px;
+    background: #fefefe;
+}
+
+.form button {
+    background-color: #6D4C41;
     color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: 0.3s ease;
 }
 
-.message.success {
-    color: green;
-    margin-top: 10px;
-}
-
-.message.error {
-    color: red;
-    margin-top: 10px;
+.form button:hover {
+    background-color: #5D4037;
 }

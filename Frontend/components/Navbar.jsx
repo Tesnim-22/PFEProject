@@ -22,7 +22,7 @@ const Navbar = () => {
         <li><Link to="/about"><FaInfoCircle /> About</Link></li>
         <li><Link to="/contact"><FaEnvelope /> Contact</Link></li>
         <li><Link to="/login"><FaSignInAlt /> Login</Link></li>
-        <li><Link to="/signin"><FaUserPlus /> Signin</Link></li>
+        <li><Link to="/signin"><FaUserPlus /> Signup</Link></li>
         {isDashboard && (
           <li>
             <button onClick={handleLogout} className="logout-button">

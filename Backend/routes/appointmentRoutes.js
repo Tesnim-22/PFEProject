@@ -1,16 +1,17 @@
-// routes/appointmentRoutes.js
 const express = require('express');
 const router = express.Router();
-const {
-    createAppointment,
-    getAppointmentsByPatient,
-    getAppointmentsByDoctor,
-    updateAppointmentStatus,
-} = require('../controllers/appointmentController');
+const appointmentController = require('../controllers/appointmentController');
 
-router.post('/', createAppointment); // créer un rendez-vous
-router.get('/patient/:email', getAppointmentsByPatient); // rdv par email patient
-router.get('/doctor/:doctorId', getAppointmentsByDoctor); // rdv par id médecin
-router.put('/:id', updateAppointmentStatus); // mettre à jour (statut)
+// Créer un nouveau rendez-vous
+router.post('/', appointmentController.createAppointment);
+
+// Liste des rendez-vous par patient
+router.get('/patient/:email', appointmentController.getAppointmentsByPatient);
+
+// Liste des rendez-vous par médecin
+router.get('/doctor/:doctorId', appointmentController.getAppointmentsByDoctor);
+
+// Mise à jour du statut d’un rendez-vous
+router.put('/:id/status', appointmentController.updateAppointmentStatus);
 
 module.exports = router;

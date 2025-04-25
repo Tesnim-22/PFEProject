@@ -1,101 +1,116 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import '../styles/Home.css';
-import HeroImg from '../assets/healthcare-hero.jpg';
 
-const Home = () => {
+export default function Home() {
   return (
-    <div className="home-container">
-      {/* HERO SECTION */}
-      <section className="hero-section">
-        <div className="hero-text">
-          <h1>Welcome to Our Health Care Platform</h1>
-          <p>
-            Your health is our priority. Access personalized dashboards tailored to your role and stay informed with health insights and consultations.
+    <div className="home-modern">
+     
+      
+      {/* Hero section */}
+      <section className="hero">
+        <div className="hero-content">
+          <div className="hero-text">
+            <h1>Votre santé, <span>simplifiée</span></h1>
+            <p className="hero-subtitle">
+              Plateforme tout-en-un pour gérer vos rendez-vous, dossiers médicaux 
+              et communications avec des professionnels certifiés.
+            </p>
+            <div className="hero-cta">
+              <Link to="/signup" className="cta-primary">Commencer maintenant</Link>
+            </div>
+          </div>
+          <div className="hero-visual">
+            <img 
+              src="/assets/docteure.jpeg" 
+              alt="Docteure souriante sur l'interface PatientPath" 
+              className="hero-image"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Stats */}
+      <section className="key-stats">
+        <div className="stats-container">
+          <div className="stat-item">
+            <div className="stat-value">98%</div>
+            <div className="stat-label">Satisfaction patients</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-value">24h</div>
+            <div className="stat-label">Réponse maximale</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-value">256-bit</div>
+            <div className="stat-label">Chiffrement AES</div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="features" id="features">
+        <div className="section-header">
+          <h2>Votre parcours santé optimisé</h2>
+          <p className="section-subtitle">
+            Une suite complète d'outils conçus pour les patients exigeants
           </p>
-          <Link to="/signin" className="hero-btn">Get Started</Link>
         </div>
-        <img src={HeroImg} alt="Healthcare hero" className="hero-image" />
-      </section>
-
-      {/* STATS BAR */}
-      <div className="stats-bar">
-        <span>🏥 100+ Hospitals | 👨‍⚕️ 500+ Verified Doctors | 😊 10k+ Happy Patients</span>
-      </div>
-
-      {/* DASHBOARD SECTION */}
-      <section className="dashboard-section">
-        <h2>Choisissez votre interface</h2>
-        <div className="dashboard-cards">
-          <Link to="/patient-dashboard" className="dashboard-card">
-            <h4>🩺 Patient</h4>
-            <p>Consultez vos dossiers médicaux, astuces de santé et rendez-vous.</p>
-          </Link>
-          <Link to="/doctor-dashboard" className="dashboard-card">
-            <h4>👨‍⚕️ Doctor</h4>
-            <p>Gérez vos consultations, rapports et horaires.</p>
-          </Link>
-          <Link to="/labs-dashboard" className="dashboard-card">
-            <h4>🔬 Labs</h4>
-            <p>Supervisez vos résultats de tests et diagnostics médicaux avec efficacité.</p>
-          </Link>
-          <Link to="/hospital-dashboard" className="dashboard-card">
-            <h4>🏥 Hospital</h4>
-            <p>Organisez les soins et administrez les moyens hospitaliers.</p>
-          </Link>
-          <Link to="/cabinet-dashboard" className="dashboard-card">
-            <h4>📁 Cabinet</h4>
-            <p>Optimisez les activités du cabinet privé et la circulation des patients.</p>
-          </Link>
-          <Link to="/ambulancier-dashboard" className="dashboard-card">
-            <h4>🚑 Ambulancier</h4>
-            <p>Gérez les demandes d'ambulance, les itinéraires d'urgence et les transferts de patients.</p>
-          </Link>
-
-          {/* ✅ New Administrator Dashboard */}
-          <Link to="/admin-dashboard" className="dashboard-card">
-            <h4>🧑‍💼 Administrateur</h4>
-            <p>Gérez les utilisateurs, les accès et les notifications en temps réel.</p>
-          </Link>
-        </div>
-      </section>
-
-      {/* FEATURES */}
-      <section className="features-section">
-        <h3>Why Choose Our Platform?</h3>
-        <div className="features-list">
-          <div className="feature-item">
-            🔐 <strong>Secure Data</strong><br />
-            Your health data is safe and encrypted.
+        
+        <div className="features-grid">
+          <div className="feature-card">
+            <div className="feature-icon">📅</div>
+            <h3>Gestion de rendez-vous</h3>
+            <ul className="feature-list">
+              <li>Prise de rendez-vous en ligne</li>
+              <li>Rappels automatiques</li>
+              <li>Annulation simplifiée</li>
+            </ul>
           </div>
-          <div className="feature-item">
-            🌐 <strong>24/7 Access</strong><br />
-            Access from anywhere, any time.
+          
+          <div className="feature-card">
+            <div className="feature-icon">📁</div>
+            <h3>Dossier médical unifié</h3>
+            <ul className="feature-list">
+              <li>Centralisation des documents</li>
+              <li>Accès multi-appareils</li>
+              <li>Partage sécurisé</li>
+            </ul>
           </div>
-          <div className="feature-item">
-            📊 <strong>Health Insights</strong><br />
-            View progress, results, and suggestions.
-          </div>
-          <div className="feature-item">
-            🤖 <strong>AI Chat Support</strong><br />
-            Instant help from our smart assistant.
+          
+          <div className="feature-card">
+            <div className="feature-icon">🔐</div>
+            <h3>Sécurité renforcée</h3>
+            <ul className="feature-list">
+              <li>Certification HIPAA</li>
+              <li>Authentification à 2 facteurs</li>
+              <li>Audits réguliers</li>
+            </ul>
           </div>
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className="footer-section">
-        <p>© 2025 Health Care Platform. All rights reserved.</p>
-        <div>
-          <Link to="/">Home</Link>
-          <Link to="/about">About</Link>
-          <Link to="/contact">Contact</Link>
-          <Link to="/login">Login</Link>
-          <Link to="/signin">Signup</Link>
+      {/* Footer */}
+      <footer className="main-footer" id="contact">
+        <div className="footer-grid">
+          <div className="footer-brand">
+            <div className="logo">PatientPath</div>
+            <p>La technologie au service de votre santé.</p>
+          </div>
+          
+          <div className="footer-contact">
+            <h4>Contact</h4>
+            <address>
+              <p>Patientpath2@gmail.com</p>
+              <p>(+216) 58292817</p>
+            </address>
+          </div>
+        </div>
+        
+        <div className="footer-legal">
+          <p>© 2025 PatientPath. Tous droits réservés.</p>
         </div>
       </footer>
     </div>
   );
-};
-
-export default Home;
+}

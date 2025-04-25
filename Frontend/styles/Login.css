@@ -1,23 +1,38 @@
+:root {
+    --bg-color: #ffffff;
+    --form-bg: #fffaf7;
+    --primary-color: #7a5c58;
+    /* marron doux */
+    --primary-dark: #5c423f;
+    /* marron foncé */
+    --input-border: #d8cfc8;
+    --input-focus: rgba(122, 92, 88, 0.25);
+    --font-main: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
 .login-page {
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
-    background: linear-gradient(135deg, #e0f2f1, #f5f9fb);
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-color);
+    /* Fond blanc */
+    font-family: var(--font-main);
+    padding: 1rem;
 }
 
 .login-box {
-    background-color: #ffffff;
+    background-color: var(--form-bg);
+    /* beige très clair */
     padding: 30px;
     border-radius: 12px;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
     width: 350px;
     text-align: center;
 }
 
 .login-box h2 {
-    color: #0e746b;
+    color: var(--primary-color);
     margin-bottom: 20px;
 }
 
@@ -26,20 +41,20 @@
     padding: 12px;
     margin-bottom: 15px;
     border-radius: 6px;
-    border: 1px solid #ddd;
-    transition: border-color 0.3s ease;
+    border: 1px solid var(--input-border);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .login-box input:focus {
-    border-color: #0e746b;
+    border-color: var(--primary-color);
     outline: none;
-    box-shadow: 0 0 5px rgba(14, 116, 107, 0.3);
+    box-shadow: 0 0 5px var(--input-focus);
 }
 
 .login-box button {
     width: 100%;
     padding: 12px;
-    background-color: #0e746b;
+    background-color: var(--primary-color);
     color: #fff;
     border: none;
     border-radius: 6px;
@@ -48,7 +63,7 @@
 }
 
 .login-box button:hover {
-    background-color: #09514a;
+    background-color: var(--primary-dark);
 }
 
 .signin-link {
@@ -57,13 +72,13 @@
 }
 
 .signin-link a {
-    color: #0e746b;
+    color: var(--primary-color);
     text-decoration: none;
     transition: color 0.3s ease;
 }
 
 .signin-link a:hover {
-    color: #09514a;
+    color: var(--primary-dark);
 }
 
 .message {

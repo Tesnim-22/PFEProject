@@ -1,78 +1,98 @@
+:root {
+    --background: #ffffff;
+    --box-bg: #fffaf7;
+    --accent-color: #7a5c58;
+    --accent-hover: #5c423f;
+    --text-dark: #3e2f2c;
+    --placeholder: #9b8682;
+    --border: #d8cfc8;
+    --focus-shadow: rgba(122, 92, 88, 0.2);
+    --font-main: 'Segoe UI', sans-serif;
+}
+
 .contact-page {
     display: flex;
     justify-content: center;
     align-items: center;
     padding: 80px 20px;
-    background: linear-gradient(135deg, #eafaf1, #f5f9fb);
     min-height: 100vh;
+    background-color: var(--background);
+    /* fond blanc */
+    font-family: var(--font-main);
 }
 
 .contact-box {
-    background-color: #ffffff;
+    background: var(--box-bg);
+    backdrop-filter: blur(10px);
     padding: 40px 30px;
-    border-radius: 16px;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+    border-radius: 20px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
     width: 100%;
-    max-width: 550px;
-    animation: fadeIn 0.7s ease;
+    max-width: 500px;
+    animation: fadeIn 0.6s ease;
+    transition: transform 0.3s ease;
+}
+
+.contact-box:hover {
+    transform: translateY(-3px);
 }
 
 .contact-box h2 {
     text-align: center;
-    color: #0e746b;
+    color: var(--accent-color);
+    font-size: 2rem;
     margin-bottom: 5px;
-    font-size: 1.9rem;
-    display: flex;
-    justify-content: center;
-    align-items: center;
 }
 
 .subtitle {
     text-align: center;
-    margin-bottom: 20px;
-    color: #666;
+    margin-bottom: 25px;
+    color: var(--placeholder);
     font-size: 0.95rem;
 }
 
 .contact-box input,
 .contact-box textarea {
     width: 100%;
-    padding: 12px;
-    margin-bottom: 15px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
+    padding: 14px;
+    margin-bottom: 18px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
     font-size: 1rem;
-    transition: border-color 0.3s;
+    background-color: #fdf9f6;
+    transition: border 0.3s ease, box-shadow 0.3s ease;
+    color: var(--text-dark);
 }
 
 .contact-box input:focus,
 .contact-box textarea:focus {
-    border-color: #0e746b;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px var(--focus-shadow);
     outline: none;
 }
 
 .contact-box button {
     width: 100%;
     padding: 14px;
-    background-color: #0e746b;
+    background-color: var(--accent-color);
     color: white;
     font-size: 1rem;
-    font-weight: 500;
+    font-weight: 600;
     border: none;
-    border-radius: 8px;
+    border-radius: 12px;
     cursor: pointer;
     transition: background-color 0.3s ease;
 }
 
 .contact-box button:hover {
-    background-color: #09514a;
+    background-color: var(--accent-hover);
 }
 
 .status-message {
     text-align: center;
-    margin-top: 15px;
+    margin-top: 18px;
     font-weight: 500;
-    color: #333;
+    color: var(--text-dark);
     font-size: 0.95rem;
 }
 

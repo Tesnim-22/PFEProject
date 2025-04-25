@@ -1,5 +1,12 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useLocation
+} from 'react-router-dom';
+
 import Navbar from '../components/Navbar';
 import Home from '../components/Home';
 import Login from '../components/Login';
@@ -11,24 +18,26 @@ import DoctorDashboard from '../components/DoctorDashboard';
 import LabsDashboard from '../components/LabsDashboard';
 import HospitalDashboard from '../components/HospitalDashboard';
 import CabinetDashboard from '../components/CabinetDashboard';
-import ChatBotButton from '../components/ChatBotButton';
 import AmbulancierDashboard from '../components/AmbulancierDashboard';
 import AmbulancierLocation from '../components/AmbulancierLocation';
-import AdministrateurDashboard from '../components/AdministrateurDashboard';
-import PatientSignupForm from '../components/PatientSignupForm'; // ✅ GARDER cette ligne
-import DoctorSignupForm from '../components/DoctorSignupForm';
-import CabinetSignupForm from '../components/CabinetSignupForm' ;
-import LabsSignupForm from '../components/LabsSignupForm'
-import HospitalSignupForm from '../components/HospitalSignupForm'
-import AmbulancierSignupForm from '../components/AmbulancierSignupForm'
-// 👉 Temp components pour les autres rôles (à remplacer plus tard)
-const AdminSignupForm = () => <h2>Administrateur Signup Form</h2>;
+import DashboardAdmin from '../components/AdministrateurDashboard';
+import ChatBotButton from '../components/ChatBotButton';
 
+import PatientSignupForm from '../components/PatientSignupForm';
+import DoctorSignupForm from '../components/DoctorSignupForm';
+import CabinetSignupForm from '../components/CabinetSignupForm';
+import LabsSignupForm from '../components/LabsSignupForm';
+import HospitalSignupForm from '../components/HospitalSignupForm';
+import AmbulancierSignupForm from '../components/AmbulancierSignupForm';
+import SignupRedirect from '../components/SignupRedirect';
+
+// 🔒 Route protégée
 const ProtectedRoute = ({ children }) => {
   const loggedIn = localStorage.getItem('loggedIn');
   return loggedIn ? children : <Navigate to="/login" />;
 };
 
+// 💡 Wrapper avec gestion Navbar
 const AppWrapper = () => {
   const location = useLocation();
 
@@ -40,7 +49,11 @@ const AppWrapper = () => {
     '/cabinet-dashboard',
     '/ambulancier-dashboard',
     '/ambulancier/location',
-    '/admin-dashboard',
+    '/dashboard-admin',
+    '/ambulance/calls',
+    '/ambulance/status',
+    '/ambulance/reports',
+    '/ambulance/vehicle-info'
   ];
 
   const hideNavbar = dashboardRoutes.includes(location.pathname);
@@ -50,22 +63,25 @@ const AppWrapper = () => {
       {!hideNavbar && <Navbar />}
       <ChatBotButton />
       <Routes>
+        {/* Pages publiques */}
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signin" element={<Signin />} />
 
-        {/* Routes vers les formulaires spécifiques selon le rôle */}
+        {/* Redirection après rôle */}
+        <Route path="/signup-redirect" element={<SignupRedirect />} />
+
+        {/* Inscriptions */}
         <Route path="/signup/patient" element={<PatientSignupForm />} />
         <Route path="/signup/doctor" element={<DoctorSignupForm />} />
         <Route path="/signup/labs" element={<LabsSignupForm />} />
         <Route path="/signup/hospital" element={<HospitalSignupForm />} />
         <Route path="/signup/cabinet" element={<CabinetSignupForm />} />
         <Route path="/signup/ambulancier" element={<AmbulancierSignupForm />} />
-        <Route path="/signup/admin" element={<AdminSignupForm />} />
 
-        {/* Dashboards */}
+        {/* Dashboards sécurisés */}
         <Route path="/patient-dashboard" element={<ProtectedRoute><PatientDashboard /></ProtectedRoute>} />
         <Route path="/doctor-dashboard" element={<ProtectedRoute><DoctorDashboard /></ProtectedRoute>} />
         <Route path="/labs-dashboard" element={<ProtectedRoute><LabsDashboard /></ProtectedRoute>} />
@@ -73,13 +89,13 @@ const AppWrapper = () => {
         <Route path="/cabinet-dashboard" element={<ProtectedRoute><CabinetDashboard /></ProtectedRoute>} />
         <Route path="/ambulancier-dashboard" element={<ProtectedRoute><AmbulancierDashboard /></ProtectedRoute>} />
         <Route path="/ambulancier/location" element={<ProtectedRoute><AmbulancierLocation /></ProtectedRoute>} />
-        <Route path="/admin-dashboard" element={<ProtectedRoute><AdministrateurDashboard /></ProtectedRoute>} />
+        <Route path="/dashboard-admin" element={<ProtectedRoute><DashboardAdmin /></ProtectedRoute>} />
 
-        {/* Ambulance placeholders */}
-        <Route path="/ambulance/calls" element={<div>📋 Assigned Calls List (Coming Soon)</div>} />
-        <Route path="/ambulance/status" element={<div>📡 Status Update Page (Coming Soon)</div>} />
-        <Route path="/ambulance/reports" element={<div>📝 Reports Form (Coming Soon)</div>} />
-        <Route path="/ambulance/vehicle-info" element={<div>🚐 Vehicle Info Management (Coming Soon)</div>} />
+        {/* Pages additionnelles pour Ambulancier */}
+        <Route path="/ambulance/calls" element={<ProtectedRoute><div>📋 Liste des appels</div></ProtectedRoute>} />
+        <Route path="/ambulance/status" element={<ProtectedRoute><div>✅ Mise à jour du statut</div></ProtectedRoute>} />
+        <Route path="/ambulance/reports" element={<ProtectedRoute><div>📄 Rapports</div></ProtectedRoute>} />
+        <Route path="/ambulance/vehicle-info" element={<ProtectedRoute><div>🛠️ Infos véhicule</div></ProtectedRoute>} />
       </Routes>
     </>
   );

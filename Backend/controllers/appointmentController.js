@@ -1,51 +1,54 @@
-// controllers/appointmentController.js
 const Appointment = require('../models/Appointment');
 
 // 🔸 Créer un rendez-vous
 exports.createAppointment = async(req, res) => {
     try {
         const { patientEmail, doctorId, date, time, reason } = req.body;
+        console.log("📥 Données reçues :", { patientEmail, doctorId, date, time, reason });
+
+        const existing = await Appointment.findOne({ doctorId, date, time });
+        if (existing) {
+            return res.status(400).json({ message: 'Ce créneau est déjà réservé. Veuillez choisir un autre.' });
+        }
+
         const appointment = new Appointment({ patientEmail, doctorId, date, time, reason });
         await appointment.save();
+
         res.status(201).json({ message: 'Rendez-vous créé avec succès', appointment });
     } catch (error) {
+        console.error("❌ Erreur lors de la création :", error);
         res.status(500).json({ message: "Erreur lors de la création", error });
     }
 };
 
-// 🔸 Lister tous les rendez-vous d’un patient
+// 🔹 Obtenir les rendez-vous d’un patient
 exports.getAppointmentsByPatient = async(req, res) => {
     try {
-        const { email } = req.params;
-        const appointments = await Appointment.find({ patientEmail: email }).sort({ date: 1 });
+        const appointments = await Appointment.find({ patientEmail: req.params.email });
         res.status(200).json(appointments);
     } catch (error) {
-        res.status(500).json({ message: "Erreur lors du chargement", error });
+        res.status(500).json({ message: "Erreur lors de la récupération des rendez-vous" });
     }
 };
 
-// 🔸 Lister tous les rendez-vous d’un médecin
+// 🔹 Obtenir les rendez-vous d’un médecin
 exports.getAppointmentsByDoctor = async(req, res) => {
     try {
-        const { doctorId } = req.params;
-        const appointments = await Appointment.find({ doctorId }).sort({ date: 1 });
+        const appointments = await Appointment.find({ doctorId: req.params.doctorId });
         res.status(200).json(appointments);
     } catch (error) {
-        res.status(500).json({ message: "Erreur lors du chargement", error });
+        res.status(500).json({ message: "Erreur lors de la récupération des rendez-vous" });
     }
 };
 
-// 🔸 Mettre à jour le statut d’un rendez-vous
+// 🔹 Mettre à jour le statut d’un rendez-vous
 exports.updateAppointmentStatus = async(req, res) => {
     try {
-        const { id } = req.params;
-        const { status } = req.body;
-
-        const appointment = await Appointment.findByIdAndUpdate(id, { status }, { new: true });
-        if (!appointment) return res.status(404).json({ message: "RDV introuvable" });
-
-        res.status(200).json({ message: 'Statut mis à jour', appointment });
+        const updated = await Appointment.findByIdAndUpdate(
+            req.params.id, { status: req.body.status }, { new: true }
+        );
+        res.status(200).json(updated);
     } catch (error) {
-        res.status(500).json({ message: "Erreur lors de la mise à jour", error });
+        res.status(500).json({ message: "Erreur lors de la mise à jour du statut" });
     }
 };

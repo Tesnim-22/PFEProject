@@ -1,9 +1,22 @@
+:root {
+    --bg: #ffffff;
+    --box: #fffaf7;
+    --accent: #7a5c58;
+    --accent-dark: #5c423f;
+    --text-main: #3e2f2c;
+    --text-muted: #7e6e69;
+    --shadow: rgba(0, 0, 0, 0.08);
+    --hover-shadow: rgba(0, 0, 0, 0.12);
+    --font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
 .about-container {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: var(--font);
     padding: 50px 20px;
     max-width: 1100px;
     margin: 0 auto;
-    color: #333;
+    color: var(--text-main);
+    background-color: var(--bg);
 }
 
 .about-header {
@@ -13,13 +26,13 @@
 
 .about-header h1 {
     font-size: 2.6rem;
-    color: #05445E;
+    color: var(--accent);
     margin-bottom: 10px;
 }
 
 .about-header p {
     font-size: 1.1rem;
-    color: #555;
+    color: var(--text-muted);
 }
 
 .about-content {
@@ -29,20 +42,20 @@
 }
 
 .about-section {
-    background-color: #ffffff;
+    background-color: var(--box);
     padding: 25px;
     border-radius: 12px;
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 6px 15px var(--shadow);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .about-section:hover {
     transform: translateY(-6px);
-    box-shadow: 0 12px 22px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 12px 22px var(--hover-shadow);
 }
 
 .about-section h2 {
-    color: #0e746b;
+    color: var(--accent);
     margin-bottom: 15px;
 }
 
@@ -50,7 +63,7 @@
 .about-section ul {
     font-size: 1rem;
     line-height: 1.7;
-    color: #444;
+    color: var(--text-main);
 }
 
 .about-section ul {
@@ -67,7 +80,6 @@
 
 .about-logo {
     width: 200px;
-    /* ← plus grand */
     max-width: 220px;
     margin-bottom: 20px;
     transition: transform 0.3s ease;
@@ -81,7 +93,7 @@
 }
 
 .about-links a {
-    background-color: #0e746b;
+    background-color: var(--accent);
     color: white;
     padding: 8px 14px;
     border-radius: 6px;
@@ -91,5 +103,5 @@
 }
 
 .about-links a:hover {
-    background-color: #09514a;
+    background-color: var(--accent-dark);
 }

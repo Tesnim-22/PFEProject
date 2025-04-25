@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import '../styles/DoctorSignupForm.css';
 
-const DoctorSignupForm = () => {
+const DoctorSignupForm= () => {
   const [specialty, setSpecialty] = useState('');
   const [diploma, setDiploma] = useState(null);
   const [photo, setPhoto] = useState(null);

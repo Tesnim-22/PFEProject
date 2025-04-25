@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import '../styles/Signin.css';
 
 const Signin = () => {
   const [nom, setNom] = useState('');
   const [prenom, setPrenom] = useState('');
-  const [dateNaissance, setDateNaissance] = useState('');
+  const [dateNaissance, setDateNaissance] = useState(null);
   const [email, setEmail] = useState('');
   const [telephone, setTelephone] = useState('');
   const [adresse, setAdresse] = useState('');
@@ -68,32 +70,16 @@ const Signin = () => {
 
       if (response.ok) {
         setMessage('Inscription réussie ! Redirection...');
-        localStorage.setItem("email", email.toLowerCase()); // ✅ Ajoute cette ligne ici
+        localStorage.setItem("email", email.toLowerCase());
         setTimeout(() => {
           switch (role) {
-            case 'Patient':
-              navigate('/signup/patient');
-              break;
-            case 'Doctor':
-              navigate('/signup/doctor');
-              break;
-            case 'Labs':
-              navigate('/signup/labs');
-              break;
-            case 'Hospital':
-              navigate('/signup/hospital');
-              break;
-            case 'Cabinet':
-              navigate('/signup/cabinet');
-              break;
-            case 'Ambulancier':
-              navigate('/signup/ambulancier');
-              break;
-            case 'Administrateur':
-              navigate('/signup/admin');
-              break;
-            default:
-              navigate('/');
+            case 'Patient': navigate('/signup/patient'); break;
+            case 'Doctor': navigate('/signup/doctor'); break;
+            case 'Labs': navigate('/signup/labs'); break;
+            case 'Hospital': navigate('/signup/hospital'); break;
+            case 'Cabinet': navigate('/signup/cabinet'); break;
+            case 'Ambulancier': navigate('/signup/ambulancier'); break;
+            default: navigate('/');
           }
         }, 1000);
       } else {
@@ -110,26 +96,49 @@ const Signin = () => {
   return (
     <div className="signin-page">
       <div className="signin-container">
-        <div className="signin-left" />
-        <motion.div
-          className="signin-box"
-          initial={{ opacity: 0, x: 50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8 }}
-        >
-          <h2>Créer un compte</h2>
+        <div className="signin-left">
+          <img src="/assets/logo-medical.jpg" alt="Patient Care Logo" />
+        </div>
+
+        <motion.div className="signin-box" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }}>
+          <div className="signin-header">
+            <h2>Créer un compte</h2>
+          </div>
+
           {message && <div className="message">{message}</div>}
-          <form onSubmit={handleSubmit}>
-            <input type="text" placeholder="Nom" value={nom} onChange={(e) => setNom(e.target.value)} required />
-            <input type="text" placeholder="Prénom" value={prenom} onChange={(e) => setPrenom(e.target.value)} required />
-            <input type="date" placeholder="Date de naissance" value={dateNaissance} onChange={(e) => setDateNaissance(e.target.value)} required />
+
+          <form className="signin-form signup-form" onSubmit={handleSubmit}>
+            <div className="name-fields">
+              <input type="text" placeholder="Nom" value={nom} onChange={(e) => setNom(e.target.value)} required />
+              <input type="text" placeholder="Prénom" value={prenom} onChange={(e) => setPrenom(e.target.value)} required />
+            </div>
+
+            <div className="date-field">
+              <DatePicker
+                selected={dateNaissance}
+                onChange={(date) => setDateNaissance(date)}
+                dateFormat="dd/MM/yyyy"
+                placeholderText="Date de naissance"
+                className="react-datepicker-custom"
+                maxDate={new Date()}
+                showMonthDropdown
+                showYearDropdown
+                dropdownMode="select"
+                required
+              />
+            </div>
+
             <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
             <input type="tel" placeholder="Téléphone" value={telephone} onChange={(e) => setTelephone(e.target.value)} required />
             <input type="text" placeholder="Adresse" value={adresse} onChange={(e) => setAdresse(e.target.value)} required />
             <input type="text" placeholder="CIN" value={cin} onChange={(e) => setCin(e.target.value)} required />
-            <input type="password" placeholder="Mot de passe" value={password} onChange={(e) => setPassword(e.target.value)} required />
+
+            <div className="password-fields">
+              <input type="password" placeholder="Mot de passe" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <input type="password" placeholder="Confirmer le mot de passe" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+            </div>
+
             <small className="password-hint">8 caractères min. avec majuscule, minuscule, chiffre, symbole.</small>
-            <input type="password" placeholder="Confirmer le mot de passe" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
 
             <select value={role} onChange={(e) => setRole(e.target.value)} required>
               <option value="">-- Sélectionnez un rôle --</option>
@@ -139,10 +148,9 @@ const Signin = () => {
               <option value="Hospital">Hospital</option>
               <option value="Cabinet">Cabinet</option>
               <option value="Ambulancier">Ambulancier</option>
-              <option value="Administrateur">Administrateur</option>
             </select>
 
-            <button type="submit" disabled={loading}>
+            <button type="submit" className="submit-btn" disabled={loading}>
               {loading ? 'Création...' : 'Créer un compte'}
             </button>
           </form>

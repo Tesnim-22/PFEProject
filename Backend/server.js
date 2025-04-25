@@ -4,8 +4,10 @@ const bcrypt = require('bcrypt');
 const cors = require('cors');
 const app = express();
 const nodemailer = require('nodemailer');
+const appointmentRoutes = require('./routes/appointmentRoutes');
 
 // Middleware
+
 app.use(express.json());
 app.use(cors());
 const multer = require('multer');
@@ -114,6 +116,7 @@ app.post('/signup', async(req, res) => {
 });
 
 // Login
+// Login
 app.post('/login', async(req, res) => {
     const { email, password } = req.body;
 
@@ -121,19 +124,24 @@ app.post('/login', async(req, res) => {
         return res.status(400).json({ message: "Champs manquants." });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) return res.status(400).json({ message: "Utilisateur non trouvé." });
+    try {
+        const user = await User.findOne({ email: email.toLowerCase() });
+        if (!user) return res.status(400).json({ message: "Utilisateur non trouvé." });
 
-    const isValid = await bcrypt.compare(password, user.password);
-    if (!isValid) return res.status(400).json({ message: "Mot de passe incorrect." });
+        const isValid = await bcrypt.compare(password, user.password);
+        if (!isValid) return res.status(400).json({ message: "Mot de passe incorrect." });
 
-    // ✅ si tout est bon
-    res.status(200).json({
-        message: "Connexion réussie !",
-        role: user.roles[0],
-        userId: user._id,
-        profileCompleted: user.profileCompleted
-    });
+        res.status(200).json({
+            message: "Connexion réussie !",
+            userId: user._id,
+            email: user.email, // ✅ AJOUTÉ ICI
+            role: user.roles[0], // ✅ Attention à user.roles
+            profileCompleted: user.profileCompleted
+        });
+    } catch (error) {
+        console.error("❌ Erreur login :", error);
+        res.status(500).json({ message: "Erreur serveur." });
+    }
 });
 
 
@@ -456,6 +464,90 @@ app.put('/admin/update-password', async(req, res) => {
         res.status(500).json({ message: "Erreur serveur." });
     }
 });
+
+
+// ➕ Route pour le tableau de bord Admin
+app.get('/admin/overview', async(req, res) => {
+    try {
+        const totalUsers = await User.countDocuments();
+        const validatedUsers = await User.countDocuments({ profileCompleted: true });
+        const docsToValidate = await User.countDocuments({ profileCompleted: false });
+
+        const recentUsers = await User.find()
+            .sort({ createdAt: -1 }) // ou _id si pas de timestamp
+            .limit(5)
+            .select('nom prenom email roles');
+
+        res.status(200).json({
+            totalUsers,
+            validatedUsers,
+            docsToValidate,
+            recentUsers
+        });
+    } catch (error) {
+        console.error("❌ Erreur /admin/overview :", error);
+        res.status(500).json({ message: "Erreur serveur lors de la récupération du tableau de bord." });
+    }
+});
+
+
+// ✅ Route pour récupérer les données d’un utilisateur par ID (profil)
+app.get('/users/:id', async(req, res) => {
+    try {
+        const user = await User.findById(req.params.id).select('-password');
+        if (!user) {
+            return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+        }
+        res.status(200).json(user);
+    } catch (error) {
+        console.error("❌ Erreur récupération utilisateur :", error);
+        res.status(500).json({ message: "Erreur serveur lors de la récupération de l'utilisateur." });
+    }
+});
+
+
+// 📩 Route de contact avec envoi d'email réel
+app.post('/contact', async(req, res) => {
+    const { name, email, message } = req.body;
+
+    if (!name || !email || !message) {
+        return res.status(400).json({ message: 'Tous les champs sont requis.' });
+    }
+
+    try {
+        // Transporteur nodemailer (utilise Gmail ici)
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: 'patientpath2@gmail.com',
+                pass: 'ppuu fmjc lzmz ntea' // ⚠️ Utilise un mot de passe d'application (voir note ci-dessous)
+            }
+        });
+
+        // Options du mail
+        const mailOptions = {
+            from: email,
+            to: 'patientpath2@gmail.com',
+            subject: `📥 Nouveau message de ${name}`,
+            text: `Nom: ${name}\nEmail: ${email}\n\nMessage:\n${message}`
+        };
+
+        // Envoi du mail
+        await transporter.sendMail(mailOptions);
+        res.status(200).json({ message: '✅ Message envoyé avec succès !' });
+
+    } catch (error) {
+        console.error('❌ Erreur envoi email :', error); // AJOUTER
+        res.status(500).json({ message: "Erreur lors de l'envoi du message.", error: error.message });
+    }
+
+});
+
+
+app.use('/api/appointments', appointmentRoutes);
+
+
+
 
 // Lancer le serveur
 app.listen(5001, () => {
