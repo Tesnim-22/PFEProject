@@ -1,12 +1,14 @@
 const mongoose = require('mongoose');
 
 const appointmentSchema = new mongoose.Schema({
-    patientEmail: { type: String, required: true },
-    doctorId: { type: String, required: true },
-    date: { type: String, required: true },
-    time: { type: String, required: true },
+    doctorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    patientId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    date: { type: Date, required: true },
     reason: { type: String },
-    status: { type: String, default: 'en attente' }
-});
+    status: { type: String, enum: ['pending', 'confirmed', 'cancelled'], default: 'pending' }
+}, { timestamps: true });
 
-module.exports = mongoose.model('Appointment', appointmentSchema);
+// 🔥 Correction critique ici
+const Appointment = mongoose.models.Appointment || mongoose.model('Appointment', appointmentSchema);
+
+module.exports = Appointment;

@@ -1,4 +1,3 @@
-// ✅ FRONTEND : CabinetSignupForm.jsx
 import React, { useEffect, useState } from 'react';
 import '../styles/CabinetSignupForm.css';
 
@@ -9,25 +8,23 @@ const CabinetSignupForm = () => {
   const [search, setSearch] = useState('');
   const [filteredDoctors, setFilteredDoctors] = useState([]);
   const [selectedDoctor, setSelectedDoctor] = useState('');
+  const [cabinetAddress, setCabinetAddress] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
-        const res = await fetch('http://localhost:5001/admin/users');
-        const data = await res.json();
-        console.log("📥 Médecins reçus du backend :", data);
-        setDoctors(data);
+        const res = await fetch('http://localhost:5001/api/valid-doctors');
 
-        const uniqueSpecialties = [...new Set(data.map(doc => doc.specialty.trim()))];
-        console.log("✅ Spécialités extraites :", uniqueSpecialties);
+        const data = await res.json();
+        setDoctors(data);
+        const uniqueSpecialties = [...new Set(data.map(doc => doc.specialty?.trim()).filter(Boolean))];
         setSpecialties(uniqueSpecialties);
       } catch (err) {
         console.error('Erreur récupération médecins:', err);
       }
     };
-
     fetchDoctors();
   }, []);
 
@@ -46,7 +43,7 @@ const CabinetSignupForm = () => {
     e.preventDefault();
     const email = localStorage.getItem('email');
 
-    if (!email || !selectedDoctor || !selectedSpecialty) {
+    if (!email || !selectedDoctor || !selectedSpecialty || !cabinetAddress) {
       setMessage('❌ Veuillez remplir tous les champs.');
       return;
     }
@@ -59,21 +56,21 @@ const CabinetSignupForm = () => {
         body: JSON.stringify({
           email,
           linkedDoctorId: selectedDoctor,
-          specialty: selectedSpecialty
+          specialty: selectedSpecialty,
+          adresse: cabinetAddress
         })
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
 
-      localStorage.setItem('profileCompleted', 'true');
-      setMessage('✅ Cabinet lié au médecin !');
+      setMessage('✅ Cabinet lié au médecin avec succès !');
       setTimeout(() => {
         window.location.href = '/cabinet-dashboard';
-      }, 1000);
+      }, 1200);
     } catch (err) {
       console.error(err);
-      setMessage('❌ Erreur serveur.');
+      setMessage(err.message || '❌ Erreur serveur.');
     } finally {
       setLoading(false);
     }
@@ -84,13 +81,11 @@ const CabinetSignupForm = () => {
       <div className="cabinet-form-card">
         <h2>Inscription Cabinet</h2>
         <p>Associez votre cabinet à un médecin existant</p>
-
         {message && (
           <div className={`message ${message.includes('✅') ? 'success' : 'error'}`}>
             {message}
           </div>
         )}
-
         <form onSubmit={handleSubmit}>
           <label>Spécialité :
             <select
@@ -105,33 +100,39 @@ const CabinetSignupForm = () => {
             </select>
           </label>
 
-          {selectedSpecialty && (
-            <>
-              <label>Rechercher un médecin :
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Nom, prénom ou email"
-                />
-              </label>
+          <label>Rechercher un médecin :
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Nom, prénom ou email"
+            />
+          </label>
 
-              <label>Médecin à associer :
-                <select
-                  value={selectedDoctor}
-                  onChange={(e) => setSelectedDoctor(e.target.value)}
-                  required
-                >
-                  <option value="">-- Sélectionner un médecin --</option>
-                  {filteredDoctors.map((doc) => (
-                    <option key={doc._id} value={doc._id}>
-                      {doc.prenom} {doc.nom} - {doc.email}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </>
-          )}
+          <label>Médecin à associer :
+            <select
+              value={selectedDoctor}
+              onChange={(e) => setSelectedDoctor(e.target.value)}
+              required
+            >
+              <option value="">-- Sélectionner un médecin --</option>
+              {filteredDoctors.map((doc) => (
+                <option key={doc._id} value={doc._id}>
+                  {doc.prenom} {doc.nom} - {doc.email}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>Adresse du cabinet :
+            <input
+              type="text"
+              value={cabinetAddress}
+              onChange={(e) => setCabinetAddress(e.target.value)}
+              placeholder="Adresse du cabinet"
+              required
+            />
+          </label>
 
           <button type="submit" disabled={loading}>
             {loading ? 'Traitement...' : 'Valider'}

@@ -1,18 +1,31 @@
-const mongoose = require('mongoose');
 const express = require('express');
-const bcrypt = require('bcrypt');
-const cors = require('cors');
 const app = express();
+const cors = require('cors');
+const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
-const appointmentRoutes = require('./routes/appointmentRoutes');
+const crypto = require('crypto');
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
+
+// ❗ Correction ici
+const Appointment = require('./models/Appointment');
+const Notification = require('./models/Notification');
+
+// middlewares
+app.use(cors());
+app.use(express.json());
+
+
+
+
+// 🟰 Tu pourras ensuite continuer ici avec ta logique MongoDB, schemas, etc.
+
 
 // Middleware
 
-app.use(express.json());
-app.use(cors());
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+
 
 // Configurer le dossier d’upload
 const uploadFolder = path.join(__dirname, 'uploads');
@@ -51,11 +64,18 @@ const userSchema = new mongoose.Schema({
     password: { type: String, required: true },
     roles: [{ type: String, required: true }],
     profileCompleted: { type: Boolean, default: false },
+    isValidated: { type: Boolean, default: false },
     specialty: { type: String },
     diploma: { type: String },
     photo: { type: String },
-    linkedDoctorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } // ✅ ajouté ici
+    linkedDoctorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+
+    // 🔥 ➡️ AJOUTE ICI et BIEN fermer l'accolade !
+    resetPasswordToken: { type: String },
+    resetPasswordExpires: { type: Date }
 });
+
+
 
 
 
@@ -65,7 +85,7 @@ const notificationSchema = new mongoose.Schema({
     message: { type: String, required: true },
     date: { type: Date, default: Date.now }
 });
-const Notification = mongoose.model('Notification', notificationSchema);
+
 
 // Routes
 // Sign Up
@@ -110,12 +130,11 @@ app.post('/signup', async(req, res) => {
         await newUser.save();
         res.status(201).json({ message: 'Utilisateur inscrit avec succès !' });
     } catch (error) {
-        console.error('❌ Erreur d’enregistrement :', error);
+        console.error('❌ Erreur d\’enregistrement :', error);
         res.status(500).json({ message: 'Erreur serveur.' });
     }
 });
 
-// Login
 // Login
 app.post('/login', async(req, res) => {
     const { email, password } = req.body;
@@ -128,21 +147,119 @@ app.post('/login', async(req, res) => {
         const user = await User.findOne({ email: email.toLowerCase() });
         if (!user) return res.status(400).json({ message: "Utilisateur non trouvé." });
 
-        const isValid = await bcrypt.compare(password, user.password);
-        if (!isValid) return res.status(400).json({ message: "Mot de passe incorrect." });
+        const isValidPassword = await bcrypt.compare(password, user.password);
+        if (!isValidPassword) return res.status(400).json({ message: "Mot de passe incorrect." });
 
+        console.log('🔎 Utilisateur trouvé :', user);
+
+        // 👉 Récupère le premier rôle en minuscule
+        const userRole = (user.roles && user.roles.length > 0) ? user.roles[0].toLowerCase().trim() : '';
+
+        // ✅ Nouvelle règle pour patient + admin
+        if (userRole !== 'admin' && userRole !== 'patient' && !user.isValidated) {
+            return res.status(403).json({ message: "Votre compte est en attente de validation par l'administrateur." });
+        }
+
+        // ✅ Connexion acceptée
         res.status(200).json({
             message: "Connexion réussie !",
             userId: user._id,
-            email: user.email, // ✅ AJOUTÉ ICI
-            role: user.roles[0], // ✅ Attention à user.roles
-            profileCompleted: user.profileCompleted
+            email: user.email,
+            role: user.roles[0],
+            profileCompleted: user.profileCompleted,
+            isValidated: user.isValidated
         });
+
     } catch (error) {
         console.error("❌ Erreur login :", error);
         res.status(500).json({ message: "Erreur serveur." });
     }
 });
+
+
+
+
+// 🔒 Forgot Password - Générer un token et envoyer email
+app.post('/forgot-password', async(req, res) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email requis." });
+
+    try {
+        const user = await User.findOne({ email: email.toLowerCase() });
+        if (!user) return res.status(400).json({ message: "Utilisateur non trouvé." });
+
+        const token = crypto.randomBytes(20).toString('hex');
+        user.resetPasswordToken = token;
+        user.resetPasswordExpires = Date.now() + 3600000; // 1 heure
+        await user.save();
+        console.log('✅ Token généré et sauvegardé :', token);
+
+
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: 'patientpath2@gmail.com',
+                pass: 'ppuu fmjc lzmz ntea'
+            }
+        });
+
+        const mailOptions = {
+            from: 'patientpath2@gmail.com',
+            to: user.email,
+            subject: '🔐 Réinitialisation de mot de passe',
+            text: `
+Bonjour ${user.nom},
+
+Vous avez demandé à réinitialiser votre mot de passe.
+
+Cliquez ici pour réinitialiser :
+http://localhost:5173/reset-password/${token}
+
+Si vous n'avez pas fait cette demande, ignorez cet email.
+`
+        };
+
+        await transporter.sendMail(mailOptions);
+        res.status(200).json({ message: "📧 Email de réinitialisation envoyé !" });
+    } catch (error) {
+        console.error('❌ Erreur forgot-password :', error);
+        res.status(500).json({ message: "Erreur serveur." });
+    }
+});
+
+// 🔒 Reset Password - Réinitialiser avec token
+app.post('/reset-password/:token', async(req, res) => {
+    const { token } = req.params;
+    const { newPassword } = req.body;
+
+    try {
+        console.log('📩 Token reçu du frontend :', token);
+
+        const user = await User.findOne({
+            resetPasswordToken: token,
+            resetPasswordExpires: { $gt: Date.now() } // ➡️ Vérifie que expire > maintenant
+        });
+
+        console.log('👤 Utilisateur trouvé ?', user);
+
+        if (!user) {
+            return res.status(400).json({ message: "Token invalide ou expiré." });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        user.password = hashedPassword;
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        await user.save();
+
+        res.status(200).json({ message: "✅ Mot de passe réinitialisé avec succès !" });
+    } catch (error) {
+        console.error('❌ Erreur reset-password :', error);
+        res.status(500).json({ message: "Erreur serveur." });
+    }
+});
+
+
 
 
 // Patient Profile Update
@@ -210,19 +327,19 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Cabinet - Complément d'inscription
 app.post('/cabinet-info', async(req, res) => {
-    const { email, linkedDoctorId, specialty } = req.body;
+    console.log("🛠️ Données reçues côté backend :", req.body);
 
-    if (!email || !linkedDoctorId || !specialty) {
+    const { email, linkedDoctorId, specialty, adresse } = req.body;
+
+    if (!email || !linkedDoctorId || !specialty || !adresse) {
+        console.log("❌ Champ manquant :", { email, linkedDoctorId, specialty, adresse });
         return res.status(400).json({ message: 'Tous les champs sont requis.' });
     }
 
     try {
-        // Trouver le cabinet à mettre à jour
         const cabinet = await User.findOne({ email: email.toLowerCase() });
-
         if (!cabinet) return res.status(404).json({ message: "Cabinet introuvable." });
 
-        // Vérifier que le médecin existe
         const doctor = await User.findById(linkedDoctorId);
         if (!doctor || !doctor.roles.includes('Doctor')) {
             return res.status(404).json({ message: "Médecin invalide ou introuvable." });
@@ -230,6 +347,7 @@ app.post('/cabinet-info', async(req, res) => {
 
         cabinet.linkedDoctorId = doctor._id;
         cabinet.specialty = specialty;
+        cabinet.adresse = adresse;
         cabinet.profileCompleted = true;
 
         await cabinet.save();
@@ -241,20 +359,7 @@ app.post('/cabinet-info', async(req, res) => {
     }
 });
 
-// Récupération des médecins valides pour l’inscription du cabinet
-app.get('/admin/users', async(req, res) => {
-    try {
-        const doctors = await User.find({
-            roles: { $in: ['Doctor'] },
-            specialty: { $exists: true, $ne: '' }
-        }).select('nom prenom email specialty _id');
 
-        res.status(200).json(doctors);
-    } catch (error) {
-        console.error("❌ Erreur récupération des médecins :", error);
-        res.status(500).json({ message: "Erreur serveur lors de la récupération des médecins." });
-    }
-});
 
 // Laboratoire - Complément d'inscription
 app.post('/labs-info', upload.single('workCard'), async(req, res) => {
@@ -359,16 +464,6 @@ app.post('/ambulancier-info', upload.single('diploma'), async(req, res) => {
     }
 });
 
-app.get('/users', async(req, res) => {
-    try {
-        const allUsers = await User.find().select('nom prenom email roles _id');
-        res.status(200).json(allUsers);
-    } catch (error) {
-        console.error("❌ Erreur récupération de tous les utilisateurs :", error);
-        res.status(500).json({ message: "Erreur serveur lors de la récupération des utilisateurs." });
-    }
-});
-
 
 app.get('/admin/notifications', async(req, res) => {
     try {
@@ -414,54 +509,105 @@ app.delete('/admin/users/:id', async(req, res) => {
     }
 });
 
+
+app.put('/admin/validate-user/:id', async(req, res) => {
+    const { id } = req.params;
+    try {
+        const updatedUser = await User.findByIdAndUpdate(
+            id, { profileCompleted: true, isValidated: true }, // 🔥 ajouter isValidated
+            { new: true }
+        );
+
+        if (!updatedUser) {
+            return res.status(404).json({ message: "Utilisateur introuvable." });
+        }
+
+        res.status(200).json({ message: "✅ Utilisateur validé avec succès.", user: updatedUser });
+    } catch (error) {
+        console.error('❌ Erreur validation utilisateur:', error);
+        res.status(500).json({ message: "Erreur serveur lors de la validation." });
+    }
+});
+
+
+
+// ✅ Route pour modifier le rôle d'un utilisateur
 app.put('/admin/users/:id', async(req, res) => {
     const { id } = req.params;
     const { role } = req.body;
 
     if (!role) {
-        return res.status(400).json({ message: "Le rôle est requis." });
+        return res.status(400).json({ message: "Rôle requis." });
     }
 
     try {
-        const updated = await User.findByIdAndUpdate(
+        const updatedUser = await User.findByIdAndUpdate(
             id, { roles: [role] }, { new: true }
         );
 
-        if (!updated) {
-            return res.status(404).json({ message: "Utilisateur non trouvé." });
+        if (!updatedUser) {
+            return res.status(404).json({ message: "Utilisateur introuvable." });
         }
 
-        res.status(200).json({ message: "✅ Rôle mis à jour avec succès.", user: updated });
+        res.status(200).json({ message: "✅ Rôle mis à jour avec succès.", user: updatedUser });
     } catch (error) {
-        console.error("❌ Erreur modification rôle :", error);
-        res.status(500).json({ message: "Erreur serveur lors de la mise à jour du rôle." });
+        console.error("❌ Erreur modification rôle utilisateur :", error);
+        res.status(500).json({ message: "Erreur serveur lors de la modification du rôle." });
     }
 });
 
 
-// ⚠️ Route temporaire à utiliser une seule fois puis supprimer
-app.put('/admin/update-password', async(req, res) => {
-    const { email, newPassword } = req.body;
-
-    if (!email || !newPassword) {
-        return res.status(400).json({ message: 'Email et nouveau mot de passe requis.' });
-    }
-
+// ➡️ À utiliser UNE SEULE FOIS pour créer un nouvel admin
+app.post('/create-admin', async(req, res) => {
     try {
-        const user = await User.findOne({ email: email.toLowerCase() });
+        const { nom, prenom, dateNaissance, email, telephone, adresse, cin, password } = req.body;
 
-        if (!user) {
-            return res.status(404).json({ message: "Admin introuvable." });
+        if (!nom || !prenom || !dateNaissance || !email || !telephone || !adresse || !cin || !password) {
+            return res.status(400).json({ message: 'Tous les champs sont obligatoires.' });
         }
 
-        const hashed = await bcrypt.hash(newPassword, 10);
-        user.password = hashed;
-        await user.save();
+        // Vérifie s'il existe déjà
+        const existingUser = await User.findOne({ email: email.toLowerCase() });
+        if (existingUser) {
+            return res.status(400).json({ message: 'Un utilisateur avec cet email existe déjà.' });
+        }
 
-        res.status(200).json({ message: "✅ Mot de passe admin mis à jour avec succès !" });
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const newAdmin = new User({
+            nom,
+            prenom,
+            dateNaissance,
+            email: email.toLowerCase(),
+            telephone,
+            adresse,
+            cin,
+            password: hashedPassword,
+            roles: ['admin'],
+            profileCompleted: true,
+            isValidated: true
+        });
+
+        await newAdmin.save();
+        res.status(201).json({ message: '✅ Admin créé avec succès !' });
     } catch (error) {
-        console.error("❌ Erreur lors de la mise à jour du mot de passe :", error);
-        res.status(500).json({ message: "Erreur serveur." });
+        console.error('❌ Erreur création admin:', error);
+        res.status(500).json({ message: 'Erreur serveur lors de la création de l\'admin.' });
+    }
+});
+
+// ✅ Route pour récupérer les données d'un utilisateur spécifique par ID
+app.get('/api/users/:id', async(req, res) => {
+    const { id } = req.params;
+
+    try {
+        const user = await User.findById(id).select('-password'); // ne renvoie pas le mot de passe pour sécurité
+        if (!user) return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+
+        res.status(200).json(user);
+    } catch (error) {
+        console.error('❌ Erreur récupération utilisateur:', error);
+        res.status(500).json({ message: 'Erreur serveur.' });
     }
 });
 
@@ -492,18 +638,17 @@ app.get('/admin/overview', async(req, res) => {
 
 
 // ✅ Route pour récupérer les données d’un utilisateur par ID (profil)
-app.get('/users/:id', async(req, res) => {
+app.get('/users', async(req, res) => {
     try {
-        const user = await User.findById(req.params.id).select('-password');
-        if (!user) {
-            return res.status(404).json({ message: 'Utilisateur non trouvé.' });
-        }
-        res.status(200).json(user);
+        const allUsers = await User.find().select('nom prenom email roles _id diploma photo adresse profileCompleted isValidated');
+        res.status(200).json(allUsers);
     } catch (error) {
-        console.error("❌ Erreur récupération utilisateur :", error);
-        res.status(500).json({ message: "Erreur serveur lors de la récupération de l'utilisateur." });
+        console.error("❌ Erreur récupération de tous les utilisateurs :", error);
+        res.status(500).json({ message: "Erreur serveur lors de la récupération des utilisateurs." });
     }
 });
+
+
 
 
 // 📩 Route de contact avec envoi d'email réel
@@ -544,8 +689,140 @@ app.post('/contact', async(req, res) => {
 });
 
 
-app.use('/api/appointments', appointmentRoutes);
 
+
+
+
+// 🔎 Récupère les médecins validés avec spécialité définie
+app.get('/api/valid-doctors', async(req, res) => {
+    try {
+        const doctors = await User.find({
+            roles: { $in: ['Doctor', 'doctor'] },
+            isValidated: true,
+            profileCompleted: true,
+            specialty: { $exists: true, $ne: '' }
+        }).select('_id nom prenom email specialty');
+
+        res.status(200).json(doctors);
+    } catch (error) {
+        console.error("❌ Erreur récupération médecins valides :", error);
+        res.status(500).json({ message: "Erreur serveur." });
+    }
+});
+
+
+// 🩺 Médecins validés et complets (pour les rendez-vous)
+app.get('/api/medecins-valides', async(req, res) => {
+    try {
+        const doctors = await User.find({
+            roles: { $in: ['cabinet', 'hopital', 'Doctor', 'Hospital'] },
+            isValidated: true,
+            profileCompleted: true
+        }).select('_id nom prenom email specialty roles');
+
+        res.status(200).json(doctors);
+    } catch (error) {
+        console.error("❌ Erreur récupération médecins :", error);
+        res.status(500).json({ message: "Erreur serveur." });
+    }
+});
+
+
+app.get('/api/doctor/appointments/:doctorId', async(req, res) => {
+    try {
+        const { doctorId } = req.params;
+
+        const appointments = await Appointment.find({ doctorId })
+            .populate('patientId', 'nom prenom email telephone');
+
+        const formatted = appointments.map(apt => ({
+            _id: apt._id,
+            patient: apt.patientId, // les infos du patient
+            date: apt.date,
+            status: apt.status,
+            reason: apt.reason
+        }));
+
+        res.status(200).json(formatted);
+    } catch (error) {
+        console.error('❌ Erreur récupération rendez-vous médecin :', error);
+        res.status(500).json({ message: 'Erreur serveur' });
+    }
+});
+
+
+app.put('/api/appointments/:appointmentId/status', async(req, res) => {
+    try {
+        const { appointmentId } = req.params;
+        const { status } = req.body;
+
+        const appointment = await Appointment.findByIdAndUpdate(
+            appointmentId, { status }, { new: true }
+        );
+
+        if (!appointment) {
+            return res.status(404).json({ message: "Rendez-vous non trouvé." });
+        }
+
+        // Notification pour le patient si confirmé
+        if (status === 'confirmed') {
+            await Notification.create({
+                userId: appointment.patientId, // 🧠 Assure-toi que `patientId` est bien dans ton modèle `Appointment`
+                message: `Votre rendez-vous du ${new Date(appointment.date).toLocaleString('fr-FR')} a été confirmé.`
+            });
+        }
+
+        res.status(200).json(appointment);
+    } catch (error) {
+        console.error("❌ Erreur maj statut :", error);
+        res.status(500).json({ message: "Erreur serveur" });
+    }
+});
+
+
+
+
+
+
+
+
+
+app.get('/api/notifications/:userId', async(req, res) => {
+    try {
+        const { userId } = req.params;
+        const notifications = await Notification.find({ userId }).sort({ createdAt: -1 });
+        res.status(200).json(notifications);
+    } catch (error) {
+        console.error("❌ Erreur notifications :", error);
+        res.status(500).json({ message: "Erreur serveur" });
+    }
+});
+
+
+// 🆕 Route pour créer un rendez-vous patient
+app.post('/api/appointments', async(req, res) => {
+    try {
+        const { doctorId, patientId, date, reason } = req.body;
+
+        if (!doctorId || !patientId || !date) {
+            return res.status(400).json({ message: "Champs obligatoires manquants." });
+        }
+
+        const appointment = new Appointment({
+            doctorId,
+            patientId,
+            date,
+            reason
+        });
+
+        await appointment.save();
+
+        res.status(201).json({ message: "✅ Rendez-vous enregistré avec succès !" });
+    } catch (error) {
+        console.error("❌ Erreur création rendez-vous :", error);
+        res.status(500).json({ message: "Erreur serveur lors de la création du rendez-vous." });
+    }
+});
 
 
 

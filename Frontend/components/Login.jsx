@@ -22,44 +22,51 @@ const Login = () => {
     }
 
     try {
-      const response = await fetch("http://localhost:5001/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('http://localhost:5001/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: email.toLowerCase(),
-          password
-        })
+          password,
+        }),
       });
 
       const data = await response.json();
-      console.log("✅ Données reçues au login :", data);
-
+      console.log('✅ Données reçues au login :', data);
 
       if (response.ok) {
-        // ✅ Enregistrement complet des données utilisateur
+        const role = (data.role || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+        // ➡️ Exception spéciale : seulement bloquer autres rôles si non validé
+        if (role !== 'admin' && role !== 'patient' && data.isValidated === false) {
+          setMessage('Votre compte est en attente de validation par l\'administrateur.');
+          setLoading(false);
+          return;
+        }
+
+        // ➡️ Connexion acceptée
         localStorage.setItem('userRole', data.role);
         localStorage.setItem('userId', data.userId);
-        localStorage.setItem('userEmail', data.email); // ✅ ESSENTIEL
+        localStorage.setItem('email', data.email);
         localStorage.setItem('loggedIn', 'true');
-
-        const role = (data.role || "").trim().toLowerCase();
-        const normalizedRole = role.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        localStorage.setItem('profileCompleted', data.profileCompleted); // 👈 ajoute cette ligne
+        
 
         if (!data.profileCompleted) {
-          switch (normalizedRole) {
+          switch (role) {
             case 'patient': navigate('/signup/patient'); break;
             case 'doctor': navigate('/signup/doctor'); break;
-            case 'labs':
-            case 'laboratoire': navigate('/signup/labs'); break;
+            case 'laboratoire':
+            case 'labs': navigate('/signup/labs'); break;
             case 'hospital':
             case 'hopital': navigate('/signup/hospital'); break;
             case 'cabinet': navigate('/signup/cabinet'); break;
             case 'ambulancier': navigate('/signup/ambulancier'); break;
             case 'admin': navigate('/signup/admin'); break;
-            default: setMessage("Rôle non reconnu pour la redirection.");
+            default: setMessage('Rôle non reconnu pour la redirection.');
           }
         } else {
-          switch (normalizedRole) {
+          switch (role) {
             case 'patient': navigate('/patient-dashboard'); break;
             case 'doctor': navigate('/doctor-dashboard'); break;
             case 'laboratoire':
@@ -69,7 +76,7 @@ const Login = () => {
             case 'hospital':
             case 'hopital': navigate('/hospital-dashboard'); break;
             case 'admin': navigate('/dashboard-admin'); break;
-            default: setMessage("Rôle non reconnu pour la redirection.");
+            default: setMessage('Rôle non reconnu pour la redirection.');
           }
         }
       } else {
@@ -112,6 +119,9 @@ const Login = () => {
             {loading ? 'Connexion...' : 'Se connecter'}
           </button>
         </form>
+        <div className="signin-link">
+          <Link to="/forgot-password">Mot de passe oublié ?</Link>
+        </div>
         <div className="signin-link">
           Pas encore de compte ? <Link to="/signin">Créer un compte</Link>
         </div>

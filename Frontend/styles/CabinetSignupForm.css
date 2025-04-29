@@ -1,9 +1,24 @@
+:root {
+    --primary-bg: #fdfaf7;
+    --card-bg: #ffffff;
+    --accent: #7a5c58;
+    /* Marron doux */
+    --accent-hover: #5c4036;
+    --input-border: #d3c5be;
+    --input-focus: #b49b8f;
+    --success: #2e7d32;
+    --error: #c62828;
+    --text-dark: #3a2f2d;
+    --text-muted: #7b6f6a;
+    --shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+
 .cabinet-form-wrapper {
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 90vh;
-    background: linear-gradient(135deg, #f0f8f7, #fefefe);
+    background: linear-gradient(135deg, #f9f4f0, #fefefe);
     animation: fadeIn 0.5s ease-in-out;
 }
 
@@ -19,63 +34,81 @@
 }
 
 .cabinet-form-card {
-    background: #fff;
-    padding: 30px;
-    border-radius: 12px;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    background: var(--card-bg);
+    padding: 35px;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
     width: 100%;
-    max-width: 450px;
+    max-width: 500px;
     font-family: 'Segoe UI', sans-serif;
     text-align: center;
 }
 
 .cabinet-form-card h2 {
-    color: #0e746b;
+    color: var(--accent);
+    font-size: 1.8rem;
     margin-bottom: 10px;
 }
 
 .cabinet-form-card p {
-    font-size: 0.95rem;
-    color: #555;
-    margin-bottom: 20px;
+    font-size: 1rem;
+    color: var(--text-muted);
+    margin-bottom: 24px;
 }
 
 .cabinet-form-card form {
     display: flex;
     flex-direction: column;
     gap: 20px;
+    text-align: left;
 }
 
+.cabinet-form-card label {
+    color: var(--text-dark);
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.cabinet-form-card input,
 .cabinet-form-card select {
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
+    padding: 12px;
+    border: 1px solid var(--input-border);
+    border-radius: 8px;
     font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.cabinet-form-card input:focus,
+.cabinet-form-card select:focus {
+    border-color: var(--input-focus);
+    outline: none;
 }
 
 .cabinet-form-card button {
-    padding: 12px;
-    background-color: #0e746b;
+    padding: 14px;
+    background-color: var(--accent);
     color: white;
     font-size: 1rem;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
     transition: background-color 0.3s ease;
 }
 
 .cabinet-form-card button:hover {
-    background-color: #09514a;
+    background-color: var(--accent-hover);
 }
 
 .message {
     font-weight: 500;
+    margin-bottom: 10px;
+    text-align: center;
 }
 
 .success {
-    color: green;
+    color: var(--success);
 }
 
 .error {
-    color: red;
+    color: var(--error);
 }

@@ -6,14 +6,12 @@ const AdminDashboard = () => {
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [message, setMessage] = useState("");
-  const [activeSection, setActiveSection] = useState("");
+  const [activeSection, setActiveSection] = useState("dashboard");
   const [overview, setOverview] = useState(null);
 
-  // ✅ Protection de la page : vérifie si l'utilisateur est admin
   useEffect(() => {
     const role = localStorage.getItem("userRole");
     const isLoggedIn = localStorage.getItem("loggedIn");
-
     if (role?.toLowerCase() !== "admin" || isLoggedIn !== "true") {
       window.location.href = "/login";
     }
@@ -53,33 +51,57 @@ const AdminDashboard = () => {
   useEffect(() => {
     fetchUsers();
     fetchNotifications();
+    fetchOverview();
   }, []);
 
-  const updateUser = async (id, newRole) => {
-    await fetch(`http://localhost:5001/admin/users/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role: newRole }),
-    });
-    fetchUsers();
+  const updateUserRole = async (id, newRole) => {
+    try {
+      await fetch(`http://localhost:5001/admin/users/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: newRole }),
+      });
+      fetchUsers();
+    } catch (error) {
+      console.error("Erreur update role:", error);
+    }
   };
 
   const deleteUser = async (id) => {
-    await fetch(`http://localhost:5001/admin/users/${id}`, {
-      method: "DELETE",
-    });
-    fetchUsers();
+    try {
+      await fetch(`http://localhost:5001/admin/users/${id}`, {
+        method: "DELETE",
+      });
+      fetchUsers();
+    } catch (error) {
+      console.error("Erreur suppression utilisateur:", error);
+    }
+  };
+
+  const validateUser = async (id) => {
+    try {
+      await fetch(`http://localhost:5001/admin/validate-user/${id}`, {
+        method: "PUT",
+      });
+      fetchUsers();
+    } catch (error) {
+      console.error("Erreur validation utilisateur:", error);
+    }
   };
 
   const sendNotification = async () => {
     if (!message.trim()) return;
-    await fetch("http://localhost:5001/admin/notify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message }),
-    });
-    setMessage("");
-    fetchNotifications();
+    try {
+      await fetch("http://localhost:5001/admin/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      });
+      setMessage("");
+      fetchNotifications();
+    } catch (error) {
+      console.error("Erreur envoi notification:", error);
+    }
   };
 
   const filterUsers = (type) => {
@@ -99,186 +121,160 @@ const AdminDashboard = () => {
     setActiveSection("users");
   };
 
-  const handleSectionChange = (section) => {
-    setActiveSection(section);
-    if (section === "dashboard" && !overview) {
-      fetchOverview();
-    }
-  };
-
   return (
-    <div className="admin-dashboard-wrapper">
-      {/* SIDEBAR */}
+    <div className="admin-dashboard">
+      {/* Sidebar */}
       <aside className="sidebar">
-        <h2>🧑‍💼 Admin</h2>
-        <nav>
-          <ul>
-            <li>
-              <button onClick={() => handleSectionChange("dashboard")}>
-                Tableau de bord
-              </button>
-            </li>
-            <li>
-              <button onClick={() => handleSectionChange("users")}>
-                Utilisateurs
-              </button>
-            </li>
-            <li>
-              <button onClick={() => handleSectionChange("alerts")}>
-                Alertes
-              </button>
-            </li>
-          </ul>
-        </nav>
-
-        {/* Bouton retour */}
-        <div className="back-home">
-          <button onClick={() => handleSectionChange("dashboard")}>
-            ⬅️ Retour au tableau de bord
-          </button>
+        <div className="sidebar-header">
+          <h2>Admin Panel</h2>
         </div>
+        <nav className="sidebar-nav">
+          <button onClick={() => setActiveSection("dashboard")}>🏠 Dashboard</button>
+          <button onClick={() => setActiveSection("users")}>👥 Utilisateurs</button>
+          <button onClick={() => setActiveSection("alerts")}>📢 Alertes</button>
+        </nav>
       </aside>
 
-      {/* MAIN */}
-      <main className="admin-dashboard-main">
-        <div className="header">
-          <h2>Administrateur</h2>
-        </div>
+      {/* Main */}
+      <main className="main-content">
+        <header className="main-header">
+          <h1>Interface Administrateur</h1>
+        </header>
 
-        {activeSection === "dashboard" && overview && (
-          <div className="dashboard-content">
-            <div className="stat-card-container">
-              <div className="stat-card stat-blue" onClick={() => filterUsers("all")} style={{ cursor: "pointer" }}>
-                <div className="icon">👥</div>
-                <div>
-                  <h3>{overview.totalUsers}</h3>
-                  <p>Utilisateurs inscrits</p>
+        {/* Dynamic Sections */}
+        <section className="content">
+          {activeSection === "dashboard" && overview && (
+            <>
+              <div className="stats-grid">
+                <div className="stat-card blue" onClick={() => filterUsers("all")}>
+                  <div className="stat-icon">👥</div>
+                  <div className="stat-info">
+                    <h3>{overview.totalUsers}</h3>
+                    <p>Utilisateurs inscrits</p>
+                  </div>
+                </div>
+                <div className="stat-card green" onClick={() => filterUsers("validated")}>
+                  <div className="stat-icon">✅</div>
+                  <div className="stat-info">
+                    <h3>{overview.validatedUsers}</h3>
+                    <p>Comptes validés</p>
+                  </div>
+                </div>
+                <div className="stat-card red" onClick={() => filterUsers("pending")}>
+                  <div className="stat-icon">📄</div>
+                  <div className="stat-info">
+                    <h3>{overview.docsToValidate}</h3>
+                    <p>Profils à valider</p>
+                  </div>
                 </div>
               </div>
-              <div className="stat-card stat-green" onClick={() => filterUsers("validated")} style={{ cursor: "pointer" }}>
-                <div className="icon">✅</div>
-                <div>
-                  <h3>{overview.validatedUsers}</h3>
-                  <p>Comptes validés</p>
-                </div>
-              </div>
-              <div className="stat-card stat-red" onClick={() => filterUsers("pending")} style={{ cursor: "pointer" }}>
-                <div className="icon">📄</div>
-                <div>
-                  <h3>{overview.docsToValidate}</h3>
-                  <p>Profils à valider</p>
-                </div>
-              </div>
-            </div>
 
-            <div className="admin-section" style={{ marginTop: "30px" }}>
-              <h3>Derniers utilisateurs inscrits</h3>
+              <div className="recent-users">
+                <h2>Derniers Inscrits</h2>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Nom</th>
+                      <th>Email</th>
+                      <th>Rôle</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {overview.recentUsers.map((user, idx) => (
+                      <tr key={idx}>
+                        <td>{user.nom} {user.prenom}</td>
+                        <td>{user.email}</td>
+                        <td>{user.roles.join(", ")}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
+          {activeSection === "users" && (
+            <div className="users-section">
+              <h2>Gestion des Utilisateurs</h2>
               <table>
                 <thead>
                   <tr>
-                    <th>Nom</th>
                     <th>Email</th>
                     <th>Rôle</th>
+                    <th>Document</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {overview.recentUsers.map((user, idx) => (
-                    <tr key={idx}>
-                      <td>{user.nom} {user.prenom}</td>
+                  {filteredUsers.map((user) => (
+                    <tr key={user._id}>
                       <td>{user.email}</td>
-                      <td>{user.roles.join(", ")}</td>
+                      <td>
+                        <select
+                          value={user.roles[0]}
+                          onChange={(e) => updateUserRole(user._id, e.target.value)}
+                        >
+                          <option value="Patient">Patient</option>
+                          <option value="Doctor">Doctor</option>
+                          <option value="Labs">Labs</option>
+                          <option value="Hospital">Hospital</option>
+                          <option value="Cabinet">Cabinet</option>
+                          <option value="Ambulancier">Ambulancier</option>
+                          <option value="Admin">Admin</option>
+                        </select>
+                      </td>
+                      <td>
+                        {user.roles[0].toLowerCase() !== 'patient' && (user.diploma || user.photo) ? (
+                          <a
+                            href={`http://localhost:5001${user.diploma || user.photo}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Voir document
+                          </a>
+                        ) : (
+                          "Aucun document"
+                        )}
+                      </td>
+                      <td>
+  <div className="user-actions">
+    {!user.isValidated && (
+      <button className="validate" onClick={() => validateUser(user._id)}>Valider</button>
+    )}
+    <button className="delete" onClick={() => deleteUser(user._id)}>Supprimer</button>
+  </div>
+</td>
+
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </div>
-        )}
+          )}
 
-        {activeSection === "users" && (
-          <div className="admin-section" id="users">
-            <h3>Utilisateurs</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>Email</th>
-                  <th>Modification</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.map((user) => (
-                  <tr key={user._id}>
-                    <td>{user.email}</td>
-                    <td>
-                      <select
-                        value={user.roles[0]}
-                        onChange={(e) => updateUser(user._id, e.target.value)}
-                      >
-                        <option value="Patient">Patient</option>
-                        <option value="Doctor">Doctor</option>
-                        <option value="Labs">Labs</option>
-                        <option value="Hospital">Hospital</option>
-                        <option value="Cabinet">Cabinet</option>
-                        <option value="Ambulancier">Ambulancier</option>
-                        <option value="Admin">Admin</option>
-                      </select>
-                    </td>
-                    <td>
-                      <button className="delete-btn" onClick={() => deleteUser(user._id)}>
-                        Supprimer
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {activeSection === "alerts" && (
-          <div className="notifications-container" id="alerts">
-            <h3>📢 Envoyer une alerte</h3>
-            <div className="notifications-form">
-              <input
-                type="text"
-                placeholder="Écrire une alerte à envoyer..."
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-              />
-              <button onClick={sendNotification}>Envoyer</button>
+          {activeSection === "alerts" && (
+            <div className="alerts-section">
+              <h2>Envoyer une Notification</h2>
+              <div className="notification-form">
+                <input
+                  type="text"
+                  placeholder="Message..."
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                />
+                <button onClick={sendNotification}>Envoyer</button>
+              </div>
+              <div className="notification-history">
+                <h3>Historique</h3>
+                <ul>
+                  {notifications.map((notif, idx) => (
+                    <li key={idx}>{notif.message}</li>
+                  ))}
+                </ul>
+              </div>
             </div>
-
-            <div className="notification-history">
-              <h4>📜 Historique des notifications</h4>
-              <ul>
-                {notifications.map((n, index) => (
-                  <li key={index}>{n.message}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        )}
-
-{!activeSection && (
-  <div className="admin-welcome-box">
-    <div className="welcome-icon">📊</div>
-    <div className="welcome-content">
-      <h3>Bienvenue sur votre interface d'administration</h3>
-      <p>Vous pouvez ici :</p>
-      <ul>
-        <li>✔️ Gérer les comptes utilisateurs (validation, suppression, rôles...)</li>
-        <li>✔️ Envoyer des notifications ou des alertes ciblées</li>
-        <li>✔️ Suivre les statistiques globales d'inscription</li>
-        <li>✔️ Visualiser les derniers inscrits et leurs rôles</li>
-      </ul>
-      <p style={{ marginTop: '10px' }}>
-        Utilisez le menu à gauche pour accéder aux différentes fonctionnalités 👈
-      </p>
-    </div>
-  </div>
-)}
-
+          )}
+        </section>
       </main>
     </div>
   );

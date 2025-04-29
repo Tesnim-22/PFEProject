@@ -1,11 +1,6 @@
 import React from 'react';
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-  useLocation
-} from 'react-router-dom';
+import {BrowserRouter as Router,Routes, Route, Navigate, useLocation} from 'react-router-dom';
+
 
 import Navbar from '../components/Navbar';
 import Home from '../components/Home';
@@ -30,6 +25,10 @@ import LabsSignupForm from '../components/LabsSignupForm';
 import HospitalSignupForm from '../components/HospitalSignupForm';
 import AmbulancierSignupForm from '../components/AmbulancierSignupForm';
 import SignupRedirect from '../components/SignupRedirect';
+
+import ForgotPassword from "../components/ForgotPassword";
+import ResetPassword from "../components/ResetPassword";
+
 
 // 🔒 Route protégée
 const ProtectedRoute = ({ children }) => {
@@ -83,7 +82,8 @@ const AppWrapper = () => {
 
         {/* Dashboards sécurisés */}
         <Route path="/patient-dashboard" element={<ProtectedRoute><PatientDashboard /></ProtectedRoute>} />
-        <Route path="/doctor-dashboard" element={<ProtectedRoute><DoctorDashboard /></ProtectedRoute>} />
+        <Route path="/doctor-dashboard/*" element={<ProtectedRoute><DoctorDashboard /></ProtectedRoute>} />
+
         <Route path="/labs-dashboard" element={<ProtectedRoute><LabsDashboard /></ProtectedRoute>} />
         <Route path="/hospital-dashboard" element={<ProtectedRoute><HospitalDashboard /></ProtectedRoute>} />
         <Route path="/cabinet-dashboard" element={<ProtectedRoute><CabinetDashboard /></ProtectedRoute>} />
@@ -96,6 +96,19 @@ const AppWrapper = () => {
         <Route path="/ambulance/status" element={<ProtectedRoute><div>✅ Mise à jour du statut</div></ProtectedRoute>} />
         <Route path="/ambulance/reports" element={<ProtectedRoute><div>📄 Rapports</div></ProtectedRoute>} />
         <Route path="/ambulance/vehicle-info" element={<ProtectedRoute><div>🛠️ Infos véhicule</div></ProtectedRoute>} />
+        <Route path="/forgot-password" element={<ForgotPassword/>} />
+        <Route path="/reset-password/:token" element={<ResetPassword/>} />
+
+      
+
+
+
+        <Route path="/" element={<Home />} />
+        <Route path="/signup" element={<Signin />} />
+
+
+        
+
       </Routes>
     </>
   );

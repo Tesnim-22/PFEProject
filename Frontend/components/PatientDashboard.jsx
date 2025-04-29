@@ -1,62 +1,56 @@
 import React, { useState, useEffect } from 'react';
+import AppointmentForm from './AppointmentForm';
 import '../styles/PatientDashboard.css';
+import axios from 'axios';
+
+const API_BASE_URL = 'http://localhost:5001';
 
 const PatientDashboard = () => {
   const [activeSection, setActiveSection] = useState('profile');
   const [profile, setProfile] = useState({});
+  const [notifications, setNotifications] = useState([]);
   const [message, setMessage] = useState('');
   const [userId, setUserId] = useState('');
-  const [appointmentMessage, setAppointmentMessage] = useState('');
-  const [doctorId, setDoctorId] = useState('');
-  const [date, setDate] = useState('');
-  const [time, setTime] = useState('');
-  const [reason, setReason] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const storedId = localStorage.getItem('userId');
-    if (storedId) {
-      setUserId(storedId);
-      if (activeSection === 'profile') {
-        fetch(`http://localhost:5001/users/${storedId}`)
-          .then(res => res.json())
-          .then(data => setProfile(data))
-          .catch(() => setMessage("❌ Erreur de récupération du profil."));
-      }
-    } else {
+    if (!storedId) {
       setMessage("ID utilisateur non trouvé.");
-    }
-  }, [activeSection]);
-
-  const handleAppointmentSubmit = async (e) => {
-    e.preventDefault();
-    setAppointmentMessage('');
-    setLoading(true);
-    const patientEmail = localStorage.getItem('userEmail');
-    if (!patientEmail) {
-      setAppointmentMessage("❌ Email utilisateur introuvable.");
-      setLoading(false);
+      setIsLoading(false);
       return;
     }
 
+    setUserId(storedId);
+    fetchProfile(storedId);
+    fetchNotifications(storedId);
+  }, [activeSection]);
+
+  const fetchProfile = async (id) => {
     try {
-      const res = await fetch('http://localhost:5001/api/appointments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ patientEmail, doctorId, date, time, reason }),
-      });
-      const data = await res.json();
-      setLoading(false);
-      if (res.ok) {
-        setAppointmentMessage("✅ Rendez-vous créé !");
-        setDoctorId(''); setDate(''); setTime(''); setReason('');
-      } else {
-        setAppointmentMessage(data.message || "❌ Erreur lors de la demande.");
-      }
-    } catch {
-      setLoading(false);
-      setAppointmentMessage("❌ Erreur serveur.");
+      setIsLoading(true);
+      const res = await axios.get(`${API_BASE_URL}/api/users/${id}`);
+      setProfile(res.data);
+    } catch (error) {
+      setMessage("❌ Erreur récupération profil.");
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const fetchNotifications = async (id) => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/notifications/${id}`);
+
+      setNotifications(res.data);
+    } catch (error) {
+      console.error("❌ Erreur notifications:", error);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.clear();
+    window.location.href = '/login';
   };
 
   return (
@@ -66,50 +60,61 @@ const PatientDashboard = () => {
         <div className="sidebar-menu">
           <button className={activeSection === 'profile' ? 'active' : ''} onClick={() => setActiveSection('profile')}>👤 Profil</button>
           <button className={activeSection === 'appointment' ? 'active' : ''} onClick={() => setActiveSection('appointment')}>📅 Rendez-vous</button>
-          <button className={activeSection === 'help' ? 'active' : ''} onClick={() => setActiveSection('help')}>❓ Aide</button>
-          <button className={activeSection === 'settings' ? 'active' : ''} onClick={() => setActiveSection('settings')}>⚙️ Paramètres</button>
-          <button onClick={() => { localStorage.clear(); window.location.href = '/login'; }}>🚪 Déconnexion</button>
+          <button className={activeSection === 'notifications' ? 'active' : ''} onClick={() => setActiveSection('notifications')}>🔔 Notifications</button>
+          <button onClick={handleLogout}>🚪 Déconnexion</button>
         </div>
       </aside>
 
       <main className="dashboard">
-        {activeSection === 'profile' && (
+        {message && <div className="alert">{message}</div>}
+
+        {isLoading ? (
+          <div className="loading">Chargement...</div>
+        ) : (
           <>
-            <h2>👤 Mon profil</h2>
-            {message && <p className="msg">{message}</p>}
-            <div className="profile-card">
-              {profile.photo && <img src={`http://localhost:5001${profile.photo}`} alt="Profil" />}
-              <div className="profile-grid">
-                <p><strong>Nom :</strong> {profile.nom}</p>
-                <p><strong>Prénom :</strong> {profile.prenom}</p>
-                <p><strong>Email :</strong> {profile.email}</p>
-                <p><strong>Téléphone :</strong> {profile.telephone}</p>
-                <p><strong>Adresse :</strong> {profile.adresse}</p>
-                <p><strong>CIN :</strong> {profile.cin}</p>
-                <p><strong>Téléphone urgence :</strong> {profile.emergencyPhone || 'Non renseigné'}</p>
-                <p><strong>Groupe sanguin :</strong> {profile.bloodType || 'Non renseigné'}</p>
-                <p><strong>Maladies chroniques :</strong> {profile.chronicDiseases || 'Non renseigné'}</p>
-              </div>
-            </div>
+            {activeSection === 'profile' && (
+              <>
+                <h2>👤 Mon profil</h2>
+                <div className="profile-card">
+                  {profile.photo && <img src={`${API_BASE_URL}${profile.photo}`} alt="Profil" className="profile-photo" />}
+                  <div className="profile-grid">
+                    <p><strong>Nom :</strong> {profile.nom}</p>
+                    <p><strong>Prénom :</strong> {profile.prenom}</p>
+                    <p><strong>Email :</strong> {profile.email}</p>
+                    <p><strong>Téléphone :</strong> {profile.telephone}</p>
+                    <p><strong>Adresse :</strong> {profile.adresse}</p>
+                    <p><strong>CIN :</strong> {profile.cin}</p>
+                    <p><strong>Urgence :</strong> {profile.emergencyPhone}</p>
+                    <p><strong>Groupe sanguin :</strong> {profile.bloodType}</p>
+                    <p><strong>Maladies :</strong> {profile.chronicDiseases}</p>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {activeSection === 'appointment' && (
+              <>
+                <h2>📅 Nouveau rendez-vous</h2>
+                <AppointmentForm userId={userId} />
+              </>
+            )}
+
+            {activeSection === 'notifications' && (
+              <>
+                <h2>🔔 Mes notifications</h2>
+                {notifications.length === 0 ? (
+                  <p>Aucune notification pour l'instant.</p>
+                ) : (
+                  <ul className="notif-list">
+                    {notifications.map((notif, idx) => (
+                      <li key={idx} className="notif-item">{notif.message}</li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
           </>
         )}
-
-        {activeSection === 'appointment' && (
-          <>
-            <h2>📅 Nouveau rendez-vous</h2>
-            {appointmentMessage && <p className="msg">{appointmentMessage}</p>}
-            <form onSubmit={handleAppointmentSubmit} className="form">
-              <input type="text" placeholder="ID du médecin" value={doctorId} onChange={(e) => setDoctorId(e.target.value)} required />
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-              <input type="time" value={time} onChange={(e) => setTime(e.target.value)} required />
-              <input type="text" placeholder="Raison" value={reason} onChange={(e) => setReason(e.target.value)} />
-              <button type="submit" disabled={loading}>{loading ? '⏳ Envoi...' : 'Envoyer'}</button>
-            </form>
-          </>
-        )}
-
-        {activeSection === 'help' && <><h2>❓ Aide</h2><p className="msg">Infos à venir.</p></>}
-        {activeSection === 'settings' && <><h2>⚙️ Paramètres</h2><p className="msg">Fonctionnalités à venir.</p></>}
       </main>
     </div>
   );
