@@ -16,6 +16,9 @@ const Patient = require('./models/Patient');
 const Message = require('./models/Message');
 const LabResult = require('./models/LabResult');
 const LabDoctorMessage = require('./models/LabDoctorMessage');
+const HospitalAppointment = require('./models/HospitalAppointment');
+const AmbulanceReport = require('./models/AmbulanceReport');
+const Vehicle = require('./models/Vehicle');
 
 // Configuration CORS
 app.use(cors({
@@ -1437,6 +1440,349 @@ app.put('/api/lab-doctor-messages/read', async (req, res) => {
     console.error('❌ Erreur mise à jour messages:', error);
     res.status(500).json({ message: 'Erreur serveur.' });
   }
+});
+
+// Routes pour les rendez-vous d'hôpital
+app.post('/api/hospital-appointments', async (req, res) => {
+    try {
+        const { hospitalId, patientId, specialty } = req.body;
+
+        if (!hospitalId || !patientId || !specialty) {
+            return res.status(400).json({ message: "Tous les champs sont requis." });
+        }
+
+        const appointment = new HospitalAppointment({
+            hospitalId,
+            patientId,
+            specialty
+        });
+
+        const savedAppointment = await appointment.save();
+
+        // Créer une notification pour l'hôpital
+        await Notification.create({
+            userId: hospitalId,
+            message: `Nouvelle demande de rendez-vous pour la spécialité ${specialty}`
+        });
+
+        res.status(201).json({
+            message: "✅ Demande de rendez-vous enregistrée avec succès !",
+            appointment: savedAppointment
+        });
+    } catch (error) {
+        console.error("❌ Erreur création rendez-vous hôpital:", error);
+        res.status(500).json({ message: "Erreur serveur." });
+    }
+});
+
+// Route pour récupérer les rendez-vous d'un patient avec un hôpital
+app.get('/api/hospital-appointments/patient/:patientId', async (req, res) => {
+    try {
+        const { patientId } = req.params;
+        const appointments = await HospitalAppointment.find({ patientId })
+            .populate('hospitalId', 'nom prenom adresse')
+            .sort({ createdAt: -1 });
+
+        res.status(200).json(appointments);
+    } catch (error) {
+        console.error("❌ Erreur récupération rendez-vous hôpital:", error);
+        res.status(500).json({ message: "Erreur serveur." });
+    }
+});
+
+// Route pour récupérer les rendez-vous d'un hôpital
+app.get('/api/hospital-appointments/hospital/:hospitalId', async (req, res) => {
+    try {
+        const { hospitalId } = req.params;
+        const appointments = await HospitalAppointment.find({ hospitalId })
+            .populate('patientId', 'nom prenom email telephone')
+            .sort({ createdAt: -1 });
+
+        res.status(200).json(appointments);
+    } catch (error) {
+        console.error("❌ Erreur récupération rendez-vous hôpital:", error);
+        res.status(500).json({ message: "Erreur serveur." });
+    }
+});
+
+// Route pour mettre à jour le statut d'un rendez-vous
+app.put('/api/hospital-appointments/:appointmentId/status', async (req, res) => {
+    try {
+        const { appointmentId } = req.params;
+        const { status } = req.body;
+
+        const appointment = await HospitalAppointment.findByIdAndUpdate(
+            appointmentId,
+            { status },
+            { new: true }
+        );
+
+        if (!appointment) {
+            return res.status(404).json({ message: "Rendez-vous non trouvé." });
+        }
+
+        // Créer une notification pour le patient
+        await Notification.create({
+            userId: appointment.patientId,
+            message: `Votre demande de rendez-vous à l'hôpital pour la spécialité ${appointment.specialty} a été ${status === 'confirmed' ? 'confirmée' : 'annulée'}.`
+        });
+
+        res.status(200).json(appointment);
+    } catch (error) {
+        console.error("❌ Erreur mise à jour statut rendez-vous:", error);
+        res.status(500).json({ message: "Erreur serveur." });
+    }
+});
+
+// Route pour la planification d'un rendez-vous d'hôpital
+app.put('/api/hospital-appointments/:appointmentId/planning', async (req, res) => {
+    try {
+        const { appointmentId } = req.params;
+        const { appointmentDate, requiredDocuments, status } = req.body;
+
+        const appointment = await HospitalAppointment.findByIdAndUpdate(
+            appointmentId,
+            { 
+                appointmentDate,
+                requiredDocuments,
+                status
+            },
+            { new: true }
+        ).populate('patientId', 'nom prenom email');
+
+        if (!appointment) {
+            return res.status(404).json({ message: "Rendez-vous non trouvé." });
+        }
+
+        // Créer une notification pour le patient
+        await Notification.create({
+            userId: appointment.patientId._id,
+            message: `Votre rendez-vous à l'hôpital pour la spécialité ${appointment.specialty} a été planifié pour le ${new Date(appointmentDate).toLocaleString('fr-FR')}. Documents requis : ${requiredDocuments}`
+        });
+
+        res.status(200).json(appointment);
+    } catch (error) {
+        console.error("❌ Erreur lors de la planification du rendez-vous:", error);
+        res.status(500).json({ message: "Erreur serveur." });
+    }
+});
+
+// Routes pour les rapports d'ambulance
+app.post('/api/ambulance-reports', async (req, res) => {
+    try {
+        const reportData = req.body;
+        const report = new AmbulanceReport(reportData);
+        const savedReport = await report.save();
+
+        // Notification pour l'hôpital si spécifié
+        if (savedReport.hospitalId) {
+            await Notification.create({
+                userId: savedReport.hospitalId,
+                message: `Nouveau rapport d'ambulance reçu pour un patient ${savedReport.urgencyLevel.toLowerCase()}`
+            });
+        }
+
+        res.status(201).json({
+            message: "✅ Rapport enregistré avec succès !",
+            report: savedReport
+        });
+    } catch (error) {
+        console.error("❌ Erreur création rapport:", error);
+        res.status(500).json({ message: "Erreur serveur." });
+    }
+});
+
+// Récupérer les rapports d'un ambulancier
+app.get('/api/ambulance-reports/ambulancier/:ambulancierId', async (req, res) => {
+    try {
+        const { ambulancierId } = req.params;
+        const reports = await AmbulanceReport.find({ ambulancierId })
+            .populate('hospitalId', 'nom adresse')
+            .populate('ambulancierId', 'nom prenom telephone')
+            .sort({ createdAt: -1 });
+
+        // Assurons-nous que les détails de l'ambulancier sont bien présents dans chaque rapport
+        const formattedReports = reports.map(report => {
+            const reportObj = report.toObject();
+            
+            // Si les détails de l'ambulancier ne sont pas déjà dans ambulancierDetails,
+            // les copier depuis l'utilisateur peuplé
+            if (!reportObj.ambulancierDetails || !reportObj.ambulancierDetails.nom) {
+                reportObj.ambulancierDetails = {
+                    nom: report.ambulancierId?.nom || '',
+                    prenom: report.ambulancierId?.prenom || '',
+                    telephone: report.ambulancierId?.telephone || '',
+                    matricule: reportObj.ambulancierDetails?.matricule || ''
+                };
+            }
+            
+            return reportObj;
+        });
+
+        res.status(200).json(formattedReports);
+    } catch (error) {
+        console.error("❌ Erreur récupération rapports:", error);
+        res.status(500).json({ message: "Erreur serveur." });
+    }
+});
+
+// Mettre à jour un rapport
+app.put('/api/ambulance-reports/:reportId', async (req, res) => {
+    try {
+        const { reportId } = req.params;
+        const updateData = req.body;
+
+        const updatedReport = await AmbulanceReport.findByIdAndUpdate(
+            reportId,
+            updateData,
+            { new: true }
+        );
+
+        if (!updatedReport) {
+            return res.status(404).json({ message: "Rapport non trouvé." });
+        }
+
+        res.status(200).json({
+            message: "✅ Rapport mis à jour avec succès !",
+            report: updatedReport
+        });
+    } catch (error) {
+        console.error("❌ Erreur mise à jour rapport:", error);
+        res.status(500).json({ message: "Erreur serveur." });
+    }
+});
+
+// Route pour récupérer un rapport spécifique
+app.get('/api/ambulance-reports/:reportId', async (req, res) => {
+    try {
+        const { reportId } = req.params;
+        const report = await AmbulanceReport.findById(reportId)
+            .populate('hospitalId', 'nom adresse')
+            .populate('ambulancierId', 'nom prenom telephone')
+            .populate('lastModified.by', 'nom prenom');
+
+        if (!report) {
+            return res.status(404).json({ message: "Rapport non trouvé." });
+        }
+
+        // Formatage du rapport pour inclure toutes les informations
+        const formattedReport = {
+            ...report.toObject(),
+            ambulancierDetails: {
+                nom: report.ambulancierDetails?.nom || report.ambulancierId?.nom || '',
+                prenom: report.ambulancierDetails?.prenom || report.ambulancierId?.prenom || '',
+                telephone: report.ambulancierDetails?.telephone || report.ambulancierId?.telephone || '',
+                matricule: report.ambulancierDetails?.matricule || ''
+            },
+            patientInfo: report.patientInfo || {},
+            missionDetails: {
+                ...report.missionDetails,
+                pickupTime: report.missionDetails?.pickupTime,
+                dropoffTime: report.missionDetails?.dropoffTime,
+                distance: report.missionDetails?.distance,
+                vehiculeId: report.missionDetails?.vehiculeId
+            },
+            medicalInfo: {
+                ...report.medicalInfo,
+                vitals: report.medicalInfo?.vitals || {},
+                interventions: report.medicalInfo?.interventions || [],
+                medications: report.medicalInfo?.medications || []
+            },
+            urgencyLevel: report.urgencyLevel,
+            status: report.status,
+            notes: report.notes,
+            hospitalInfo: report.hospitalId ? {
+                nom: report.hospitalId.nom,
+                adresse: report.hospitalId.adresse
+            } : null,
+            lastModified: report.lastModified ? {
+                date: report.lastModified.date,
+                by: report.lastModified.by ? {
+                    nom: report.lastModified.by.nom,
+                    prenom: report.lastModified.by.prenom
+                } : null
+            } : null,
+            createdAt: report.createdAt
+        };
+
+        res.status(200).json(formattedReport);
+    } catch (error) {
+        console.error("❌ Erreur récupération rapport:", error);
+        res.status(500).json({ message: "Erreur serveur." });
+    }
+});
+
+// Routes pour la gestion des véhicules
+app.post('/api/vehicles', async (req, res) => {
+    try {
+        const vehicleData = req.body;
+        const vehicle = new Vehicle(vehicleData);
+        await vehicle.save();
+        res.status(201).json({
+            message: "✅ Véhicule enregistré avec succès !",
+            vehicle
+        });
+    } catch (error) {
+        console.error("❌ Erreur création véhicule:", error);
+        res.status(500).json({ 
+            message: "Erreur lors de l'enregistrement du véhicule.",
+            error: error.message 
+        });
+    }
+});
+
+app.get('/api/vehicles', async (req, res) => {
+    try {
+        const vehicles = await Vehicle.find().sort({ createdAt: -1 });
+        res.status(200).json(vehicles);
+    } catch (error) {
+        console.error("❌ Erreur récupération véhicules:", error);
+        res.status(500).json({ message: "Erreur serveur." });
+    }
+});
+
+app.put('/api/vehicles/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updateData = {
+            ...req.body,
+            updatedAt: new Date()
+        };
+        
+        const vehicle = await Vehicle.findByIdAndUpdate(
+            id,
+            updateData,
+            { new: true }
+        );
+
+        if (!vehicle) {
+            return res.status(404).json({ message: "Véhicule non trouvé." });
+        }
+
+        res.status(200).json({
+            message: "✅ Véhicule mis à jour avec succès !",
+            vehicle
+        });
+    } catch (error) {
+        console.error("❌ Erreur mise à jour véhicule:", error);
+        res.status(500).json({ message: "Erreur serveur." });
+    }
+});
+
+app.delete('/api/vehicles/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const vehicle = await Vehicle.findByIdAndDelete(id);
+        
+        if (!vehicle) {
+            return res.status(404).json({ message: "Véhicule non trouvé." });
+        }
+
+        res.status(200).json({ message: "✅ Véhicule supprimé avec succès !" });
+    } catch (error) {
+        console.error("❌ Erreur suppression véhicule:", error);
+        res.status(500).json({ message: "Erreur serveur." });
+    }
 });
 
 // Lancer le serveur

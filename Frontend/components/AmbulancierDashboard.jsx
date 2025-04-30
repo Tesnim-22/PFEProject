@@ -1,39 +1,63 @@
-import React from 'react';
+import React, { useState } from 'react';
 import '../styles/AmbulancierDashboard.css';
-import { Link } from 'react-router-dom';
+import AmbulanceReports from './AmbulanceReports';
+import VehicleInfo from './VehicleInfo';
 
 const AmbulancierDashboard = () => {
+  const [activeSection, setActiveSection] = useState('status');
+
+  const renderContent = () => {
+    switch (activeSection) {
+      case 'reports':
+        return <AmbulanceReports />;
+      case 'vehicle':
+        return <VehicleInfo />;
+      default:
+        return (
+          <div className="dashboard-card-grid">
+            <div className="dashboard-card" onClick={() => setActiveSection('location')}>
+              <h3>📍 Position actuelle</h3>
+              <p>Voir et partager votre position en temps réel.</p>
+            </div>
+
+            <div className="dashboard-card" onClick={() => setActiveSection('calls')}>
+              <h3>📋 Appels assignés</h3>
+              <p>Liste des appels d'urgence et prises en charge.</p>
+            </div>
+
+            <div className="dashboard-card" onClick={() => setActiveSection('status')}>
+              <h3>✅ Mise à jour statut</h3>
+              <p>Mettre à jour votre statut : Disponible, En route, Arrivé, Terminé.</p>
+            </div>
+
+            <div className="dashboard-card" onClick={() => setActiveSection('reports')}>
+              <h3>📄 Rapports</h3>
+              <p>Remplir les rapports de transport et d'intervention.</p>
+            </div>
+
+            <div className="dashboard-card" onClick={() => setActiveSection('vehicle')}>
+              <h3>🚑 Info véhicule</h3>
+              <p>Gérer la maintenance, le carburant et l'équipement.</p>
+            </div>
+          </div>
+        );
+    }
+  };
+
   return (
     <div className="ambulance-dashboard">
-      <h2>🚑 Ambulancier Dashboard</h2>
-      <div className="dashboard-card-grid">
-
-        <Link to="/ambulancier/location" className="dashboard-card">
-          <h3>📍 Current Location</h3>
-          <p>View and share your live location with dispatchers.</p>
-        </Link>
-
-        <Link to="/ambulance/calls" className="dashboard-card">
-          <h3>📋 Assigned Calls</h3>
-          <p>See the list of emergency calls and patient pickups assigned to you.</p>
-        </Link>
-
-        <Link to="/ambulance/status" className="dashboard-card">
-          <h3>✅ Status Updates</h3>
-          <p>Update your status: Available, On the way, Arrived, Completed.</p>
-        </Link>
-
-        <Link to="/ambulance/reports" className="dashboard-card">
-          <h3>📄 Reports</h3>
-          <p>Fill out transport and patient reports after each trip.</p>
-        </Link>
-
-        <Link to="/ambulance/vehicle-info" className="dashboard-card">
-          <h3>🛠️ Vehicle Info</h3>
-          <p>Manage ambulance maintenance, fuel logs, and equipment checks.</p>
-        </Link>
-
+      <div className="dashboard-header">
+        <h2>🚑 Tableau de bord Ambulancier</h2>
+        {activeSection !== 'status' && (
+          <button 
+            className="back-btn"
+            onClick={() => setActiveSection('status')}
+          >
+            ← Retour
+          </button>
+        )}
       </div>
+      {renderContent()}
     </div>
   );
 };

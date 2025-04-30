@@ -26,6 +26,24 @@ const PatientDashboard = () => {
   const [labAppointments, setLabAppointments] = useState([]);
   const [labResults, setLabResults] = useState([]);
   const [error, setError] = useState('');
+  const [hospitals, setHospitals] = useState([]);
+  const [selectedHospital, setSelectedHospital] = useState('');
+  const [selectedSpecialty, setSelectedSpecialty] = useState('');
+  const [hospitalAppointments, setHospitalAppointments] = useState([]);
+
+  // Liste des spécialités disponibles
+  const specialties = [
+    'Cardiologie',
+    'Dermatologie',
+    'Gastro-entérologie',
+    'Neurologie',
+    'Ophtalmologie',
+    'Orthopédie',
+    'Pédiatrie',
+    'Psychiatrie',
+    'Radiologie',
+    'Urologie'
+  ];
 
   useEffect(() => {
     const storedId = localStorage.getItem('userId');
@@ -39,12 +57,16 @@ const PatientDashboard = () => {
     setUserId(storedId);
     fetchProfile(storedId);
     fetchNotifications(storedId);
+    
+    // Charger les documents médicaux si nécessaire
     if (activeSection === 'documents') {
       fetchMedicalDocuments(storedId);
     }
+    
+    // Charger les rendez-vous appropriés selon la section
     if (activeSection === 'messagerie' || activeSection === 'all-appointments') {
-      console.log('🔄 Fetching appointments due to section:', activeSection);
-      fetchAppointments(storedId);
+      console.log('🔄 Fetching all appointments...');
+      fetchAllAppointments(storedId);
     }
     if (activeSection === 'lab-appointment') {
       fetchLabs();
@@ -52,6 +74,13 @@ const PatientDashboard = () => {
     }
     if (activeSection === 'lab-results') {
       fetchLabResults(storedId);
+    }
+    if (activeSection === 'hospital-appointment') {
+      fetchHospitals();
+      fetchHospitalAppointments(storedId);
+    }
+    if (activeSection === 'all-appointments') {
+      fetchHospitalAppointments(storedId);
     }
   }, [activeSection]);
 
@@ -86,15 +115,22 @@ const PatientDashboard = () => {
     }
   };
 
-  const fetchAppointments = async (id) => {
+  const fetchAllAppointments = async (patientId) => {
     try {
-      console.log('🔍 Fetching appointments for patient ID:', id);
-      const res = await axios.get(`${API_BASE_URL}/api/appointments?patientId=${id}`);
-      console.log('✅ Appointments received:', res.data);
-      setAppointments(res.data);
+      // Charger les rendez-vous médicaux
+      const medicalRes = await axios.get(`${API_BASE_URL}/api/appointments?patientId=${patientId}`);
+      setAppointments(medicalRes.data);
+
+      // Charger les rendez-vous de laboratoire
+      const labRes = await axios.get(`${API_BASE_URL}/api/lab-appointments/patient/${patientId}`);
+      setLabAppointments(labRes.data);
+
+      // Charger les rendez-vous d'hôpital
+      const hospitalRes = await axios.get(`${API_BASE_URL}/api/hospital-appointments/patient/${patientId}`);
+      setHospitalAppointments(hospitalRes.data);
     } catch (error) {
-      console.error('❌ Error fetching appointments:', error.response || error);
-      setAppointments([]);
+      console.error('❌ Error fetching appointments:', error);
+      setMessage("Erreur lors de la récupération des rendez-vous.");
     }
   };
 
@@ -234,60 +270,141 @@ const PatientDashboard = () => {
     }
   };
 
+  const fetchHospitals = async () => {
+    try {
+      console.log("🏥 Récupération des hôpitaux...");
+      const response = await axios.get(`${API_BASE_URL}/api/medecins-valides`);
+      console.log("✅ Données reçues:", response.data);
+      // Filtrer uniquement les hôpitaux
+      const validatedHospitals = response.data.filter(user => 
+        user.roles.includes('Hospital') || user.roles.includes('hopital')
+      );
+      console.log("🏥 Hôpitaux filtrés:", validatedHospitals);
+      setHospitals(validatedHospitals);
+    } catch (error) {
+      console.error("❌ Erreur récupération hôpitaux:", error);
+      setMessage("Erreur lors de la récupération des hôpitaux.");
+    }
+  };
+
+  const fetchHospitalAppointments = async (patientId) => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/hospital-appointments/patient/${patientId}`);
+      setHospitalAppointments(response.data);
+    } catch (error) {
+      console.error("❌ Erreur récupération rendez-vous hôpital:", error);
+      setMessage("Erreur lors de la récupération des rendez-vous d'hôpital.");
+    }
+  };
+
+  const handleHospitalAppointmentSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API_BASE_URL}/api/hospital-appointments`, {
+        hospitalId: selectedHospital,
+        patientId: userId,
+        specialty: selectedSpecialty
+      });
+      setMessage("✅ Demande de rendez-vous envoyée avec succès !");
+      setSelectedHospital('');
+      setSelectedSpecialty('');
+      fetchHospitalAppointments(userId);
+    } catch (error) {
+      console.error("❌ Erreur création rendez-vous hôpital:", error);
+      setMessage("Erreur lors de la création du rendez-vous.");
+    }
+  };
+
   return (
     <div className="dashboard-wrapper">
       <aside className="sidebar">
-        <div className="sidebar-header">🧑‍⚕️ Patient</div>
+        <div className="sidebar-header">
+          <div className="user-info">
+            <span className="user-icon">👤</span>
+            <span className="user-role">Patient</span>
+          </div>
+        </div>
+
         <div className="sidebar-menu">
-          <button 
-            className={activeSection === 'profile' ? 'active' : ''} 
-            onClick={() => setActiveSection('profile')}
-          >
-            👤 Profil
+          <div className="menu-group">
+            <div className="menu-group-title">Profil</div>
+            <button 
+              className={activeSection === 'profile' ? 'active' : ''} 
+              onClick={() => setActiveSection('profile')}
+            >
+              <span className="icon">👤</span>
+              Mon Profil
+            </button>
+            <button 
+              className={activeSection === 'documents' ? 'active' : ''} 
+              onClick={() => setActiveSection('documents')}
+            >
+              <span className="icon">📄</span>
+              Documents Médicaux
+            </button>
+          </div>
+
+          <div className="menu-group">
+            <div className="menu-group-title">Rendez-vous</div>
+            <button 
+              className={activeSection === 'all-appointments' ? 'active' : ''} 
+              onClick={() => setActiveSection('all-appointments')}
+            >
+              <span className="icon">📋</span>
+              Tous mes rendez-vous
+            </button>
+            <button 
+              className={activeSection === 'appointment' ? 'active' : ''} 
+              onClick={() => setActiveSection('appointment')}
+            >
+              <span className="icon">👨‍⚕️</span>
+              Nouveau RDV Médecin
+            </button>
+            <button 
+              className={activeSection === 'lab-appointment' ? 'active' : ''} 
+              onClick={() => setActiveSection('lab-appointment')}
+            >
+              <span className="icon">🔬</span>
+              Nouveau RDV Laboratoire
+            </button>
+            <button 
+              className={activeSection === 'hospital-appointment' ? 'active' : ''} 
+              onClick={() => setActiveSection('hospital-appointment')}
+            >
+              <span className="icon">🏥</span>
+              Nouveau RDV Hôpital
+            </button>
+          </div>
+
+          <div className="menu-group">
+            <div className="menu-group-title">Résultats & Communication</div>
+            <button 
+              className={activeSection === 'lab-results' ? 'active' : ''} 
+              onClick={() => setActiveSection('lab-results')}
+            >
+              <span className="icon">📋</span>
+              Résultats Laboratoire
+            </button>
+            <button 
+              className={activeSection === 'messagerie' ? 'active' : ''} 
+              onClick={() => setActiveSection('messagerie')}
+            >
+              <span className="icon">💬</span>
+              Messagerie
+            </button>
+            <button 
+              className={activeSection === 'notifications' ? 'active' : ''} 
+              onClick={() => setActiveSection('notifications')}
+            >
+              <span className="icon">🔔</span>
+              Notifications
+            </button>
+          </div>
+
+          <button className="logout-button" onClick={handleLogout}>
+            <span className="icon">🚪</span>
+            Déconnexion
           </button>
-          <button 
-            className={activeSection === 'appointment' ? 'active' : ''} 
-            onClick={() => setActiveSection('appointment')}
-          >
-            📅 Rendez-vous Médecin
-          </button>
-          <button 
-            className={activeSection === 'all-appointments' ? 'active' : ''} 
-            onClick={() => setActiveSection('all-appointments')}
-          >
-            📋 Tous mes rendez-vous
-          </button>
-          <button 
-            className={activeSection === 'lab-appointment' ? 'active' : ''} 
-            onClick={() => setActiveSection('lab-appointment')}
-          >
-            🔬 Rendez-vous Laboratoire
-          </button>
-          <button 
-            className={activeSection === 'lab-results' ? 'active' : ''} 
-            onClick={() => setActiveSection('lab-results')}
-          >
-            📋 Résultats Laboratoire
-          </button>
-          <button 
-            className={activeSection === 'documents' ? 'active' : ''} 
-            onClick={() => setActiveSection('documents')}
-          >
-            📄 Documents Médicaux
-          </button>
-          <button 
-            className={activeSection === 'notifications' ? 'active' : ''} 
-            onClick={() => setActiveSection('notifications')}
-          >
-            🔔 Notifications
-          </button>
-          <button 
-            className={activeSection === 'messagerie' ? 'active' : ''} 
-            onClick={() => setActiveSection('messagerie')}
-          >
-            💬 Messagerie
-          </button>
-          <button onClick={handleLogout}>🚪 Déconnexion</button>
         </div>
       </aside>
 
@@ -481,20 +598,34 @@ const PatientDashboard = () => {
                   <div className="appointments-category">
                     <h3>🏥 Rendez-vous Médecins</h3>
                     {appointments.length === 0 ? (
-                      <p>Aucun rendez-vous médical trouvé.</p>
+                      <p className="no-appointments-message">Aucun rendez-vous médical trouvé.</p>
                     ) : (
-                      <div className="appointments-grid">
-                        {appointments.map((apt) => (
-                          <div key={apt._id} className="appointment-card">
-                            <h4>{apt.doctorName || "Dr. " + apt.doctorId}</h4>
-                            <p>🗓️ {new Date(apt.date).toLocaleString('fr-FR')}</p>
-                            <p>📝 {apt.reason || "Non spécifié"}</p>
-                            <p className={`status ${apt.status}`}>
-                              {apt.status === 'confirmed' ? 'Confirmé' : 
-                               apt.status === 'pending' ? 'En attente' : 'Annulé'}
-                            </p>
-                          </div>
-                        ))}
+                      <div className="appointments-list">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Médecin</th>
+                              <th>Date</th>
+                              <th>Motif</th>
+                              <th>Statut</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {appointments.map((apt) => (
+                              <tr key={apt._id} className="appointment-row">
+                                <td>{apt.doctorName || "Dr. " + apt.doctorId}</td>
+                                <td>{new Date(apt.date).toLocaleString('fr-FR')}</td>
+                                <td>{apt.reason || "Non spécifié"}</td>
+                                <td>
+                                  <span className={`status-badge ${apt.status}`}>
+                                    {apt.status === 'confirmed' ? 'Confirmé' : 
+                                     apt.status === 'pending' ? 'En attente' : 'Annulé'}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
                     )}
                   </div>
@@ -502,21 +633,92 @@ const PatientDashboard = () => {
                   <div className="appointments-category">
                     <h3>🔬 Rendez-vous Laboratoires</h3>
                     {labAppointments.length === 0 ? (
-                      <p>Aucun rendez-vous laboratoire trouvé.</p>
+                      <p className="no-appointments-message">Aucun rendez-vous laboratoire trouvé.</p>
                     ) : (
-                      <div className="appointments-grid">
-                        {labAppointments.map((apt) => (
-                          <div key={apt._id} className="appointment-card">
-                            <h4>{apt.lab?.nom || "Laboratoire"}</h4>
-                            <p>📍 {apt.lab?.adresse || "Adresse non spécifiée"}</p>
-                            <p>🗓️ {new Date(apt.date).toLocaleString('fr-FR')}</p>
-                            <p>📝 {apt.reason}</p>
-                            <p className={`status ${apt.status}`}>
-                              {apt.status === 'confirmed' ? 'Confirmé' : 
-                               apt.status === 'pending' ? 'En attente' : 'Annulé'}
-                            </p>
-                          </div>
-                        ))}
+                      <div className="appointments-list">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Laboratoire</th>
+                              <th>Adresse</th>
+                              <th>Date</th>
+                              <th>Motif</th>
+                              <th>Statut</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {labAppointments.map((apt) => (
+                              <tr key={apt._id} className="appointment-row">
+                                <td>{apt.lab?.nom || "Laboratoire"}</td>
+                                <td>{apt.lab?.adresse || "Adresse non spécifiée"}</td>
+                                <td>{new Date(apt.date).toLocaleString('fr-FR')}</td>
+                                <td>{apt.reason}</td>
+                                <td>
+                                  <span className={`status-badge ${apt.status}`}>
+                                    {apt.status === 'confirmed' ? 'Confirmé' : 
+                                     apt.status === 'pending' ? 'En attente' : 'Annulé'}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="appointments-category">
+                    <h3>🏥 Rendez-vous Hôpitaux</h3>
+                    {hospitalAppointments.length === 0 ? (
+                      <p className="no-appointments-message">Aucun rendez-vous hospitalier trouvé.</p>
+                    ) : (
+                      <div className="appointments-list">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Hôpital</th>
+                              <th>Adresse</th>
+                              <th>Spécialité</th>
+                              <th>Date demande</th>
+                              <th>Date rendez-vous</th>
+                              <th>Documents requis</th>
+                              <th>Statut</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {hospitalAppointments.map((apt) => (
+                              <tr key={apt._id} className="appointment-row">
+                                <td>{apt.hospitalId?.nom || "Hôpital"}</td>
+                                <td>{apt.hospitalId?.adresse || "Adresse non spécifiée"}</td>
+                                <td>{apt.specialty}</td>
+                                <td>{new Date(apt.createdAt).toLocaleString('fr-FR')}</td>
+                                <td>
+                                  {apt.appointmentDate 
+                                    ? new Date(apt.appointmentDate).toLocaleString('fr-FR')
+                                    : 'En attente de planification'}
+                                </td>
+                                <td>
+                                  {apt.requiredDocuments 
+                                    ? <div className="required-docs">
+                                        <button 
+                                          className="view-docs-btn"
+                                          onClick={() => alert(apt.requiredDocuments)}
+                                        >
+                                          Voir les documents requis
+                                        </button>
+                                      </div>
+                                    : 'Non spécifié'}
+                                </td>
+                                <td>
+                                  <span className={`status-badge ${apt.status}`}>
+                                    {apt.status === 'confirmed' ? 'Confirmé' : 
+                                     apt.status === 'pending' ? 'En attente' : 'Annulé'}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
                     )}
                   </div>
@@ -627,6 +829,75 @@ const PatientDashboard = () => {
                       ))}
                     </div>
                   )}
+                </div>
+              </>
+            )}
+
+            {activeSection === 'hospital-appointment' && (
+              <>
+                <h2>🏥 Rendez-vous Hôpital</h2>
+                <div className="hospital-appointment-section">
+                  <form onSubmit={handleHospitalAppointmentSubmit} className="hospital-form">
+                    <div className="form-group">
+                      <label>Hôpital :</label>
+                      <select 
+                        value={selectedHospital} 
+                        onChange={(e) => setSelectedHospital(e.target.value)}
+                        required
+                      >
+                        <option value="">Sélectionnez un hôpital</option>
+                        {hospitals.map(hospital => (
+                          <option key={hospital._id} value={hospital._id}>
+                            {hospital.nom} - {hospital.adresse}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label>Spécialité :</label>
+                      <select 
+                        value={selectedSpecialty} 
+                        onChange={(e) => setSelectedSpecialty(e.target.value)}
+                        required
+                      >
+                        <option value="">Sélectionnez une spécialité</option>
+                        {specialties.map(specialty => (
+                          <option key={specialty} value={specialty}>
+                            {specialty}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <button type="submit" className="submit-btn">
+                      Demander un rendez-vous
+                    </button>
+                  </form>
+
+                  <div className="hospital-appointments-list">
+                    <h3>Mes demandes de rendez-vous</h3>
+                    {hospitalAppointments.length === 0 ? (
+                      <p>Aucune demande de rendez-vous en cours.</p>
+                    ) : (
+                      <div className="appointments-grid">
+                        {hospitalAppointments.map((apt) => (
+                          <div key={apt._id} className="appointment-card">
+                            <h4>{apt.hospitalId?.nom || "Hôpital"}</h4>
+                            <p>📍 {apt.hospitalId?.adresse || "Adresse non spécifiée"}</p>
+                            <p>👨‍⚕️ Spécialité : {apt.specialty}</p>
+                            <p className={`status ${apt.status}`}>
+                              {apt.status === 'confirmed' ? 'Confirmé' : 
+                               apt.status === 'pending' ? 'En attente' : 'Annulé'}
+                            </p>
+                            <p className="created-date">
+                              Demande effectuée le : {new Date(apt.createdAt).toLocaleDateString('fr-FR')}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </>
             )}
