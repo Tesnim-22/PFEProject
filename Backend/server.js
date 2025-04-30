@@ -12,13 +12,27 @@ const multer = require('multer');
 // ❗ Correction ici
 const Appointment = require('./models/Appointment');
 const Notification = require('./models/Notification');
+const Patient = require('./models/Patient');
+const Message = require('./models/Message');
+const LabResult = require('./models/LabResult');
+const LabDoctorMessage = require('./models/LabDoctorMessage');
+
+// Configuration CORS
+app.use(cors({
+    origin: 'http://localhost:5173',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+}));
+
+// Enable pre-flight for all routes
+app.options('*', cors({
+    origin: 'http://localhost:5173',
+    credentials: true
+}));
 
 // middlewares
-app.use(cors());
 app.use(express.json());
-
-
-
 
 // 🟰 Tu pourras ensuite continuer ici avec ta logique MongoDB, schemas, etc.
 
@@ -27,7 +41,7 @@ app.use(express.json());
 
 
 
-// Configurer le dossier d’upload
+// Configurer le dossier d'upload
 const uploadFolder = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadFolder)) {
     fs.mkdirSync(uploadFolder);
@@ -44,6 +58,68 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
+
+// Configuration pour les documents médicaux
+const medicalDocsStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const path = './uploads/medical-docs';
+        if (!fs.existsSync(path)) {
+            fs.mkdirSync(path, { recursive: true });
+        }
+        cb(null, path);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, 'medical-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const uploadMedicalDoc = multer({
+    storage: medicalDocsStorage,
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Format de fichier non supporté. Utilisez PDF, JPEG ou PNG.'));
+        }
+    },
+    limits: {
+        fileSize: 5 * 1024 * 1024 // 5MB max
+    }
+});
+
+// Configuration pour les résultats de laboratoire
+const labResultsStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const path = './uploads/lab-results';
+        if (!fs.existsSync(path)) {
+            fs.mkdirSync(path, { recursive: true });
+        }
+        cb(null, path);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = file.originalname.split('.').pop();
+        cb(null, `lab-result-${uniqueSuffix}.${ext}`);
+    }
+});
+
+const uploadLabResult = multer({
+    storage: labResultsStorage,
+    fileFilter: (req, file, cb) => {
+        console.log('File received:', file);
+        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Format de fichier non supporté. Utilisez PDF, JPEG ou PNG.'));
+        }
+    },
+    limits: {
+        fileSize: 5 * 1024 * 1024 // 5MB max
+    }
+});
 
 // MongoDB Connection String
 const uri = "mongodb+srv://tesnim:Tesnim.123456789@cluster0.50qhu.mongodb.net/HealthApp?retryWrites=true&w=majority";
@@ -130,7 +206,7 @@ app.post('/signup', async(req, res) => {
         await newUser.save();
         res.status(201).json({ message: 'Utilisateur inscrit avec succès !' });
     } catch (error) {
-        console.error('❌ Erreur d\’enregistrement :', error);
+        console.error('❌ Erreur d\enregistrement :', error);
         res.status(500).json({ message: 'Erreur serveur.' });
     }
 });
@@ -177,7 +253,73 @@ app.post('/login', async(req, res) => {
 });
 
 
-
+// Route pour récupérer la liste des médecins validés
+app.get('/api/doctors-for-labs', async (req, res) => {
+    try {
+      const doctors = await User.find({
+        roles: { $in: ['Doctor', 'doctor'] },
+        isValidated: true,
+        profileCompleted: true
+      })
+      .select('nom prenom email specialty')
+      .sort({ nom: 1 });
+  
+      res.status(200).json(doctors);
+    } catch (error) {
+      console.error('❌ Erreur récupération liste médecins:', error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+  
+  // Route pour envoyer un message (laboratoire -> médecin)
+  app.post('/api/lab-messages', async (req, res) => {
+    try {
+      const { senderId, receiverId, content } = req.body;
+      if (!senderId || !receiverId || !content) {
+        return res.status(400).json({ message: 'Champs manquants.' });
+      }
+  
+      const message = new Message({
+        senderId,
+        receiverId,
+        content,
+        type: 'lab-doctor'
+      });
+  
+      await message.save();
+  
+      // Créer une notification pour le médecin
+      await Notification.create({
+        userId: receiverId,
+        message: `Nouveau message du laboratoire`
+      });
+  
+      res.status(201).json({ message: 'Message envoyé.', data: message });
+    } catch (error) {
+      console.error('❌ Erreur envoi message:', error);
+      res.status(500).json({ message: 'Erreur serveur.' });
+    }
+  });
+  
+  // Route pour récupérer les messages entre un laboratoire et un médecin
+  app.get('/api/lab-messages/:labId/:doctorId', async (req, res) => {
+    try {
+      const { labId, doctorId } = req.params;
+      const messages = await Message.find({
+        $or: [
+          { senderId: labId, receiverId: doctorId },
+          { senderId: doctorId, receiverId: labId }
+        ],
+        type: 'lab-doctor'
+      })
+      .sort({ createdAt: 1 });
+  
+      res.status(200).json(messages);
+    } catch (error) {
+      console.error('❌ Erreur récupération messages:', error);
+      res.status(500).json({ message: 'Erreur serveur.' });
+    }
+  });
 
 // 🔒 Forgot Password - Générer un token et envoyer email
 app.post('/forgot-password', async(req, res) => {
@@ -637,7 +779,7 @@ app.get('/admin/overview', async(req, res) => {
 });
 
 
-// ✅ Route pour récupérer les données d’un utilisateur par ID (profil)
+// ✅ Route pour récupérer les données d'un utilisateur par ID (profil)
 app.get('/users', async(req, res) => {
     try {
         const allUsers = await User.find().select('nom prenom email roles _id diploma photo adresse profileCompleted isValidated');
@@ -710,6 +852,25 @@ app.get('/api/valid-doctors', async(req, res) => {
     }
 });
 
+// Route pour récupérer les laboratoires validés
+app.get('/api/labs-valides', async(req, res) => {
+    try {
+        console.log("🔍 Recherche des laboratoires...");
+        const labs = await User.find({
+            roles: { $in: ['Laboratory', 'laboratory', 'Laboratoire', 'Labs'] },
+            isValidated: true,
+            profileCompleted: true
+        });
+
+        console.log("✅ Laboratoires trouvés:", labs.length);
+        console.log("📝 Détails des labs:", labs);
+
+        res.status(200).json(labs);
+    } catch (error) {
+        console.error("❌ Erreur récupération laboratoires :", error);
+        res.status(500).json({ message: "Erreur serveur." });
+    }
+});
 
 // 🩺 Médecins validés et complets (pour les rendez-vous)
 app.get('/api/medecins-valides', async(req, res) => {
@@ -824,7 +985,459 @@ app.post('/api/appointments', async(req, res) => {
     }
 });
 
+// Route pour télécharger un document médical
+app.post('/api/patient/medical-documents/:userId', uploadMedicalDoc.single('document'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: "Aucun fichier n'a été téléchargé." });
+        }
 
+        const { userId } = req.params;
+        const { description } = req.body;
+
+        let patient = await Patient.findOne({ userId });
+
+        if (!patient) {
+            patient = new Patient({
+                userId,
+                medicalDocuments: []
+            });
+        }
+
+        patient.medicalDocuments.push({
+            fileName: req.file.originalname,
+            fileType: req.file.mimetype,
+            filePath: req.file.path,
+            description
+        });
+
+        await patient.save();
+
+        res.status(200).json({
+            message: "Document médical téléchargé avec succès",
+            document: patient.medicalDocuments[patient.medicalDocuments.length - 1]
+        });
+
+    } catch (error) {
+        console.error('❌ Erreur upload document:', error);
+        res.status(500).json({ message: "Erreur lors du téléchargement du document." });
+    }
+});
+
+// Route pour récupérer les documents médicaux
+app.get('/api/patient/medical-documents/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const patient = await Patient.findOne({ userId });
+
+        if (!patient) {
+            return res.status(404).json({ message: "Patient non trouvé." });
+        }
+
+        res.status(200).json(patient.medicalDocuments);
+    } catch (error) {
+        console.error('❌ Erreur récupération documents:', error);
+        res.status(500).json({ message: "Erreur lors de la récupération des documents." });
+    }
+});
+
+// Route pour supprimer un document médical
+app.delete('/api/patient/medical-documents/:userId/:documentId', async (req, res) => {
+    try {
+        const { userId, documentId } = req.params;
+        const patient = await Patient.findOne({ userId });
+
+        if (!patient) {
+            return res.status(404).json({ message: "Patient non trouvé." });
+        }
+
+        const document = patient.medicalDocuments.id(documentId);
+        if (!document) {
+            return res.status(404).json({ message: "Document non trouvé." });
+        }
+
+        // Supprimer le fichier physique
+        if (fs.existsSync(document.filePath)) {
+            fs.unlinkSync(document.filePath);
+        }
+
+        // Supprimer le document de la base de données
+        patient.medicalDocuments.pull(documentId);
+        await patient.save();
+
+        res.status(200).json({ message: "Document supprimé avec succès." });
+    } catch (error) {
+        console.error('❌ Erreur suppression document:', error);
+        res.status(500).json({ message: "Erreur lors de la suppression du document." });
+    }
+});
+
+// Envoyer un message (patient -> médecin ou médecin -> patient)
+app.post('/api/messages', async (req, res) => {
+  try {
+    const { senderId, receiverId, appointmentId, content } = req.body;
+    if (!senderId || !receiverId || !appointmentId || !content) {
+      return res.status(400).json({ message: 'Champs manquants.' });
+    }
+    const message = new Message({ senderId, receiverId, appointmentId, content });
+    await message.save();
+    res.status(201).json({ message: 'Message envoyé.', data: message });
+  } catch (error) {
+    console.error('❌ Erreur envoi message:', error);
+    res.status(500).json({ message: 'Erreur serveur.' });
+  }
+});
+
+// Récupérer les messages pour un rendez-vous donné (patient et médecin)
+app.get('/api/messages/:appointmentId', async (req, res) => {
+  try {
+    const { appointmentId } = req.params;
+    const messages = await Message.find({ appointmentId }).sort({ sentAt: 1 });
+    res.status(200).json(messages);
+  } catch (error) {
+    console.error('❌ Erreur récupération messages:', error);
+    res.status(500).json({ message: 'Erreur serveur.' });
+  }
+});
+
+// Récupérer les rendez-vous d'un patient
+app.get('/api/appointments', async (req, res) => {
+  const { patientId } = req.query;
+  console.log('📥 Received request for appointments with patientId:', patientId);
+  
+  if (!patientId) {
+    console.log('❌ No patientId provided');
+    return res.status(400).json({ message: "patientId requis" });
+  }
+  
+  try {
+    console.log('🔍 Searching for appointments...');
+    const appointments = await Appointment.find({ 
+      patientId,
+      $or: [
+        { type: { $ne: 'laboratory' } },  // Rendez-vous médecins (type null ou différent de laboratory)
+        { type: { $exists: false } }      // Pour les anciens rendez-vous sans type
+      ]
+    })
+    .populate('doctorId', 'nom prenom email')
+    .sort({ date: -1 });
+    
+    console.log('📊 Found appointments:', appointments.length);
+    
+    const formatted = appointments.map(apt => {
+      const formattedApt = {
+        ...apt.toObject(),
+        doctorName: apt.doctorId?.nom && apt.doctorId?.prenom
+          ? `Dr. ${apt.doctorId.prenom} ${apt.doctorId.nom}`
+          : apt.doctorId?.email || '',
+        doctorEmail: apt.doctorId?.email || '',
+        doctorId: apt.doctorId?._id || apt.doctorId,
+        type: apt.type || 'medical'  // Par défaut, c'est un rendez-vous médical
+      };
+      return formattedApt;
+    });
+    
+    console.log('✅ Sending formatted appointments');
+    res.status(200).json(formatted);
+  } catch (error) {
+    console.error('❌ Error fetching appointments:', error);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+});
+
+// Route pour créer un rendez-vous laboratoire
+app.post('/api/lab-appointments', async(req, res) => {
+    try {
+        const { labId, patientId, date, reason } = req.body;
+        console.log('📝 Création rendez-vous laboratoire:', { labId, patientId, date, reason });
+
+        if (!labId || !patientId || !date || !reason) {
+            return res.status(400).json({ message: "Tous les champs sont requis." });
+        }
+
+        const appointment = new Appointment({
+            doctorId: labId,
+            patientId,
+            date,
+            reason,
+            type: 'laboratory',
+            status: 'pending'
+        });
+
+        const savedAppointment = await appointment.save();
+        console.log('✅ Rendez-vous laboratoire créé:', savedAppointment);
+
+        // Créer une notification pour le laboratoire
+        await Notification.create({
+            userId: labId,
+            message: `Nouveau rendez-vous demandé pour le ${new Date(date).toLocaleString('fr-FR')}`
+        });
+
+        res.status(201).json({ 
+            message: "✅ Rendez-vous laboratoire créé avec succès !",
+            appointment: savedAppointment
+        });
+    } catch (error) {
+        console.error("❌ Erreur création rendez-vous laboratoire:", error);
+        res.status(500).json({ 
+            message: "Erreur serveur.",
+            error: error.message 
+        });
+    }
+});
+
+// Route pour récupérer les rendez-vous laboratoire d'un patient
+app.get('/api/lab-appointments/patient/:patientId', async(req, res) => {
+    try {
+        const { patientId } = req.params;
+        const appointments = await Appointment.find({ 
+            patientId,
+            type: 'laboratory'
+        })
+        .populate({
+            path: 'doctorId',
+            model: 'User',
+            select: 'nom prenom adresse'
+        })
+        .sort({ date: -1 });
+
+        const formattedAppointments = appointments.map(apt => ({
+            _id: apt._id,
+            date: apt.date,
+            reason: apt.reason,
+            status: apt.status,
+            lab: {
+                _id: apt.doctorId._id,
+                nom: apt.doctorId.nom,
+                adresse: apt.doctorId.adresse
+            }
+        }));
+
+        res.status(200).json(formattedAppointments);
+    } catch (error) {
+        console.error("❌ Erreur récupération rendez-vous laboratoire:", error);
+        res.status(500).json({ message: "Erreur serveur." });
+    }
+});
+
+// Route pour récupérer les rendez-vous d'un laboratoire
+app.get('/api/lab-appointments/lab/:labId', async(req, res) => {
+    try {
+        const { labId } = req.params;
+        console.log('Recherche RDV pour labId:', labId);
+        
+        // Récupérer les rendez-vous avec les informations du patient
+        const appointments = await Appointment.find({ 
+            doctorId: labId,
+            type: 'laboratory'
+        }).populate({
+            path: 'patientId',
+            model: 'User',
+            select: 'nom prenom email telephone'
+        }).sort({ date: -1 });
+
+        console.log('RDV trouvés:', appointments.length);
+        
+        // Formater les données en s'assurant que toutes les informations du patient sont présentes
+        const formattedAppointments = appointments.map(apt => {
+            const patientData = apt.patientId || {};
+            return {
+                _id: apt._id,
+                date: apt.date,
+                reason: apt.reason,
+                status: apt.status,
+                patient: {
+                    _id: patientData._id || '',
+                    nom: patientData.nom || 'Non renseigné',
+                    prenom: patientData.prenom || 'Non renseigné',
+                    email: patientData.email || 'Non renseigné',
+                    telephone: patientData.telephone || 'Non renseigné'
+                },
+                type: apt.type
+            };
+        });
+
+        res.status(200).json(formattedAppointments);
+    } catch (error) {
+        console.error("❌ Erreur récupération rendez-vous laboratoire:", error);
+        res.status(500).json({ message: "Erreur serveur." });
+    }
+});
+
+// Route pour mettre à jour le statut d'un rendez-vous laboratoire
+app.put('/api/lab-appointments/:appointmentId/status', async(req, res) => {
+    try {
+        const { appointmentId } = req.params;
+        const { status } = req.body;
+
+        const appointment = await Appointment.findByIdAndUpdate(
+            appointmentId,
+            { status },
+            { new: true }
+        );
+
+        if (!appointment) {
+            return res.status(404).json({ message: "Rendez-vous non trouvé." });
+        }
+
+        // Créer une notification pour le patient
+        await Notification.create({
+            userId: appointment.patientId,
+            message: `Votre rendez-vous laboratoire du ${new Date(appointment.date).toLocaleString('fr-FR')} a été ${
+                status === 'confirmed' ? 'confirmé' : 'annulé'
+            }.`
+        });
+
+        res.status(200).json(appointment);
+    } catch (error) {
+        console.error("❌ Erreur mise à jour statut rendez-vous:", error);
+        res.status(500).json({ message: "Erreur serveur." });
+    }
+});
+
+// Route pour envoyer un résultat de laboratoire
+app.post('/api/lab-results', uploadLabResult.single('file'), async(req, res) => {
+    try {
+        console.log('Body reçu:', req.body);
+        console.log('Fichier reçu:', req.file);
+        
+        const { appointmentId, labId, patientId, testType, results } = req.body;
+
+        if (!testType) {
+            if (req.file) {
+                fs.unlinkSync(req.file.path);
+            }
+            return res.status(400).json({ message: "Le type de test est requis." });
+        }
+
+        const labResult = new LabResult({
+            appointmentId,
+            labId,
+            patientId,
+            testType,
+            results,
+            status: 'completed',
+            fileUrl: req.file ? req.file.path.replace('Backend/', '') : null
+        });
+
+        const savedResult = await labResult.save();
+
+        // Créer une notification pour le patient
+        await Notification.create({
+            userId: patientId,
+            message: `Nouveaux résultats d'analyses disponibles de la part de votre laboratoire.`
+        });
+
+        res.status(201).json({
+            message: "✅ Résultats envoyés avec succès !",
+            result: savedResult
+        });
+    } catch (error) {
+        console.error("❌ Erreur envoi résultats:", error);
+        if (req.file) {
+            fs.unlinkSync(req.file.path);
+        }
+        res.status(500).json({ 
+            message: "Erreur lors de l'envoi des résultats.",
+            error: error.message 
+        });
+    }
+});
+
+// Route pour récupérer les résultats d'un patient
+app.get('/api/lab-results/patient/:patientId', async(req, res) => {
+    try {
+        const { patientId } = req.params;
+        const results = await LabResult.find({ patientId })
+            .populate('labId', 'nom prenom')
+            .populate('appointmentId', 'date')
+            .sort({ createdAt: -1 });
+
+        res.status(200).json(results);
+    } catch (error) {
+        console.error("❌ Erreur récupération résultats:", error);
+        res.status(500).json({ message: "Erreur lors de la récupération des résultats." });
+    }
+});
+
+// Route pour récupérer les résultats envoyés par un laboratoire
+app.get('/api/lab-results/lab/:labId', async(req, res) => {
+    try {
+        const { labId } = req.params;
+        const results = await LabResult.find({ labId })
+            .populate('patientId', 'nom prenom')
+            .populate('appointmentId', 'date')
+            .sort({ createdAt: -1 });
+
+        res.status(200).json(results);
+    } catch (error) {
+        console.error("❌ Erreur récupération résultats:", error);
+        res.status(500).json({ message: "Erreur lors de la récupération des résultats." });
+    }
+});
+
+// Route pour envoyer un message (laboratoire -> médecin)
+app.post('/api/lab-doctor-messages', async (req, res) => {
+  try {
+    const { senderId, receiverId, content } = req.body;
+    if (!senderId || !receiverId || !content) {
+      return res.status(400).json({ message: 'Tous les champs sont requis.' });
+    }
+
+    const message = new LabDoctorMessage({
+      senderId,
+      receiverId,
+      content
+    });
+
+    await message.save();
+
+    // Créer une notification pour le destinataire
+    await Notification.create({
+      userId: receiverId,
+      message: 'Nouveau message reçu'
+    });
+
+    res.status(201).json({ message: 'Message envoyé.', data: message });
+  } catch (error) {
+    console.error('❌ Erreur envoi message:', error);
+    res.status(500).json({ message: 'Erreur serveur.' });
+  }
+});
+
+// Route pour récupérer les messages entre un laboratoire et un médecin
+app.get('/api/lab-doctor-messages/:labId/:doctorId', async (req, res) => {
+  try {
+    const { labId, doctorId } = req.params;
+    const messages = await LabDoctorMessage.find({
+      $or: [
+        { senderId: labId, receiverId: doctorId },
+        { senderId: doctorId, receiverId: labId }
+      ]
+    })
+    .sort({ createdAt: 1 });
+
+    res.status(200).json(messages);
+  } catch (error) {
+    console.error('❌ Erreur récupération messages:', error);
+    res.status(500).json({ message: 'Erreur serveur.' });
+  }
+});
+
+// Route pour marquer les messages comme lus
+app.put('/api/lab-doctor-messages/read', async (req, res) => {
+  try {
+    const { receiverId, senderId } = req.body;
+    await LabDoctorMessage.updateMany(
+      { senderId, receiverId, isRead: false },
+      { isRead: true }
+    );
+    res.status(200).json({ message: 'Messages marqués comme lus.' });
+  } catch (error) {
+    console.error('❌ Erreur mise à jour messages:', error);
+    res.status(500).json({ message: 'Erreur serveur.' });
+  }
+});
 
 // Lancer le serveur
 app.listen(5001, () => {

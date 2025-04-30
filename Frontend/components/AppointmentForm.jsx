@@ -1,148 +1,92 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import '../styles/AppointmentForm.css';
 
 const API_BASE_URL = 'http://localhost:5001';
 
-const AppointmentForm = () => {
-  const [type, setType] = useState('');
-  const [doctorList, setDoctorList] = useState([]);
- 
-
+const AppointmentForm = ({ userId }) => {
+  const [doctors, setDoctors] = useState([]);
   const [selectedDoctor, setSelectedDoctor] = useState('');
   const [date, setDate] = useState('');
-  const [time, setTime] = useState('');
   const [reason, setReason] = useState('');
   const [message, setMessage] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  // 🔁 Récupération des médecins validés uniquement
   useEffect(() => {
-    const fetchDoctors = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/medecins-valides`);
-        const data = await res.json();
-        setDoctorList(data);
-      } catch (err) {
-        console.error('❌ Erreur chargement médecins:', err);
-      }
-    };
-
     fetchDoctors();
   }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-  
-    const patientId = localStorage.getItem('userId');
-    if (!patientId || !selectedDoctor || !date || !time) {
-      setMessage("❌ Tous les champs sont obligatoires.");
-      return;
-    }
-  
+  const fetchDoctors = async () => {
     try {
-      setLoading(true);
-      const res = await fetch(`${API_BASE_URL}/api/appointments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          doctorId: selectedDoctor,
-          patientId: patientId,
-          date: `${date}T${time}`, // ➡️ Important : assembler date + heure
-          reason
-        })
-      });
-  
-      const data = await res.json();
-      if (res.ok) {
-        setMessage("✅ Rendez-vous pris avec succès !");
-        setType('');
-        setSelectedDoctor('');
-        setDate('');
-        setTime('');
-        setReason('');
-      } else {
-        setMessage(data.message || "❌ Échec de la demande.");
-      }
-    } catch (err) {
-      console.error(err);
-      setMessage("❌ Erreur serveur.");
-    } finally {
-      setLoading(false);
+      const response = await axios.get(`${API_BASE_URL}/api/medecins-valides`);
+      setDoctors(response.data);
+    } catch (error) {
+      setMessage("❌ Erreur lors de la récupération des médecins.");
     }
   };
-  
-  // 🔍 Filtrer les médecins selon le type (Cabinet ou Hôpital)
-  const filteredDoctors = doctorList.filter(doc => {
-    const role = doc.roles?.[0]?.toLowerCase();
 
-if (type === 'Cabinet') return role === 'cabinet' || role === 'doctor';
-if (type === 'Hopital') return role === 'hopital' || role === 'hospital';
-
-
-    return false;
-  });
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API_BASE_URL}/api/appointments`, {
+        doctorId: selectedDoctor,
+        patientId: userId,
+        date,
+        reason
+      });
+      setMessage("✅ Rendez-vous enregistré avec succès !");
+      setSelectedDoctor('');
+      setDate('');
+      setReason('');
+    } catch (error) {
+      setMessage("❌ Erreur lors de l'enregistrement du rendez-vous.");
+    }
+  };
 
   return (
-    <div className="appointment-form-wrapper">
-      <div className="appointment-form-card">
-        <h2>Prendre un rendez-vous</h2>
+    <div className="appointment-form">
+      {message && <div className="alert">{message}</div>}
+      
+      <form onSubmit={handleSubmit}>
+        <div className="form-group">
+          <label>Médecin :</label>
+          <select 
+            value={selectedDoctor} 
+            onChange={(e) => setSelectedDoctor(e.target.value)}
+            required
+          >
+            <option value="">Sélectionnez un médecin</option>
+            {doctors.map(doctor => (
+              <option key={doctor._id} value={doctor._id}>
+                Dr. {doctor.prenom} {doctor.nom} - {doctor.specialty}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        {message && (
-          <div className={`message ${message.includes("✅") ? 'success' : 'error'}`}>
-            {message}
-          </div>
-        )}
+        <div className="form-group">
+          <label>Date et heure :</label>
+          <input
+            type="datetime-local"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            required
+          />
+        </div>
 
-        <form onSubmit={handleSubmit}>
-          <label>
-            Choisir entre Cabinet ou Hôpital :
-            <select value={type} onChange={(e) => setType(e.target.value)} required>
-              <option value="">-- Sélectionner --</option>
-              <option value="Cabinet">Cabinet</option>
-              <option value="Hopital">Hôpital</option>
-            </select>
-          </label>
+        <div className="form-group">
+          <label>Motif de consultation :</label>
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            required
+            placeholder="Décrivez brièvement le motif de votre consultation..."
+          />
+        </div>
 
-          {type && (
-            <>
-              <label>
-                Choisir un médecin ({type}) :
-                <select value={selectedDoctor} onChange={(e) => setSelectedDoctor(e.target.value)} required>
-                  <option value="">-- Sélectionner --</option>
-                  {filteredDoctors.map((doc) => (
-                    <option key={doc._id} value={doc._id}>
-                      {doc.nom} {doc.prenom} - {doc.specialty}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Date :
-                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-              </label>
-
-              <label>
-                Heure :
-                <input type="time" value={time} onChange={(e) => setTime(e.target.value)} required />
-              </label>
-
-              <label>
-                Motif du rendez-vous :
-                <textarea
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  placeholder="Facultatif"
-                />
-              </label>
-
-              <button type="submit" disabled={loading}>
-                {loading ? "Envoi..." : "Valider le rendez-vous"}
-              </button>
-            </>
-          )}
-        </form>
-      </div>
+        <button type="submit" className="submit-btn">
+          Prendre rendez-vous
+        </button>
+      </form>
     </div>
   );
 };
