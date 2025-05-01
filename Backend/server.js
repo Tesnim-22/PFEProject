@@ -19,6 +19,8 @@ const LabDoctorMessage = require('./models/LabDoctorMessage');
 const HospitalAppointment = require('./models/HospitalAppointment');
 const AmbulanceReport = require('./models/AmbulanceReport');
 const Vehicle = require('./models/Vehicle');
+const Article = require('./models/Article');
+const Comment = require('./models/Comment');
 
 // Configuration CORS
 app.use(cors({
@@ -48,6 +50,11 @@ app.use(express.json());
 const uploadFolder = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadFolder)) {
     fs.mkdirSync(uploadFolder);
+}
+
+const articlesUploadFolder = path.join(__dirname, 'uploads', 'articles');
+if (!fs.existsSync(articlesUploadFolder)) {
+    fs.mkdirSync(articlesUploadFolder, { recursive: true });
 }
 
 const storage = multer.diskStorage({
@@ -117,6 +124,36 @@ const uploadLabResult = multer({
             cb(null, true);
         } else {
             cb(new Error('Format de fichier non supporté. Utilisez PDF, JPEG ou PNG.'));
+        }
+    },
+    limits: {
+        fileSize: 5 * 1024 * 1024 // 5MB max
+    }
+});
+
+// Configuration pour les images d'articles
+const articleImageStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const path = './uploads/articles';
+        if (!fs.existsSync(path)) {
+            fs.mkdirSync(path, { recursive: true });
+        }
+        cb(null, path);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, 'article-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const uploadArticleImage = multer({
+    storage: articleImageStorage,
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = ['image/jpeg', 'image/png'];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Format de fichier non supporté. Utilisez JPEG ou PNG.'));
         }
     },
     limits: {
@@ -753,6 +790,89 @@ app.get('/api/users/:id', async(req, res) => {
     } catch (error) {
         console.error('❌ Erreur récupération utilisateur:', error);
         res.status(500).json({ message: 'Erreur serveur.' });
+    }
+});
+
+// Créer un nouvel article
+app.post('/api/articles', uploadArticleImage.single('image'), async (req, res) => {
+    try {
+        const { title, content, category, tags, authorId } = req.body;
+        
+        if (!title || !content || !category || !authorId) {
+            return res.status(400).json({ message: "Tous les champs requis doivent être remplis." });
+        }
+
+        const article = new Article({
+            title,
+            content,
+            authorId,
+            category,
+            tags: tags ? JSON.parse(tags) : [],
+            imageUrl: req.file ? `/uploads/articles/${req.file.filename}` : null
+        });
+
+        const savedArticle = await article.save();
+        res.status(201).json({
+            message: "✅ Article publié avec succès !",
+            article: savedArticle
+        });
+    } catch (error) {
+        console.error("❌ Erreur création article:", error);
+        res.status(500).json({ 
+            message: "Erreur lors de la création de l'article.",
+            error: error.message 
+        });
+    }
+});
+
+// Récupérer les articles d'un docteur spécifique
+app.get('/api/articles/doctor/:doctorId', async (req, res) => {
+    try {
+        const { doctorId } = req.params;
+        if (!doctorId) {
+            return res.status(400).json({ message: "ID du docteur requis" });
+        }
+
+        const articles = await Article.find({ authorId: doctorId })
+            .populate('authorId', 'nom prenom')
+            .sort({ createdAt: -1 });
+
+        res.status(200).json(articles);
+    } catch (error) {
+        console.error("❌ Erreur récupération articles:", error);
+        res.status(500).json({ 
+            message: "Erreur lors de la récupération des articles.",
+            error: error.message 
+        });
+    }
+});
+
+// Supprimer un article
+app.delete('/api/articles/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const article = await Article.findById(id);
+        
+        if (!article) {
+            return res.status(404).json({ message: "Article non trouvé." });
+        }
+
+        // Supprimer l'image associée si elle existe
+        if (article.imageUrl) {
+            const imagePath = path.join(__dirname, article.imageUrl);
+            if (fs.existsSync(imagePath)) {
+                fs.unlinkSync(imagePath);
+            }
+        }
+
+        await Article.findByIdAndDelete(id);
+        res.status(200).json({ message: "✅ Article supprimé avec succès !" });
+    } catch (error) {
+        console.error("❌ Erreur suppression article:", error);
+        res.status(500).json({ 
+            message: "Erreur lors de la suppression de l'article.",
+            error: error.message 
+        });
     }
 });
 
@@ -1781,6 +1901,85 @@ app.delete('/api/vehicles/:id', async (req, res) => {
         res.status(200).json({ message: "✅ Véhicule supprimé avec succès !" });
     } catch (error) {
         console.error("❌ Erreur suppression véhicule:", error);
+        res.status(500).json({ message: "Erreur serveur." });
+    }
+});
+
+// Récupérer tous les articles
+app.get('/api/articles', async (req, res) => {
+  try {
+    const articles = await Article.find()
+      .populate('authorId', 'nom prenom')
+      .sort({ createdAt: -1 });
+    res.status(200).json(articles);
+  } catch (error) {
+    console.error("❌ Erreur récupération articles:", error);
+    res.status(500).json({ 
+      message: "Erreur lors de la récupération des articles.",
+      error: error.message 
+    });
+  }
+});
+
+// Routes pour les commentaires
+app.post('/api/comments', async (req, res) => {
+    try {
+        const { articleId, authorId, content } = req.body;
+        
+        if (!articleId || !authorId || !content) {
+            return res.status(400).json({ message: "Tous les champs sont requis." });
+        }
+
+        const comment = new Comment({
+            articleId,
+            authorId,
+            content
+        });
+
+        const savedComment = await comment.save();
+        
+        // Populate author info
+        const populatedComment = await Comment.findById(savedComment._id)
+            .populate('authorId', 'nom prenom');
+
+        res.status(201).json({
+            message: "✅ Commentaire ajouté avec succès !",
+            comment: populatedComment
+        });
+    } catch (error) {
+        console.error("❌ Erreur ajout commentaire:", error);
+        res.status(500).json({ message: "Erreur serveur." });
+    }
+});
+
+// Récupérer les commentaires d'un article
+app.get('/api/comments/:articleId', async (req, res) => {
+    try {
+        const { articleId } = req.params;
+        const comments = await Comment.find({ articleId })
+            .populate('authorId', 'nom prenom')
+            .sort({ createdAt: -1 });
+
+        res.status(200).json(comments);
+    } catch (error) {
+        console.error("❌ Erreur récupération commentaires:", error);
+        res.status(500).json({ message: "Erreur serveur." });
+    }
+});
+
+// Supprimer un commentaire
+app.delete('/api/comments/:commentId', async (req, res) => {
+    try {
+        const { commentId } = req.params;
+        const comment = await Comment.findByIdAndDelete(commentId);
+        
+        if (!comment) {
+            return res.status(404).json({ message: "Commentaire non trouvé." });
+        }
+
+        res.status(200).json({ message: "✅ Commentaire supprimé avec succès !" });
+    } catch (error) {
+        console.error("❌ Erreur suppression commentaire:", error);
         res.status(500).json({ message: "Erreur serveur." });
     }
 });

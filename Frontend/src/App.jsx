@@ -28,6 +28,7 @@ import SignupRedirect from '../components/SignupRedirect';
 
 import ForgotPassword from "../components/ForgotPassword";
 import ResetPassword from "../components/ResetPassword";
+import ArticlesPage from '../components/ArticlesPage';
 
 
 // 🔒 Route protégée
@@ -68,6 +69,7 @@ const AppWrapper = () => {
         <Route path="/contact" element={<Contact />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signin" element={<Signin />} />
+        <Route path="/articles" element={<ArticlesPage />} />
 
         {/* Redirection après rôle */}
         <Route path="/signup-redirect" element={<SignupRedirect />} />

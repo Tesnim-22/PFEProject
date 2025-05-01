@@ -608,19 +608,35 @@ const PatientDashboard = () => {
                               <th>Date</th>
                               <th>Motif</th>
                               <th>Statut</th>
+                              <th>Actions</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {appointments.map((apt) => (
-                              <tr key={apt._id} className="appointment-row">
-                                <td>{apt.doctorName || "Dr. " + apt.doctorId}</td>
+                            {appointments.map(apt => (
+                              <tr key={apt._id} className={`appointment-row ${apt.status}`}>
+                                <td>{apt.doctorName}</td>
                                 <td>{new Date(apt.date).toLocaleString('fr-FR')}</td>
-                                <td>{apt.reason || "Non spécifié"}</td>
+                                <td>{apt.reason}</td>
                                 <td>
                                   <span className={`status-badge ${apt.status}`}>
-                                    {apt.status === 'confirmed' ? 'Confirmé' : 
-                                     apt.status === 'pending' ? 'En attente' : 'Annulé'}
+                                    {apt.status === 'pending' && 'En attente'}
+                                    {apt.status === 'confirmed' && 'Confirmé'}
+                                    {apt.status === 'cancelled' && 'Annulé'}
                                   </span>
+                                </td>
+                                <td>
+                                  {apt.status !== 'cancelled' && (
+                                    <button
+                                      onClick={() => {
+                                        setSelectedAppointment(apt);
+                                        fetchChatMessages(apt._id);
+                                        setActiveSection('messagerie');
+                                      }}
+                                      className="chat-button"
+                                    >
+                                      💬 Chat
+                                    </button>
+                                  )}
                                 </td>
                               </tr>
                             ))}
@@ -631,7 +647,7 @@ const PatientDashboard = () => {
                   </div>
 
                   <div className="appointments-category">
-                    <h3>🔬 Rendez-vous Laboratoires</h3>
+                    <h3>🔬 Rendez-vous Laboratoire</h3>
                     {labAppointments.length === 0 ? (
                       <p className="no-appointments-message">Aucun rendez-vous laboratoire trouvé.</p>
                     ) : (
@@ -640,23 +656,22 @@ const PatientDashboard = () => {
                           <thead>
                             <tr>
                               <th>Laboratoire</th>
-                              <th>Adresse</th>
                               <th>Date</th>
                               <th>Motif</th>
                               <th>Statut</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {labAppointments.map((apt) => (
-                              <tr key={apt._id} className="appointment-row">
-                                <td>{apt.lab?.nom || "Laboratoire"}</td>
-                                <td>{apt.lab?.adresse || "Adresse non spécifiée"}</td>
+                            {labAppointments.map(apt => (
+                              <tr key={apt._id} className={`appointment-row ${apt.status}`}>
+                                <td>{apt.doctorName}</td>
                                 <td>{new Date(apt.date).toLocaleString('fr-FR')}</td>
                                 <td>{apt.reason}</td>
                                 <td>
                                   <span className={`status-badge ${apt.status}`}>
-                                    {apt.status === 'confirmed' ? 'Confirmé' : 
-                                     apt.status === 'pending' ? 'En attente' : 'Annulé'}
+                                    {apt.status === 'pending' && 'En attente'}
+                                    {apt.status === 'confirmed' && 'Confirmé'}
+                                    {apt.status === 'cancelled' && 'Annulé'}
                                   </span>
                                 </td>
                               </tr>
@@ -668,7 +683,7 @@ const PatientDashboard = () => {
                   </div>
 
                   <div className="appointments-category">
-                    <h3>🏥 Rendez-vous Hôpitaux</h3>
+                    <h3>🏥 Rendez-vous Hôpital</h3>
                     {hospitalAppointments.length === 0 ? (
                       <p className="no-appointments-message">Aucun rendez-vous hospitalier trouvé.</p>
                     ) : (
@@ -677,42 +692,22 @@ const PatientDashboard = () => {
                           <thead>
                             <tr>
                               <th>Hôpital</th>
-                              <th>Adresse</th>
-                              <th>Spécialité</th>
-                              <th>Date demande</th>
-                              <th>Date rendez-vous</th>
-                              <th>Documents requis</th>
+                              <th>Date</th>
+                              <th>Service</th>
                               <th>Statut</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {hospitalAppointments.map((apt) => (
-                              <tr key={apt._id} className="appointment-row">
-                                <td>{apt.hospitalId?.nom || "Hôpital"}</td>
-                                <td>{apt.hospitalId?.adresse || "Adresse non spécifiée"}</td>
-                                <td>{apt.specialty}</td>
-                                <td>{new Date(apt.createdAt).toLocaleString('fr-FR')}</td>
-                                <td>
-                                  {apt.appointmentDate 
-                                    ? new Date(apt.appointmentDate).toLocaleString('fr-FR')
-                                    : 'En attente de planification'}
-                                </td>
-                                <td>
-                                  {apt.requiredDocuments 
-                                    ? <div className="required-docs">
-                                        <button 
-                                          className="view-docs-btn"
-                                          onClick={() => alert(apt.requiredDocuments)}
-                                        >
-                                          Voir les documents requis
-                                        </button>
-                                      </div>
-                                    : 'Non spécifié'}
-                                </td>
+                            {hospitalAppointments.map(apt => (
+                              <tr key={apt._id} className={`appointment-row ${apt.status}`}>
+                                <td>{apt.hospitalName}</td>
+                                <td>{new Date(apt.date).toLocaleString('fr-FR')}</td>
+                                <td>{apt.service}</td>
                                 <td>
                                   <span className={`status-badge ${apt.status}`}>
-                                    {apt.status === 'confirmed' ? 'Confirmé' : 
-                                     apt.status === 'pending' ? 'En attente' : 'Annulé'}
+                                    {apt.status === 'pending' && 'En attente'}
+                                    {apt.status === 'confirmed' && 'Confirmé'}
+                                    {apt.status === 'cancelled' && 'Annulé'}
                                   </span>
                                 </td>
                               </tr>
