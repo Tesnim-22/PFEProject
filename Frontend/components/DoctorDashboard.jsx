@@ -846,13 +846,11 @@ const ArticlesView = () => {
         ) : (
           articles.map(article => (
             <div key={article._id} className="article-card">
-              {article.imageUrl && (
-                <img 
-                  src={`http://localhost:5001${article.imageUrl}`} 
-                  alt={article.title}
-                  className="article-image"
-                />
-              )}
+              <img 
+                src={article.imageUrl}
+                alt={article.title}
+                className="article-image"
+              />
               <div className="article-content">
                 <h3>{article.title}</h3>
                 <p className="article-category">📂 {article.category}</p>

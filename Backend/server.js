@@ -8,6 +8,8 @@ const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
 // ❗ Correction ici
 const Appointment = require('./models/Appointment');
@@ -131,35 +133,24 @@ const uploadLabResult = multer({
     }
 });
 
-// Configuration pour les images d'articles
-const articleImageStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const path = './uploads/articles';
-        if (!fs.existsSync(path)) {
-            fs.mkdirSync(path, { recursive: true });
-        }
-        cb(null, path);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, 'article-' + uniqueSuffix + path.extname(file.originalname));
-    }
+// Configuration Cloudinary
+cloudinary.config({
+  cloud_name: 'dish7tzta',
+  api_key: '549348789473747',
+  api_secret: 'xdI6JvS3okVXI2W_djbRw0HOqkA'
 });
 
-const uploadArticleImage = multer({
-    storage: articleImageStorage,
-    fileFilter: (req, file, cb) => {
-        const allowedTypes = ['image/jpeg', 'image/png'];
-        if (allowedTypes.includes(file.mimetype)) {
-            cb(null, true);
-        } else {
-            cb(new Error('Format de fichier non supporté. Utilisez JPEG ou PNG.'));
-        }
-    },
-    limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB max
-    }
+// Nouveau storage pour les articles
+const storageArticles = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'articles',
+    allowed_formats: ['jpg', 'png', 'jpeg']
+  }
 });
+
+// Modifier la configuration multer pour utiliser Cloudinary
+const uploadArticleImage = multer({ storage: storageArticles });
 
 // MongoDB Connection String
 const uri = "mongodb+srv://tesnim:Tesnim.123456789@cluster0.50qhu.mongodb.net/HealthApp?retryWrites=true&w=majority";
@@ -795,34 +786,34 @@ app.get('/api/users/:id', async(req, res) => {
 
 // Créer un nouvel article
 app.post('/api/articles', uploadArticleImage.single('image'), async (req, res) => {
-    try {
-        const { title, content, category, tags, authorId } = req.body;
-        
-        if (!title || !content || !category || !authorId) {
-            return res.status(400).json({ message: "Tous les champs requis doivent être remplis." });
-        }
-
-        const article = new Article({
-            title,
-            content,
-            authorId,
-            category,
-            tags: tags ? JSON.parse(tags) : [],
-            imageUrl: req.file ? `/uploads/articles/${req.file.filename}` : null
-        });
-
-        const savedArticle = await article.save();
-        res.status(201).json({
-            message: "✅ Article publié avec succès !",
-            article: savedArticle
-        });
-    } catch (error) {
-        console.error("❌ Erreur création article:", error);
-        res.status(500).json({ 
-            message: "Erreur lors de la création de l'article.",
-            error: error.message 
-        });
+  try {
+    const { title, content, category, tags, authorId } = req.body;
+    
+    if (!title || !content || !category || !authorId) {
+      return res.status(400).json({ message: "Tous les champs requis doivent être remplis." });
     }
+
+    const article = new Article({
+      title,
+      content,
+      authorId,
+      category,
+      tags: tags ? JSON.parse(tags) : [],
+      imageUrl: req.file ? req.file.path : null // Cloudinary retourne directement l'URL
+    });
+
+    const savedArticle = await article.save();
+    res.status(201).json({
+      message: "✅ Article publié avec succès !",
+      article: savedArticle
+    });
+  } catch (error) {
+    console.error("❌ Erreur création article:", error);
+    res.status(500).json({ 
+      message: "Erreur lors de la création de l'article.",
+      error: error.message 
+    });
+  }
 });
 
 // Récupérer les articles d'un docteur spécifique

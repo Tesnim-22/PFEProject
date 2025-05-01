@@ -119,7 +119,7 @@ const ArticlesPage = () => {
           </button>
           {article.imageUrl && (
             <div className="modal-article-image">
-              <img src={`http://localhost:5001${article.imageUrl}`} alt={article.title} />
+              <img src={article.imageUrl} alt={article.title} className="article-image" />
             </div>
           )}
           <div className="modal-article-content">
@@ -246,7 +246,7 @@ const ArticlesPage = () => {
           <article key={article._id} className="article-card">
             {article.imageUrl && (
               <div className="article-image">
-                <img src={`http://localhost:5001${article.imageUrl}`} alt={article.title} />
+                <img src={article.imageUrl} alt={article.title} className="article-image" />
               </div>
             )}
             <div className="article-content">
