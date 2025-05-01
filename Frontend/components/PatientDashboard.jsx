@@ -519,11 +519,24 @@ const PatientDashboard = () => {
                   <p>Aucune notification pour l'instant.</p>
                 ) : (
                   <ul className="notif-list">
-                    {notifications.map((notif, idx) => (
-                      <li key={idx} className="notif-item">
-                        {notif.message}
-                      </li>
-                    ))}
+                    {notifications
+                      .sort((a, b) => {
+                        const dateA = a.createdAt || a.date || new Date();
+                        const dateB = b.createdAt || b.date || new Date();
+                        return new Date(dateB) - new Date(dateA);
+                      })
+                      .map((notif, idx) => (
+                        <li key={idx} className="notif-item">
+                          <div className="notif-content">
+                            {notif.message}
+                          </div>
+                          <div className="notif-date">
+                            {(notif.createdAt || notif.date) ? 
+                              new Date(notif.createdAt || notif.date).toLocaleString('fr-FR') : 
+                              'Date non disponible'}
+                          </div>
+                        </li>
+                      ))}
                   </ul>
                 )}
               </>
@@ -548,26 +561,33 @@ const PatientDashboard = () => {
                               fetchChatMessages(apt._id);
                             }}
                           >
-                            {apt.date ? new Date(apt.date).toLocaleString() : ''} <br />
-                            {apt.doctorName || apt.doctorEmail || apt.doctorId}
+                            <strong>{apt.doctorName || apt.doctorEmail || 'Médecin'}</strong>
+                            <br />
+                            <small>{apt.date ? new Date(apt.date).toLocaleString('fr-FR') : ''}</small>
                           </li>
                         ))}
                       </ul>
                     )}
                   </div>
+                  
                   <div className="chat-box">
                     {selectedAppointment ? (
                       <>
                         <div className="chat-messages">
                           {chatLoading ? (
-                            <div>Chargement...</div>
+                            <div className="loading-messages">Chargement...</div>
                           ) : chatMessages.length === 0 ? (
-                            <div>Aucun message.</div>
+                            <div className="no-messages">Aucun message.</div>
                           ) : (
                             chatMessages.map((msg) => (
-                              <div key={msg._id} className={msg.senderId === userId ? 'msg-patient' : 'msg-doctor'}>
-                                <span>{msg.content}</span>
-                                <div className="msg-date">{new Date(msg.sentAt).toLocaleString()}</div>
+                              <div 
+                                key={msg._id} 
+                                className={msg.senderId === userId ? 'msg-patient' : 'msg-doctor'}
+                              >
+                                <div className="message-content">{msg.content}</div>
+                                <div className="msg-date">
+                                  {new Date(msg.sentAt || msg.createdAt).toLocaleString('fr-FR')}
+                                </div>
                               </div>
                             ))
                           )}
@@ -577,7 +597,7 @@ const PatientDashboard = () => {
                             type="text"
                             value={newChatMessage}
                             onChange={(e) => setNewChatMessage(e.target.value)}
-                            placeholder="Votre message..."
+                            placeholder="Écrivez votre message..."
                             onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
                           />
                           <button onClick={handleSendMessage}>Envoyer</button>

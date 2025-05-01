@@ -1065,10 +1065,13 @@ app.put('/api/appointments/:appointmentId/status', async(req, res) => {
 app.get('/api/notifications/:userId', async(req, res) => {
     try {
         const { userId } = req.params;
-        const notifications = await Notification.find({ userId }).sort({ createdAt: -1 });
+        const notifications = await Notification.find({ userId })
+            .sort({ createdAt: -1 }) // Utiliser createdAt pour le tri
+            .lean(); // Pour une meilleure performance
+
         res.status(200).json(notifications);
     } catch (error) {
-        console.error("❌ Erreur notifications :", error);
+        console.error("❌ Erreur notifications:", error);
         res.status(500).json({ message: "Erreur serveur" });
     }
 });
