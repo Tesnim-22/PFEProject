@@ -540,7 +540,7 @@ const PatientDashboard = () => {
   useEffect(() => {
     if (userId) {
       checkUnreadMessages();
-      const interval = setInterval(checkUnreadMessages, 30000);
+      const interval = setInterval(checkUnreadMessages, 900000);
       return () => clearInterval(interval);
     }
   }, [userId]);

@@ -69,29 +69,21 @@ const MessagesView = () => {
   const fetchMessages = async (appointmentId) => {
     try {
       setLoading(true);
-      setError(null);
-      console.log('Chargement des messages pour le rendez-vous:', appointmentId);
+      const response = await axios.get(`http://localhost:5001/api/messages/${appointmentId}?userId=${doctorId}`);
+      setMessages(response.data);
       
-      const res = await axios.get(`http://localhost:5001/api/messages/${appointmentId}`);
-      console.log('Messages reçus:', res.data);
+      // Marquer les messages comme lus
+      const unreadMessages = response.data
+        .filter(msg => msg.receiverId === doctorId && !msg.isRead)
+        .map(msg => msg._id);
       
-      let messagesToDisplay = [];
-      if (res.data && Array.isArray(res.data.messages)) {
-        messagesToDisplay = res.data.messages;
-      } else if (res.data && Array.isArray(res.data)) {
-        messagesToDisplay = res.data;
+      if (unreadMessages.length > 0) {
+        await axios.put('http://localhost:5001/api/messages/read', {
+          messageIds: unreadMessages
+        });
       }
-
-      messagesToDisplay.sort((a, b) => {
-        const dateA = new Date(a.createdAt);
-        const dateB = new Date(b.createdAt);
-        return dateA - dateB;
-      });
-
-      console.log('Messages à afficher:', messagesToDisplay);
-      setMessages(messagesToDisplay);
-    } catch (err) {
-      console.error('Erreur lors du chargement des messages:', err);
+    } catch (error) {
+      console.error('❌ Erreur récupération messages:', error);
       setError('Erreur lors du chargement des messages');
     } finally {
       setLoading(false);
@@ -1597,6 +1589,33 @@ const MedicalReportsView = () => {
 };
 
 const DoctorDashboard = () => {
+  const [unreadMessages, setUnreadMessages] = useState(0);
+
+  const checkUnreadMessages = async () => {
+    try {
+      const doctorId = localStorage.getItem('userId');
+      if (!doctorId) {
+        console.log("⚠️ Pas d'userId disponible pour vérifier les messages non lus");
+        return;
+      }
+      console.log("🔍 Vérification des messages non lus pour doctorId:", doctorId);
+      const response = await axios.get(`http://localhost:5001/api/messages/unread/${doctorId}`);
+      console.log("✅ Messages non lus reçus:", response.data);
+      setUnreadMessages(response.data.length);
+    } catch (error) {
+      console.error('❌ Erreur vérification messages non lus:', error);
+    }
+  };
+
+  useEffect(() => {
+    const doctorId = localStorage.getItem('userId');
+    if (doctorId) {
+      checkUnreadMessages();
+      const interval = setInterval(checkUnreadMessages, 900000); // Vérification toutes les 15 minutes
+      return () => clearInterval(interval);
+    }
+  }, []);
+
   const navigate = useNavigate();
 
   return (
@@ -1615,12 +1634,26 @@ const DoctorDashboard = () => {
                 <li><Link to="past-appointments">📚 Historique</Link></li>
               </ul>
             </li>
-            <li><Link to="messages">💬 Messages Patients</Link></li>
+            <li>
+              <Link to="messages">
+                💬 Messages Patients
+                {unreadMessages > 0 && (
+                  <span style={{
+                    backgroundColor: '#ff4444',
+                    color: 'white',
+                    padding: '2px 6px',
+                    borderRadius: '10px',
+                    fontSize: '0.75rem',
+                    marginLeft: '8px'
+                  }}>
+                    {unreadMessages}
+                  </span>
+                )}
+              </Link>
+            </li>
             <li><Link to="lab-messages">🔬 Messages Laboratoires</Link></li>
             <li><Link to="articles">📝 Articles</Link></li>
-            <li>
-              <Link to="medical-reports">Rapports Médicaux</Link>
-            </li>
+            <li><Link to="medical-reports">Rapports Médicaux</Link></li>
           </ul>
         </nav>
       </aside>
