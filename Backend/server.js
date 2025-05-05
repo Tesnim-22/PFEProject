@@ -1305,7 +1305,13 @@ app.post('/api/messages', async (req, res) => {
     if (!senderId || !receiverId || !appointmentId || !content) {
       return res.status(400).json({ message: 'Champs manquants.' });
     }
-    const message = new Message({ senderId, receiverId, appointmentId, content });
+    const message = new Message({ 
+      senderId, 
+      receiverId, 
+      appointmentId, 
+      content,
+      isRead: false // Explicitement définir isRead à false
+    });
     await message.save();
     res.status(201).json({ message: 'Message envoyé.', data: message });
   } catch (error) {
@@ -1314,15 +1320,73 @@ app.post('/api/messages', async (req, res) => {
   }
 });
 
+// Route pour mettre à jour les messages existants (à exécuter une seule fois)
+app.post('/api/messages/migrate', async (req, res) => {
+  try {
+    // Mettre à jour tous les messages qui n'ont pas de champ isRead
+    const result = await Message.updateMany(
+      { isRead: { $exists: false } },
+      { $set: { isRead: false } }
+    );
+    
+    res.status(200).json({ 
+      message: 'Migration terminée', 
+      modifiedCount: result.modifiedCount 
+    });
+  } catch (error) {
+    console.error('❌ Erreur migration messages:', error);
+    res.status(500).json({ message: 'Erreur serveur.' });
+  }
+});
+
 // Récupérer les messages pour un rendez-vous donné (patient et médecin)
 app.get('/api/messages/:appointmentId', async (req, res) => {
   try {
     const { appointmentId } = req.params;
-    const messages = await Message.find({ appointmentId }).sort({ sentAt: 1 });
-    res.status(200).json(messages);
+    const { userId } = req.query;
+    
+    console.log("🔍 Recherche des messages pour le rendez-vous:", appointmentId);
+    
+    // Récupérer les messages avec les informations des utilisateurs
+    const messages = await Message.find({ appointmentId })
+      .populate('senderId', 'nom prenom email')
+      .populate('receiverId', 'nom prenom email')
+      .sort({ createdAt: 1 });
+    
+    console.log(`✅ ${messages.length} messages trouvés`);
+    
+    // Marquer les messages comme lus si userId est fourni
+    if (userId) {
+      console.log("📝 Marquage des messages comme lus pour l'utilisateur:", userId);
+      await Message.updateMany(
+        {
+          appointmentId,
+          receiverId: userId,
+          isRead: false
+        },
+        { $set: { isRead: true } }
+      );
+    }
+    
+    // Formater les messages pour l'affichage
+    const formattedMessages = messages.map(msg => ({
+      _id: msg._id,
+      content: msg.content,
+      senderId: msg.senderId._id,
+      senderName: `${msg.senderId.nom} ${msg.senderId.prenom}`,
+      receiverId: msg.receiverId._id,
+      receiverName: `${msg.receiverId.nom} ${msg.receiverId.prenom}`,
+      createdAt: msg.createdAt,
+      isRead: msg.isRead
+    }));
+
+    res.status(200).json(formattedMessages);
   } catch (error) {
     console.error('❌ Erreur récupération messages:', error);
-    res.status(500).json({ message: 'Erreur serveur.' });
+    res.status(500).json({ 
+      message: 'Erreur serveur.',
+      error: error.message 
+    });
   }
 });
 
@@ -2309,4 +2373,46 @@ app.put('/api/lab-appointments/:appointmentId/planning', async (req, res) => {
         console.error("❌ Erreur lors de la planification du rendez-vous:", error);
         res.status(500).json({ message: "Erreur serveur." });
     }
+});
+
+// Ajouter cette route avant la route de messagerie existante
+app.get('/api/messages/unread/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    if (!userId) {
+      console.log("❌ Pas d'userId fourni pour la requête de messages non lus");
+      return res.status(400).json({ message: 'userId requis' });
+    }
+
+    console.log("🔍 Recherche des messages non lus pour userId:", userId);
+    const unreadMessages = await Message.find({
+      receiverId: userId,
+      isRead: false
+    });
+    
+    console.log(`✅ ${unreadMessages.length} messages non lus trouvés pour l'utilisateur ${userId}`);
+    res.status(200).json(unreadMessages);
+  } catch (error) {
+    console.error('❌ Erreur récupération messages non lus:', error);
+    res.status(500).json({ 
+      message: 'Erreur serveur.',
+      error: error.message 
+    });
+  }
+});
+
+// Ajouter cette route pour marquer les messages comme lus
+app.put('/api/messages/read', async (req, res) => {
+  try {
+    const { messageIds } = req.body;
+    await Message.updateMany(
+      { _id: { $in: messageIds } },
+      { $set: { isRead: true } }
+    );
+    res.status(200).json({ message: 'Messages marqués comme lus.' });
+  } catch (error) {
+    console.error('❌ Erreur mise à jour messages:', error);
+    res.status(500).json({ message: 'Erreur serveur.' });
+  }
 });

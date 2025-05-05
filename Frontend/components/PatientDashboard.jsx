@@ -28,6 +28,26 @@ const styles = {
     border: '1px solid #ccc',
     minHeight: '100px',
     marginTop: '0.5rem'
+  },
+  newMessageBadge: {
+    backgroundColor: '#ff4444',
+    color: 'white',
+    padding: '2px 8px',
+    borderRadius: '12px',
+    fontSize: '0.8rem',
+    marginLeft: '8px',
+    fontWeight: 'bold'
+  },
+  unreadCount: {
+    backgroundColor: '#ff4444',
+    color: 'white',
+    padding: '2px 6px',
+    borderRadius: '10px',
+    fontSize: '0.75rem',
+    marginLeft: '8px'
+  },
+  hasUnread: {
+    borderLeft: '3px solid #ff4444'
   }
 };
 
@@ -60,6 +80,8 @@ const PatientDashboard = () => {
   const [appointmentReason, setAppointmentReason] = useState('');
   const [doctors, setDoctors] = useState([]);
   const [selectedRegion, setSelectedRegion] = useState('');
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [hasNewMessages, setHasNewMessages] = useState(false);
 
   // Liste des régions de la Tunisie
   const regions = [
@@ -121,9 +143,9 @@ const PatientDashboard = () => {
       fetchMedicalDocuments(storedId);
     }
     
-    // Charger les rendez-vous appropriés selon la section
-    if (activeSection === 'messagerie' || activeSection === 'all-appointments') {
-      console.log('🔄 Fetching all appointments...');
+    // Charger les rendez-vous si on est dans la section messages ou rendez-vous
+    if (activeSection === 'messages' || activeSection === 'all-appointments') {
+      console.log('🔄 Chargement des rendez-vous...');
       fetchAllAppointments(storedId);
     }
     if (activeSection === 'lab-appointment') {
@@ -201,10 +223,20 @@ const PatientDashboard = () => {
 
   const fetchAllAppointments = async (patientId) => {
     try {
-      // Charger les rendez-vous médicaux
+      console.log("🔄 Chargement des rendez-vous pour le patient:", patientId);
       const medicalRes = await axios.get(`${API_BASE_URL}/api/appointments?patientId=${patientId}`);
-      setAppointments(medicalRes.data);
-
+      console.log("✅ Rendez-vous médicaux reçus:", medicalRes.data);
+      
+      // S'assurer que tous les rendez-vous ont les informations nécessaires
+      const formattedAppointments = medicalRes.data.map(apt => ({
+        ...apt,
+        doctorName: apt.doctorId?.nom ? `Dr. ${apt.doctorId.nom} ${apt.doctorId.prenom}` : apt.doctorEmail,
+        doctorEmail: apt.doctorId?.email || '',
+        doctorId: apt.doctorId?._id || apt.doctorId
+      }));
+      
+      setAppointments(formattedAppointments);
+      
       // Charger les rendez-vous de laboratoire
       const labRes = await axios.get(`${API_BASE_URL}/api/lab-appointments/patient/${patientId}`);
       setLabAppointments(labRes.data);
@@ -221,9 +253,13 @@ const PatientDashboard = () => {
   const fetchChatMessages = async (appointmentId) => {
     setChatLoading(true);
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/messages/${appointmentId}`);
+      console.log("🔄 Chargement des messages pour le rendez-vous:", appointmentId);
+      const res = await axios.get(`${API_BASE_URL}/api/messages/${appointmentId}?userId=${userId}`);
+      console.log("✅ Messages reçus:", res.data);
       setChatMessages(res.data);
+      checkUnreadMessages();
     } catch (error) {
+      console.error("❌ Erreur lors du chargement des messages:", error);
       setChatMessages([]);
     } finally {
       setChatLoading(false);
@@ -484,6 +520,31 @@ const PatientDashboard = () => {
     }
   };
 
+  const checkUnreadMessages = async () => {
+    try {
+      // Vérifier si userId existe avant de faire la requête
+      if (!userId) {
+        console.log("⚠️ Pas d'userId disponible pour vérifier les messages non lus");
+        return;
+      }
+      console.log("🔍 Vérification des messages non lus pour userId:", userId);
+      const response = await axios.get(`${API_BASE_URL}/api/messages/unread/${userId}`);
+      console.log("✅ Messages non lus reçus:", response.data);
+      setUnreadMessages(response.data.length);
+    } catch (error) {
+      console.error('❌ Erreur vérification messages non lus:', error);
+    }
+  };
+
+  // Modifier l'useEffect pour vérifier les messages non lus uniquement quand userId est disponible
+  useEffect(() => {
+    if (userId) {
+      checkUnreadMessages();
+      const interval = setInterval(checkUnreadMessages, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [userId]);
+
   return (
     <div className="dashboard-wrapper">
       <aside className="sidebar">
@@ -562,11 +623,15 @@ const PatientDashboard = () => {
               Résultats Laboratoire
             </button>
             <button 
-              className={activeSection === 'messagerie' ? 'active' : ''} 
-              onClick={() => setActiveSection('messagerie')}
+              className={`nav-button ${activeSection === 'messages' ? 'active' : ''}`}
+              onClick={() => setActiveSection('messages')}
             >
-              <span className="icon">💬</span>
-              Messagerie
+              <span>💬 Messagerie</span>
+              {unreadMessages > 0 && (
+                <span className="unread-badge">
+                  {unreadMessages}
+                </span>
+              )}
             </button>
             <button 
               className={activeSection === 'notifications' ? 'active' : ''} 
@@ -791,7 +856,7 @@ const PatientDashboard = () => {
               </>
             )}
 
-            {activeSection === 'messagerie' && (
+            {activeSection === 'messages' && (
               <div className="messagerie-section">
                 <h2>💬 Messagerie avec mes médecins</h2>
                 <div className="messagerie-layout">
@@ -823,26 +888,28 @@ const PatientDashboard = () => {
                         .map((doctor) => (
                           <li
                             key={doctor.id}
-                            className={selectedAppointment && selectedAppointment.doctorId === doctor.id ? 'selected' : ''}
+                            className={`doctor-chat-item ${selectedAppointment && selectedAppointment.doctorId === doctor.id ? 'selected' : ''} ${unreadMessages[doctor.id] ? 'has-unread' : ''}`}
                             onClick={() => {
-                              // Sélectionner le dernier rendez-vous avec ce médecin
                               const lastAppointment = doctor.appointments
                                 .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
                               setSelectedAppointment(lastAppointment);
                               fetchChatMessages(lastAppointment._id);
                             }}
                           >
-                            <div className="doctor-chat-item">
-                              <div className="doctor-info">
-                                <strong>{doctor.name}</strong>
-                                <span className="appointment-count">
-                                  {doctor.appointments.length} rendez-vous
+                            <div className="doctor-info">
+                              <strong>{doctor.name}</strong>
+                              {unreadMessages[doctor.id] && (
+                                <span className="unread-count">
+                                  {unreadMessages[doctor.id]} nouveau{unreadMessages[doctor.id] > 1 ? 'x' : ''}
                                 </span>
-                              </div>
-                              <small className="last-appointment">
-                                Dernier RDV: {new Date(doctor.lastAppointment).toLocaleDateString('fr-FR')}
-                              </small>
+                              )}
+                              <span className="appointment-count">
+                                {doctor.appointments.length} rendez-vous
+                              </span>
                             </div>
+                            <small className="last-appointment">
+                              Dernier RDV: {new Date(doctor.lastAppointment).toLocaleDateString('fr-FR')}
+                            </small>
                           </li>
                         ))}
                       </ul>
@@ -864,15 +931,15 @@ const PatientDashboard = () => {
                           ) : (
                             <div className="messages-container">
                               {chatMessages.map((msg) => (
-                                <div 
-                                  key={msg._id} 
+                              <div 
+                                key={msg._id} 
                                   className={`message ${msg.senderId === userId ? 'message-sent' : 'message-received'}`}
-                                >
-                                  <div className="message-content">{msg.content}</div>
+                              >
+                                <div className="message-content">{msg.content}</div>
                                   <div className="message-time">
-                                    {new Date(msg.sentAt || msg.createdAt).toLocaleString('fr-FR')}
-                                  </div>
+                                  {new Date(msg.sentAt || msg.createdAt).toLocaleString('fr-FR')}
                                 </div>
+                              </div>
                               ))}
                             </div>
                           )}
@@ -938,18 +1005,18 @@ const PatientDashboard = () => {
                                 </td>
                                 <td>
                                   <div className="appointment-actions">
-                                    {apt.status !== 'cancelled' && (
+                                  {apt.status !== 'cancelled' && (
                                       <>
-                                        <button
-                                          onClick={() => {
-                                            setSelectedAppointment(apt);
-                                            fetchChatMessages(apt._id);
-                                            setActiveSection('messagerie');
-                                          }}
-                                          className="chat-button"
-                                        >
-                                          💬 Chat
-                                        </button>
+                                    <button
+                                      onClick={() => {
+                                        setSelectedAppointment(apt);
+                                        fetchChatMessages(apt._id);
+                                        setActiveSection('messages');
+                                      }}
+                                      className="chat-button"
+                                    >
+                                      💬 Chat
+                                    </button>
                                         <button
                                           onClick={() => handleCancelAppointment(apt._id, 'medical')}
                                           className="cancel-button"
@@ -1116,10 +1183,10 @@ const PatientDashboard = () => {
                         {labs
                           .filter(lab => !selectedRegion || lab.region === selectedRegion)
                           .map(lab => (
-                            <option key={lab._id} value={lab._id}>
-                              {lab.nom} - {lab.adresse}
-                            </option>
-                          ))}
+                          <option key={lab._id} value={lab._id}>
+                            {lab.nom} - {lab.adresse}
+                          </option>
+                        ))}
                       </select>
                     </div>
 
@@ -1312,8 +1379,8 @@ const PatientDashboard = () => {
                           .map(hospital => (
                             <option key={hospital._id} value={hospital._id}>
                               {hospital.nom} - {hospital.adresse}
-                            </option>
-                          ))}
+                          </option>
+                        ))}
                       </select>
                     </div>
 
