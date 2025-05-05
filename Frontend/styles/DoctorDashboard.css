@@ -1,0 +1,119 @@
+.doctor-home {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.doctor-header {
+  margin-bottom: 30px;
+}
+
+.doctor-header h1 {
+  color: #2c3e50;
+  margin-bottom: 20px;
+  font-size: 2rem;
+}
+
+.doctor-info-card {
+  background-color: white;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 30px;
+}
+
+.doctor-info-card h2 {
+  color: #2c3e50;
+  margin-bottom: 15px;
+  font-size: 1.5rem;
+}
+
+.doctor-info-card p {
+  margin: 10px 0;
+  color: #34495e;
+  font-size: 1.1rem;
+}
+
+.doctor-appointments h2 {
+  color: #2c3e50;
+  margin-bottom: 20px;
+  font-size: 1.5rem;
+}
+
+.doctor-appointments-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.doctor-appointment-card {
+  background-color: white;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease;
+}
+
+.doctor-appointment-card:hover {
+  transform: translateY(-5px);
+}
+
+.doctor-appointment-header {
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+  margin-bottom: 15px;
+}
+
+.doctor-appointment-header h3 {
+  color: #2c3e50;
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.doctor-appointment-date {
+  display: block;
+  color: #7f8c8d;
+  margin-top: 5px;
+  font-size: 0.9rem;
+}
+
+.doctor-appointment-details p {
+  margin: 8px 0;
+  color: #34495e;
+}
+
+.doctor-status-badge {
+  display: inline-block;
+  padding: 5px 10px;
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border-radius: 15px;
+  font-size: 0.9rem;
+  margin-top: 10px;
+}
+
+.doctor-loading {
+  text-align: center;
+  padding: 50px;
+  color: #666;
+  font-size: 1.2rem;
+}
+
+.doctor-error {
+  text-align: center;
+  padding: 50px;
+  color: #e74c3c;
+  font-size: 1.2rem;
+  background-color: #fde8e7;
+  border-radius: 8px;
+  margin: 20px;
+}
+
+.doctor-no-appointments {
+  text-align: center;
+  padding: 30px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  color: #666;
+  font-size: 1.1rem;
+} 

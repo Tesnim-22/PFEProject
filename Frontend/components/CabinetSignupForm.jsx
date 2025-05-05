@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import '../styles/CabinetSignupForm.css';
 
 const CabinetSignupForm = () => {
   const [doctors, setDoctors] = useState([]);
   const [specialties, setSpecialties] = useState([]);
   const [selectedSpecialty, setSelectedSpecialty] = useState('');
+  const [selectedRegion, setSelectedRegion] = useState('');
   const [search, setSearch] = useState('');
   const [filteredDoctors, setFilteredDoctors] = useState([]);
   const [selectedDoctor, setSelectedDoctor] = useState('');
@@ -12,32 +14,52 @@ const CabinetSignupForm = () => {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Liste des régions de Tunisie
+  const tunisianRegions = [
+    'Tunis', 'Ariana', 'Ben Arous', 'Manouba', 'Nabeul', 'Zaghouan', 'Bizerte',
+    'Béja', 'Jendouba', 'Le Kef', 'Siliana', 'Sousse', 'Monastir', 'Mahdia',
+    'Sfax', 'Kairouan', 'Kasserine', 'Sidi Bouzid', 'Gabès', 'Medenine',
+    'Tataouine', 'Gafsa', 'Tozeur', 'Kebili'
+  ];
+
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
-        const res = await fetch('http://localhost:5001/api/valid-doctors');
+        const response = await axios.get('http://localhost:5001/api/medecins-valides');
+        console.log('Médecins récupérés:', response.data);
+        setDoctors(response.data);
 
-        const data = await res.json();
-        setDoctors(data);
-        const uniqueSpecialties = [...new Set(data.map(doc => doc.specialty?.trim()).filter(Boolean))];
+        // Extraire les spécialités uniques
+        const uniqueSpecialties = [...new Set(response.data
+          .map(doc => doc.specialty?.trim())
+          .filter(Boolean))].sort();
         setSpecialties(uniqueSpecialties);
+
+        // Initialiser les médecins filtrés avec tous les médecins
+        setFilteredDoctors(response.data);
       } catch (err) {
-        console.error('Erreur récupération médecins:', err);
+        console.error('❌ Erreur récupération médecins:', err);
+        setMessage('❌ Erreur lors de la récupération des médecins');
       }
     };
     fetchDoctors();
   }, []);
 
+  // Mettre à jour les médecins filtrés à chaque changement de filtre
   useEffect(() => {
-    const filtered = doctors.filter(
-      (doc) =>
-        doc.specialty?.trim() === selectedSpecialty.trim() &&
-        (doc.nom?.toLowerCase().includes(search.toLowerCase()) ||
-         doc.prenom?.toLowerCase().includes(search.toLowerCase()) ||
-         doc.email?.toLowerCase().includes(search.toLowerCase()))
-    );
+    const filtered = doctors.filter((doc) => {
+      const matchesSpecialty = !selectedSpecialty || doc.specialty?.trim() === selectedSpecialty;
+      const matchesRegion = !selectedRegion || doc.region === selectedRegion;
+      const matchesSearch = !search || 
+        doc.nom?.toLowerCase().includes(search.toLowerCase()) ||
+        doc.prenom?.toLowerCase().includes(search.toLowerCase());
+
+      return matchesSpecialty && matchesRegion && matchesSearch;
+    });
+
+    console.log('Médecins filtrés:', filtered);
     setFilteredDoctors(filtered);
-  }, [search, doctors, selectedSpecialty]);
+  }, [search, selectedSpecialty, selectedRegion, doctors]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -50,27 +72,20 @@ const CabinetSignupForm = () => {
 
     try {
       setLoading(true);
-      const res = await fetch('http://localhost:5001/cabinet-info', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          linkedDoctorId: selectedDoctor,
-          specialty: selectedSpecialty,
-          adresse: cabinetAddress
-        })
+      const res = await axios.post('http://localhost:5001/cabinet-info', {
+        email,
+        linkedDoctorId: selectedDoctor,
+        specialty: selectedSpecialty,
+        adresse: cabinetAddress
       });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
 
       setMessage('✅ Cabinet lié au médecin avec succès !');
       setTimeout(() => {
         window.location.href = '/cabinet-dashboard';
       }, 1200);
     } catch (err) {
-      console.error(err);
-      setMessage(err.message || '❌ Erreur serveur.');
+      console.error('❌ Erreur:', err);
+      setMessage(err.response?.data?.message || '❌ Erreur serveur.');
     } finally {
       setLoading(false);
     }
@@ -87,55 +102,79 @@ const CabinetSignupForm = () => {
           </div>
         )}
         <form onSubmit={handleSubmit}>
-          <label>Spécialité :
-            <select
-              value={selectedSpecialty}
-              onChange={(e) => setSelectedSpecialty(e.target.value)}
-              required
-            >
-              <option value="">-- Sélectionner une spécialité --</option>
-              {specialties.map((spec, idx) => (
-                <option key={idx} value={spec}>{spec}</option>
-              ))}
-            </select>
-          </label>
+          <div className="form-row">
+            <label>
+              Spécialité :
+              <select
+                value={selectedSpecialty}
+                onChange={(e) => setSelectedSpecialty(e.target.value)}
+                required
+              >
+                <option value="">-- Sélectionner une spécialité --</option>
+                {specialties.map((spec, idx) => (
+                  <option key={idx} value={spec}>{spec}</option>
+                ))}
+              </select>
+            </label>
 
-          <label>Rechercher un médecin :
+            <label>
+              Région :
+              <select
+                value={selectedRegion}
+                onChange={(e) => setSelectedRegion(e.target.value)}
+              >
+                <option value="">-- Toutes les régions --</option>
+                {tunisianRegions.map((region, idx) => (
+                  <option key={idx} value={region}>{region}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <label>
+            Rechercher un médecin :
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Nom, prénom ou email"
+              placeholder="Rechercher par nom ou prénom"
+              className="search-input"
             />
           </label>
 
-          <label>Médecin à associer :
+          <label>
+            Médecin à associer :
             <select
               value={selectedDoctor}
               onChange={(e) => setSelectedDoctor(e.target.value)}
               required
+              className="doctor-select"
             >
               <option value="">-- Sélectionner un médecin --</option>
               {filteredDoctors.map((doc) => (
                 <option key={doc._id} value={doc._id}>
-                  {doc.prenom} {doc.nom} - {doc.email}
+                  Dr. {doc.prenom} {doc.nom} - {doc.specialty} ({doc.region || 'Région non spécifiée'})
                 </option>
               ))}
             </select>
+            {filteredDoctors.length === 0 && (
+              <p className="no-results">Aucun médecin ne correspond aux critères sélectionnés</p>
+            )}
           </label>
 
-          <label>Adresse du cabinet :
+          <label>
+            Adresse du cabinet :
             <input
               type="text"
               value={cabinetAddress}
               onChange={(e) => setCabinetAddress(e.target.value)}
-              placeholder="Adresse du cabinet"
+              placeholder="Adresse complète du cabinet"
               required
             />
           </label>
 
-          <button type="submit" disabled={loading}>
-            {loading ? 'Traitement...' : 'Valider'}
+          <button type="submit" disabled={loading} className="submit-button">
+            {loading ? 'Traitement...' : 'Valider l\'inscription'}
           </button>
         </form>
       </div>

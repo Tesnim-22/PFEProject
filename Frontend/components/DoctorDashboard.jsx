@@ -1588,6 +1588,109 @@ const MedicalReportsView = () => {
   );
 };
 
+const HomeView = () => {
+  const [doctorInfo, setDoctorInfo] = useState(null);
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const doctorId = localStorage.getItem('userId');
+
+  useEffect(() => {
+    if (doctorId) {
+      fetchDoctorInfo();
+      fetchAppointments();
+    }
+  }, []);
+
+  const fetchDoctorInfo = async () => {
+    try {
+      const response = await axios.get(`http://localhost:5001/api/users/${doctorId}`);
+      setDoctorInfo(response.data);
+    } catch (error) {
+      console.error('❌ Erreur récupération info médecin:', error);
+      setError('Impossible de charger les informations du médecin');
+    }
+  };
+
+  const fetchAppointments = async () => {
+    try {
+      const response = await axios.get(`http://localhost:5001/api/doctor/appointments/${doctorId}`);
+      const confirmedAppointments = response.data.filter(apt => apt.status === 'confirmed');
+      setAppointments(confirmedAppointments);
+      setLoading(false);
+    } catch (error) {
+      console.error('❌ Erreur récupération rendez-vous:', error);
+      setError('Impossible de charger les rendez-vous');
+      setLoading(false);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  if (loading) {
+    return <div className="doctor-loading">Chargement...</div>;
+  }
+
+  if (error) {
+    return <div className="doctor-error">{error}</div>;
+  }
+
+  return (
+    <div className="doctor-home">
+      <div className="doctor-header">
+        <h1>👨‍⚕️ Tableau de bord du Médecin</h1>
+        {doctorInfo && (
+          <div className="doctor-info-card">
+            <h2>Dr. {doctorInfo.prenom} {doctorInfo.nom}</h2>
+            <p>🏥 Spécialité: {doctorInfo.specialty}</p>
+            <p>📍 Région: {doctorInfo.region}</p>
+            <p>📧 Email: {doctorInfo.email}</p>
+            <p>📞 Téléphone: {doctorInfo.telephone}</p>
+          </div>
+        )}
+      </div>
+
+      <div className="doctor-appointments">
+        <h2>📅 Rendez-vous Confirmés</h2>
+        {appointments.length === 0 ? (
+          <div className="doctor-no-appointments">
+            <p>Aucun rendez-vous confirmé pour le moment</p>
+          </div>
+        ) : (
+          <div className="doctor-appointments-grid">
+            {appointments.map(appointment => (
+              <div key={appointment._id} className="doctor-appointment-card">
+                <div className="doctor-appointment-header">
+                  <h3>👤 Patient: {appointment.patient?.prenom} {appointment.patient?.nom}</h3>
+                  <span className="doctor-appointment-date">
+                    🗓️ {formatDate(appointment.date)}
+                  </span>
+                </div>
+                <div className="doctor-appointment-details">
+                  <p>📧 Email: {appointment.patient?.email}</p>
+                  <p>📞 Téléphone: {appointment.patient?.telephone}</p>
+                  {appointment.reason && <p>📝 Motif: {appointment.reason}</p>}
+                </div>
+                <div className="doctor-status-badge">
+                  ✅ Confirmé
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const DoctorDashboard = () => {
   const [unreadMessages, setUnreadMessages] = useState(0);
 
@@ -1660,6 +1763,7 @@ const DoctorDashboard = () => {
 
       <div className="main-content">
         <Routes>
+          <Route path="/" element={<HomeView />} />
           <Route path="calendar" element={<CalendarView />} />
           <Route path="pending-appointments" element={<PendingAppointmentsView />} />
           <Route path="upcoming-appointments" element={<UpcomingAppointmentsView />} />
