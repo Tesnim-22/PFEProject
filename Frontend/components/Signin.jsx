@@ -16,10 +16,18 @@ const Signin = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState('');
+  const [region, setRegion] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
+
+  const regions = [
+    'Tunis', 'Ariana', 'Ben Arous', 'Manouba', 'Nabeul', 'Zaghouan', 'Bizerte',
+    'Béja', 'Jendouba', 'Le Kef', 'Siliana', 'Sousse', 'Monastir', 'Mahdia',
+    'Sfax', 'Kairouan', 'Kasserine', 'Sidi Bouzid', 'Gabès', 'Medenine',
+    'Tataouine', 'Gafsa', 'Tozeur', 'Kebili'
+  ];
 
   const isStrongPassword = (password) => {
     const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
@@ -49,6 +57,12 @@ const Signin = () => {
       return;
     }
 
+    if (!region) {
+      setMessage("Veuillez choisir une région.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch("http://localhost:5001/signup", {
         method: "POST",
@@ -62,7 +76,8 @@ const Signin = () => {
           adresse,
           cin,
           password,
-          role
+          role,
+          region
         })
       });
 
@@ -83,7 +98,7 @@ const Signin = () => {
           }
         }, 1000);
       } else {
-        setMessage(data.message || 'Erreur lors de l’inscription.');
+        setMessage(data.message || 'Erreur lors de l\'inscription.');
       }
     } catch (error) {
       console.error('Signup error:', error);
@@ -148,6 +163,13 @@ const Signin = () => {
               <option value="Hospital">Hospital</option>
               <option value="Cabinet">Cabinet</option>
               <option value="Ambulancier">Ambulancier</option>
+            </select>
+
+            <select value={region} onChange={(e) => setRegion(e.target.value)} required>
+              <option value="">-- Sélectionnez une région --</option>
+              {regions.map((reg) => (
+                <option key={reg} value={reg}>{reg}</option>
+              ))}
             </select>
 
             <button type="submit" className="submit-btn" disabled={loading}>

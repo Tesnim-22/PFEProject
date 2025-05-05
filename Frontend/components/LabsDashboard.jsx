@@ -14,6 +14,9 @@ const LabsDashboard = () => {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [currentLabId, setCurrentLabId] = useState(null);
+  const [showPlanningForm, setShowPlanningForm] = useState(false);
+  const [appointmentDate, setAppointmentDate] = useState('');
+  const [requiredDocuments, setRequiredDocuments] = useState('');
   
   // États pour la messagerie
   const [doctors, setDoctors] = useState([]);
@@ -61,18 +64,21 @@ const LabsDashboard = () => {
 
   const handleStatusChange = async (appointmentId, newStatus) => {
     try {
-      await axios.put(`${API_BASE_URL}/api/lab-appointments/${appointmentId}/status`, {
-        status: newStatus
-      });
-      
-      // Mettre à jour localement
-      setAppointments(appointments.map(apt => 
-        apt._id === appointmentId ? {...apt, status: newStatus} : apt
-      ));
+      if (newStatus === 'confirmed') {
+        setSelectedAppointment(appointments.find(apt => apt._id === appointmentId));
+        setShowPlanningForm(true);
+      } else {
+        await axios.put(`${API_BASE_URL}/api/lab-appointments/${appointmentId}/status`, {
+          status: newStatus
+        });
+        
+        setAppointments(appointments.map(apt => 
+          apt._id === appointmentId ? {...apt, status: newStatus} : apt
+        ));
 
-      // Notification de succès
-      setError(`✅ Statut mis à jour avec succès : ${newStatus}`);
-      setTimeout(() => setError(''), 3000);
+        setError(`✅ Statut mis à jour avec succès : ${newStatus}`);
+        setTimeout(() => setError(''), 3000);
+      }
     } catch (err) {
       console.error('❌ Erreur lors de la mise à jour du statut:', err);
       setError('Impossible de mettre à jour le statut.');
@@ -166,6 +172,32 @@ const LabsDashboard = () => {
   const handleDoctorSelect = (doctor) => {
     setSelectedDoctor(doctor);
     fetchMessages(doctor._id);
+  };
+
+  const handlePlanningSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(`${API_BASE_URL}/api/lab-appointments/${selectedAppointment._id}/planning`, {
+        appointmentDate,
+        requiredDocuments,
+        status: 'confirmed'
+      });
+
+      setAppointments(appointments.map(apt => 
+        apt._id === selectedAppointment._id 
+          ? { ...apt, status: 'confirmed', appointmentDate, requiredDocuments } 
+          : apt
+      ));
+
+      setError('✅ Planification du rendez-vous envoyée avec succès !');
+      setShowPlanningForm(false);
+      setSelectedAppointment(null);
+      setAppointmentDate('');
+      setRequiredDocuments('');
+    } catch (error) {
+      console.error('❌ Erreur:', error);
+      setError("Erreur lors de la planification du rendez-vous.");
+    }
   };
 
   if (loading && activeSection === 'appointments') return <div className="loading">Chargement...</div>;
@@ -332,6 +364,74 @@ const LabsDashboard = () => {
                 👈 Sélectionnez un médecin pour commencer une discussion
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {showPlanningForm && selectedAppointment && (
+        <div className="planning-form-overlay" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div className="planning-form-container" style={{
+            backgroundColor: 'white',
+            padding: '2rem',
+            borderRadius: '8px',
+            width: '90%',
+            maxWidth: '500px'
+          }}>
+            <h2>Planifier le rendez-vous</h2>
+            <p>Patient: {selectedAppointment.patient?.nom} {selectedAppointment.patient?.prenom}</p>
+            
+            <form onSubmit={handlePlanningSubmit} className="planning-form">
+              <div className="form-group">
+                <label>Date et heure du rendez-vous:</label>
+                <input
+                  type="datetime-local"
+                  value={appointmentDate}
+                  onChange={(e) => setAppointmentDate(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Documents requis:</label>
+                <textarea
+                  value={requiredDocuments}
+                  onChange={(e) => setRequiredDocuments(e.target.value)}
+                  placeholder="Liste des documents nécessaires..."
+                  required
+                />
+              </div>
+
+              <div className="form-actions" style={{
+                display: 'flex',
+                gap: '1rem',
+                marginTop: '1rem'
+              }}>
+                <button type="submit" className="confirm-btn">
+                  Confirmer la planification
+                </button>
+                <button 
+                  type="button" 
+                  className="cancel-btn"
+                  onClick={() => {
+                    setShowPlanningForm(false);
+                    setSelectedAppointment(null);
+                  }}
+                >
+                  Annuler
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

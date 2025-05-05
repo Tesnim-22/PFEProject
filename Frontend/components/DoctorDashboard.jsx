@@ -12,6 +12,7 @@ const MessagesView = () => {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [groupedAppointments, setGroupedAppointments] = useState({});
   const messagesEndRef = useRef(null);
   const doctorId = localStorage.getItem('userId');
 
@@ -40,14 +41,27 @@ const MessagesView = () => {
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      setError(null);
       const res = await axios.get(`http://localhost:5001/api/doctor/appointments/${doctorId}`);
-      console.log('Rendez-vous reçus:', res.data);
-      setAppointments(res.data);
+      const appointments = res.data;
+
+      // Grouper les rendez-vous par patient
+      const grouped = appointments.reduce((acc, apt) => {
+        const patientId = apt.patient._id;
+        if (!acc[patientId]) {
+          acc[patientId] = {
+            patient: apt.patient,
+            appointments: []
+          };
+        }
+        acc[patientId].appointments.push(apt);
+        return acc;
+      }, {});
+
+      setGroupedAppointments(grouped);
+      setLoading(false);
     } catch (err) {
-      console.error('Erreur lors du chargement des rendez-vous:', err);
-      setError('Erreur lors du chargement des rendez-vous');
-    } finally {
+      console.error('Erreur:', err);
+      setError("Impossible de charger les rendez-vous");
       setLoading(false);
     }
   };
@@ -154,54 +168,142 @@ const MessagesView = () => {
   };
 
   return (
-    <div className="messages-container">
-      <div className="appointments-list">
-        <h3>Mes Rendez-vous</h3>
+    <div className="messages-container" style={{ height: '100vh', display: 'flex' }}>
+      <div className="appointments-list" style={{
+        flex: '0 0 300px',
+        overflowY: 'auto',
+        borderRight: '1px solid #e0e0e0',
+        padding: '20px',
+        backgroundColor: '#f8f9fa'
+      }}>
+        <h3 style={{
+          fontSize: '1.5rem',
+          marginBottom: '20px',
+          color: '#2c3e50'
+        }}>Mes Patients</h3>
         {error && <div className="error-message" key="error">{error}</div>}
-        {loading && appointments.length === 0 ? (
-          <div className="loading" key="loading">Chargement des rendez-vous...</div>
-        ) : appointments.length === 0 ? (
-          <div className="no-appointments" key="no-appointments">Aucun rendez-vous trouvé</div>
+        {loading && Object.keys(groupedAppointments).length === 0 ? (
+          <div className="loading" key="loading">Chargement des patients...</div>
+        ) : Object.keys(groupedAppointments).length === 0 ? (
+          <div className="no-appointments" key="no-appointments">Aucun patient trouvé</div>
         ) : (
-          appointments.map(apt => (
+          Object.values(groupedAppointments).map(({ patient, appointments }) => (
             <div 
-              key={`appointment-${apt._id}`}
-              className={`appointment-item ${selectedAppointment?._id === apt._id ? 'selected' : ''}`}
-              onClick={() => setSelectedAppointment(apt)}
+              key={`patient-${patient._id}`}
+              className="patient-group"
+              style={{
+                backgroundColor: 'white',
+                borderRadius: '8px',
+                padding: '15px',
+                marginBottom: '15px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              }}
             >
-              <h4>{apt.patient?.prenom} {apt.patient?.nom}</h4>
-              <p>🗓️ {formatDate(apt.date)}</p>
-              <p className={`status ${apt.status}`}>
-                {apt.status === 'confirmed' ? 'Confirmé' : apt.status === 'pending' ? 'En attente' : 'Annulé'}
-              </p>
+              <div className="patient-header" style={{
+                borderBottom: '1px solid #eee',
+                paddingBottom: '10px',
+                marginBottom: '10px'
+              }}>
+                <h4 style={{
+                  margin: '0 0 8px 0',
+                  color: '#2c3e50',
+                  fontSize: '1.1rem'
+                }}>{patient.prenom} {patient.nom}</h4>
+                <p style={{ margin: '4px 0', color: '#666' }}>📧 {patient.email}</p>
+                <p style={{ margin: '4px 0', color: '#666' }}>📞 {patient.telephone}</p>
+              </div>
+              <div className="patient-appointments">
+                {appointments.map(apt => (
+                  <div 
+                    key={`appointment-${apt._id}`}
+                    className={`appointment-item ${selectedAppointment?._id === apt._id ? 'selected' : ''}`}
+                    onClick={() => setSelectedAppointment(apt)}
+                    style={{
+                      padding: '8px',
+                      margin: '5px 0',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      backgroundColor: selectedAppointment?._id === apt._id ? '#e3f2fd' : '#f8f9fa',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <p style={{ margin: '2px 0' }}>🗓️ {formatDate(apt.date)}</p>
+                    <p className={`status ${apt.status}`} style={{
+                      margin: '2px 0',
+                      color: apt.status === 'confirmed' ? '#4caf50' : 
+                             apt.status === 'pending' ? '#ff9800' : '#f44336'
+                    }}>
+                      {apt.status === 'confirmed' ? 'Confirmé' : apt.status === 'pending' ? 'En attente' : 'Annulé'}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           ))
         )}
       </div>
 
-      <div className="chat-section">
+      <div className="chat-section" style={{
+        flex: '1',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%'
+      }}>
         {selectedAppointment ? (
           <>
-            <div className="chat-header">
-              <h3>Discussion avec {selectedAppointment.patient?.prenom} {selectedAppointment.patient?.nom}</h3>
-              <p>📅 {formatDate(selectedAppointment.date)}</p>
+            <div className="chat-header" style={{
+              padding: '20px',
+              borderBottom: '1px solid #e0e0e0',
+              backgroundColor: '#fff'
+            }}>
+              <h3 style={{
+                margin: '0 0 8px 0',
+                color: '#2c3e50',
+                fontSize: '1.3rem'
+              }}>Discussion avec {selectedAppointment.patient?.prenom} {selectedAppointment.patient?.nom}</h3>
+              <p style={{ margin: '0', color: '#666' }}>📅 {formatDate(selectedAppointment.date)}</p>
             </div>
 
-            <div className="messages-list">
+            <div className="messages-list" style={{
+              flex: '1',
+              overflowY: 'auto',
+              padding: '20px',
+              backgroundColor: '#f8f9fa'
+            }}>
               {error && <div className="error-message" key="chat-error">{error}</div>}
               {loading ? (
                 <div className="loading" key="chat-loading">Chargement des messages...</div>
               ) : messages.length === 0 ? (
-                <div className="no-messages" key="no-messages">Aucun message dans cette discussion</div>
+                <div className="no-messages" key="no-messages" style={{
+                  textAlign: 'center',
+                  color: '#666',
+                  marginTop: '20px'
+                }}>Aucun message dans cette discussion</div>
               ) : (
                 <>
                   {messages.map((msg, index) => (
                     <div 
                       key={msg._id || `msg-${index}-${Date.now()}`}
                       className={`message ${isMessageFromDoctor(msg) ? 'sent' : 'received'}`}
+                      style={{
+                        maxWidth: '70%',
+                        margin: '10px',
+                        padding: '12px 16px',
+                        borderRadius: '12px',
+                        backgroundColor: isMessageFromDoctor(msg) ? '#1976d2' : '#fff',
+                        color: isMessageFromDoctor(msg) ? '#fff' : '#2c3e50',
+                        alignSelf: isMessageFromDoctor(msg) ? 'flex-end' : 'flex-start',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                        display: 'flex',
+                        flexDirection: 'column'
+                      }}
                     >
-                      <p>{msg.content}</p>
-                      <small>{formatDate(msg.createdAt)}</small>
+                      <p style={{ margin: '0 0 4px 0' }}>{msg.content}</p>
+                      <small style={{
+                        fontSize: '0.75rem',
+                        opacity: 0.8,
+                        alignSelf: isMessageFromDoctor(msg) ? 'flex-end' : 'flex-start'
+                      }}>{formatDate(msg.createdAt)}</small>
                     </div>
                   ))}
                   <div ref={messagesEndRef} key="messages-end" />
@@ -209,22 +311,57 @@ const MessagesView = () => {
               )}
             </div>
 
-            <form onSubmit={sendMessage} className="message-form">
+            <form onSubmit={sendMessage} className="message-form" style={{
+              padding: '20px',
+              borderTop: '1px solid #e0e0e0',
+              backgroundColor: '#fff',
+              display: 'flex',
+              gap: '10px'
+            }}>
               <input
                 type="text"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder="Écrivez votre message..."
                 disabled={loading}
+                style={{
+                  flex: '1',
+                  padding: '12px',
+                  borderRadius: '24px',
+                  border: '1px solid #e0e0e0',
+                  outline: 'none',
+                  fontSize: '1rem'
+                }}
               />
-              <button type="submit" disabled={loading || !newMessage.trim()}>
+              <button 
+                type="submit" 
+                disabled={loading || !newMessage.trim()}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: '24px',
+                  border: 'none',
+                  backgroundColor: '#1976d2',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  opacity: loading || !newMessage.trim() ? 0.7 : 1,
+                  transition: 'all 0.2s ease'
+                }}
+              >
                 {loading ? 'Envoi...' : 'Envoyer'}
               </button>
             </form>
           </>
         ) : (
-          <div className="no-chat-selected" key="no-chat">
-            <p>Sélectionnez un rendez-vous pour voir la discussion</p>
+          <div className="no-chat-selected" key="no-chat" style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+            color: '#666',
+            fontSize: '1.1rem'
+          }}>
+            <p>👈 Sélectionnez un rendez-vous pour voir la discussion</p>
           </div>
         )}
       </div>
@@ -518,14 +655,29 @@ const PastAppointmentsView = () => {
 
 const PendingAppointmentsView = () => {
   const [appointments, setAppointments] = useState([]);
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [medicalDocuments, setMedicalDocuments] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [showPlanningForm, setShowPlanningForm] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [appointmentDate, setAppointmentDate] = useState('');
+  const [requiredDocuments, setRequiredDocuments] = useState('');
   const doctorId = localStorage.getItem('userId');
 
   useEffect(() => {
     fetchAppointments();
   }, []);
 
+  useEffect(() => {
+    if (selectedPatient) {
+      fetchMedicalDocuments(selectedPatient);
+    }
+  }, [selectedPatient]);
+
   const fetchAppointments = async () => {
     try {
+      setLoading(true);
       const res = await axios.get(`http://localhost:5001/api/doctor/appointments/${doctorId}`);
       const pendingAppointments = res.data
         .filter(apt => apt.status === 'pending')
@@ -533,36 +685,347 @@ const PendingAppointmentsView = () => {
       setAppointments(pendingAppointments);
     } catch (err) {
       console.error('Erreur:', err);
+      setError('Erreur lors du chargement des rendez-vous');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const updateStatus = async (id, newStatus) => {
-    await axios.put(`http://localhost:5001/api/appointments/${id}/status`, { status: newStatus });
-    fetchAppointments();
+  const fetchMedicalDocuments = async (patientId) => {
+    try {
+      setLoading(true);
+      const res = await axios.get(`http://localhost:5001/api/patient/medical-documents/${patientId}`);
+      setMedicalDocuments(res.data);
+    } catch (err) {
+      console.error('Erreur lors du chargement des documents:', err);
+      setError('Erreur lors du chargement des documents médicaux');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStatusChange = async (appointmentId, newStatus) => {
+    try {
+      if (newStatus === 'confirmed') {
+        setSelectedAppointment(appointments.find(apt => apt._id === appointmentId));
+        setShowPlanningForm(true);
+      } else {
+        await axios.put(`http://localhost:5001/api/appointments/${appointmentId}/status`, { status: newStatus });
+        fetchAppointments();
+        setError('✅ Rendez-vous ' + (newStatus === 'cancelled' ? 'annulé' : 'mis à jour') + ' avec succès');
+      }
+    } catch (err) {
+      console.error('Erreur lors de la mise à jour du statut:', err);
+      setError('Erreur lors de la mise à jour du statut');
+    }
+  };
+
+  const handlePlanningSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(`http://localhost:5001/api/appointments/${selectedAppointment._id}/planning`, {
+        appointmentDate,
+        requiredDocuments,
+        status: 'confirmed'
+      });
+
+      setAppointments(appointments.map(apt => 
+        apt._id === selectedAppointment._id 
+          ? { ...apt, status: 'confirmed', appointmentDate, requiredDocuments } 
+          : apt
+      ));
+
+      setError('✅ Planification du rendez-vous envoyée avec succès !');
+      setShowPlanningForm(false);
+      setSelectedAppointment(null);
+      setAppointmentDate('');
+      setRequiredDocuments('');
+      fetchAppointments();
+    } catch (error) {
+      console.error('❌ Erreur:', error);
+      setError("Erreur lors de la planification du rendez-vous.");
+    }
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   return (
-    <div className="dashboard-content">
-      <h2>⏳ Demandes en attente</h2>
-      {appointments.length === 0 ? (
-        <p>Aucune demande en attente</p>
-      ) : (
-        appointments.map(apt => (
-          <div key={apt._id} className="appointment-card pending">
-            <h4>{apt.patient?.prenom} {apt.patient?.nom}</h4>
-            <p>📧 {apt.patient?.email} | 📞 {apt.patient?.telephone}</p>
-            <p>🗓️ {new Date(apt.date).toLocaleString('fr-FR')}</p>
-            {apt.reason && <p>📝 {apt.reason}</p>}
-            <div className="action-buttons">
-              <button onClick={() => updateStatus(apt._id, 'confirmed')} className="confirm-btn">
-                ✅ Accepter
-              </button>
-              <button onClick={() => updateStatus(apt._id, 'cancelled')} className="cancel-btn">
-                ❌ Refuser
-              </button>
-            </div>
+    <div style={{ 
+      display: 'flex', 
+      height: 'calc(100vh - 60px)',
+      gap: '20px',
+      padding: '20px'
+    }}>
+      <div style={{ 
+        flex: '1',
+        overflowY: 'auto',
+        backgroundColor: '#f8f9fa',
+        borderRadius: '8px',
+        padding: '20px'
+      }}>
+        <h2 style={{ 
+          marginBottom: '20px',
+          color: '#2c3e50'
+        }}>⏳ Demandes en attente</h2>
+        
+        {error && (
+          <div style={{
+            padding: '10px',
+            backgroundColor: '#fee',
+            color: '#c00',
+            borderRadius: '4px',
+            marginBottom: '10px'
+          }}>{error}</div>
+        )}
+
+        {loading && appointments.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '20px' }}>
+            Chargement des demandes...
           </div>
-        ))
+        ) : appointments.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+            Aucune demande en attente
+          </div>
+        ) : (
+          appointments.map(apt => (
+            <div 
+              key={apt._id} 
+              style={{
+                backgroundColor: 'white',
+                borderRadius: '8px',
+                padding: '15px',
+                marginBottom: '15px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                cursor: 'pointer',
+                border: selectedPatient === apt.patient._id ? '2px solid #1976d2' : '1px solid #e0e0e0'
+              }}
+              onClick={() => setSelectedPatient(apt.patient._id)}
+            >
+              <h4 style={{ margin: '0 0 10px 0', color: '#2c3e50' }}>
+                {apt.patient?.prenom} {apt.patient?.nom}
+              </h4>
+              <p style={{ margin: '5px 0', color: '#666' }}>
+                📧 {apt.patient?.email}
+              </p>
+              <p style={{ margin: '5px 0', color: '#666' }}>
+                📞 {apt.patient?.telephone}
+              </p>
+              <p style={{ margin: '5px 0', color: '#666' }}>
+                🗓️ {formatDate(apt.date)}
+              </p>
+              {apt.reason && (
+                <p style={{ 
+                  margin: '10px 0',
+                  padding: '10px',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '4px'
+                }}>
+                  📝 Motif: {apt.reason}
+                </p>
+              )}
+              <div style={{
+                display: 'flex',
+                gap: '10px',
+                marginTop: '15px'
+              }}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleStatusChange(apt._id, 'confirmed');
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '8px',
+                    border: 'none',
+                    borderRadius: '4px',
+                    backgroundColor: '#4caf50',
+                    color: 'white',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ✅ Accepter
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleStatusChange(apt._id, 'cancelled');
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '8px',
+                    border: 'none',
+                    borderRadius: '4px',
+                    backgroundColor: '#f44336',
+                    color: 'white',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ❌ Refuser
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div style={{ 
+        flex: '1',
+        backgroundColor: '#f8f9fa',
+        borderRadius: '8px',
+        padding: '20px',
+        overflowY: 'auto'
+      }}>
+        <h2 style={{ 
+          marginBottom: '20px',
+          color: '#2c3e50'
+        }}>📄 Documents Médicaux</h2>
+
+        {!selectedPatient ? (
+          <div style={{ 
+            textAlign: 'center',
+            padding: '20px',
+            color: '#666'
+          }}>
+            👈 Sélectionnez un patient pour voir ses documents médicaux
+          </div>
+        ) : loading ? (
+          <div style={{ 
+            textAlign: 'center',
+            padding: '20px'
+          }}>
+            Chargement des documents...
+          </div>
+        ) : medicalDocuments.length === 0 ? (
+          <div style={{ 
+            textAlign: 'center',
+            padding: '20px',
+            color: '#666'
+          }}>
+            Aucun document médical disponible pour ce patient
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            {medicalDocuments.map((doc, index) => (
+              <div
+                key={doc._id || index}
+                style={{
+                  backgroundColor: 'white',
+                  borderRadius: '8px',
+                  padding: '15px',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}
+              >
+                <h4 style={{ 
+                  margin: '0 0 10px 0',
+                  color: '#2c3e50'
+                }}>
+                  📎 {doc.fileName}
+                </h4>
+                {doc.description && (
+                  <p style={{ 
+                    margin: '5px 0',
+                    color: '#666'
+                  }}>
+                    {doc.description}
+                  </p>
+                )}
+                <a
+                  href={`http://localhost:5001/${doc.filePath}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-block',
+                    marginTop: '10px',
+                    padding: '8px 16px',
+                    backgroundColor: '#1976d2',
+                    color: 'white',
+                    textDecoration: 'none',
+                    borderRadius: '4px',
+                    fontSize: '0.9rem'
+                  }}
+                >
+                  📥 Télécharger
+                </a>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {showPlanningForm && selectedAppointment && (
+        <div className="planning-form-overlay" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div className="planning-form-container" style={{
+            backgroundColor: 'white',
+            padding: '2rem',
+            borderRadius: '8px',
+            width: '90%',
+            maxWidth: '500px'
+          }}>
+            <h2>Planifier le rendez-vous</h2>
+            <p>Patient: {selectedAppointment.patient?.prenom} {selectedAppointment.patient?.nom}</p>
+            
+            <form onSubmit={handlePlanningSubmit} className="planning-form">
+              <div className="form-group">
+                <label>Date et heure du rendez-vous:</label>
+                <input
+                  type="datetime-local"
+                  value={appointmentDate}
+                  onChange={(e) => setAppointmentDate(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Documents requis:</label>
+                <textarea
+                  value={requiredDocuments}
+                  onChange={(e) => setRequiredDocuments(e.target.value)}
+                  placeholder="Liste des documents nécessaires..."
+                  required
+                />
+              </div>
+
+              <div className="form-actions" style={{
+                display: 'flex',
+                gap: '1rem',
+                marginTop: '1rem'
+              }}>
+                <button type="submit" className="confirm-btn">
+                  Confirmer la planification
+                </button>
+                <button 
+                  type="button" 
+                  className="cancel-btn"
+                  onClick={() => {
+                    setShowPlanningForm(false);
+                    setSelectedAppointment(null);
+                  }}
+                >
+                  Annuler
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -880,6 +1343,259 @@ const ArticlesView = () => {
   );
 };
 
+const MedicalReportsView = () => {
+  const [patients, setPatients] = useState([]);
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [appointments, setAppointments] = useState([]);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [file, setFile] = useState(null);
+  const [description, setDescription] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState('');
+  const [reports, setReports] = useState([]);
+  const doctorId = localStorage.getItem('userId');
+
+  useEffect(() => {
+    fetchPatients();
+    fetchReports();
+  }, []);
+
+  useEffect(() => {
+    if (selectedPatient) {
+      fetchPatientAppointments();
+    } else {
+      setAppointments([]);
+      setSelectedAppointment(null);
+    }
+  }, [selectedPatient]);
+
+  const fetchPatients = async () => {
+    try {
+      setLoading(true);
+      const res = await axios.get(`http://localhost:5001/api/doctor/${doctorId}/patients`);
+      setPatients(res.data);
+    } catch (err) {
+      setError("Erreur lors du chargement des patients");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchPatientAppointments = async () => {
+    try {
+      setLoading(true);
+      const res = await axios.get(`http://localhost:5001/api/doctor/appointments/${doctorId}`);
+      const patientAppointments = res.data.filter(
+        apt => apt.patient._id === selectedPatient._id && apt.status === 'confirmed'
+      );
+      setAppointments(patientAppointments);
+    } catch (err) {
+      setError("Erreur lors du chargement des rendez-vous");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchReports = async () => {
+    try {
+      const res = await axios.get(`http://localhost:5001/api/medical-reports/doctor/${doctorId}`);
+      setReports(res.data);
+    } catch (err) {
+      console.error("Erreur lors du chargement des rapports:", err);
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    if (selectedFile && (selectedFile.type === 'application/pdf' || selectedFile.type.startsWith('image/'))) {
+      setFile(selectedFile);
+      setError(null);
+    } else {
+      setError("Veuillez sélectionner un fichier PDF ou une image");
+      setFile(null);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedAppointment || !file || !description) {
+      setError("Veuillez remplir tous les champs");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('doctorId', doctorId);
+    formData.append('patientId', selectedPatient._id);
+    formData.append('appointmentId', selectedAppointment._id);
+    formData.append('description', description);
+
+    try {
+      setLoading(true);
+      await axios.post('http://localhost:5001/api/medical-reports', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      setSuccess('Rapport médical envoyé avec succès');
+      setFile(null);
+      setDescription('');
+      setSelectedAppointment(null);
+      fetchReports(); // Rafraîchir la liste des rapports
+    } catch (err) {
+      setError("Erreur lors de l'envoi du rapport médical");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (reportId) => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce rapport ?')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await axios.delete(`http://localhost:5001/api/medical-reports/${reportId}`);
+      setSuccess('Rapport supprimé avec succès');
+      fetchReports(); // Rafraîchir la liste des rapports
+    } catch (err) {
+      setError('Erreur lors de la suppression du rapport');
+      console.error('Erreur:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  return (
+    <div className="medical-reports-container">
+      <h2>📋 Rapports Médicaux</h2>
+      {error && <div className="error-message">{error}</div>}
+      {success && <div className="success-message">{success}</div>}
+      
+      <div className="medical-reports-layout">
+        <div className="form-section">
+          <form onSubmit={handleSubmit} className="medical-report-form">
+            <div className="form-group">
+              <label>Patient:</label>
+              <select 
+                value={selectedPatient ? selectedPatient._id : ''} 
+                onChange={(e) => {
+                  const patient = patients.find(p => p._id === e.target.value);
+                  setSelectedPatient(patient);
+                  setSelectedAppointment(null);
+                }}
+                required
+              >
+                <option value="">Sélectionnez un patient</option>
+                {patients.map(patient => (
+                  <option key={patient._id} value={patient._id}>
+                    {patient.prenom} {patient.nom}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {selectedPatient && (
+              <div className="form-group">
+                <label>Rendez-vous:</label>
+                <select 
+                  value={selectedAppointment ? selectedAppointment._id : ''} 
+                  onChange={(e) => {
+                    const apt = appointments.find(a => a._id === e.target.value);
+                    setSelectedAppointment(apt);
+                  }}
+                  required
+                >
+                  <option value="">Sélectionnez un rendez-vous</option>
+                  {appointments.map(apt => (
+                    <option key={apt._id} value={apt._id}>
+                      {formatDate(apt.date)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="form-group">
+              <label>Fichier (PDF ou Image):</label>
+              <input 
+                type="file" 
+                accept=".pdf,image/*" 
+                onChange={handleFileChange}
+                required 
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Description:</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                required
+                placeholder="Ajoutez une description du rapport médical"
+              />
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={loading || !selectedAppointment || !file || !description}
+              className="submit-button"
+            >
+              {loading ? 'Envoi en cours...' : 'Envoyer le rapport'}
+            </button>
+          </form>
+        </div>
+
+        <div className="reports-list">
+          <h3>Rapports récents</h3>
+          {reports.length === 0 ? (
+            <div className="no-reports">Aucun rapport médical</div>
+          ) : (
+            reports.map(report => (
+              <div key={report._id} className="report-card">
+                <div className="report-header">
+                  <h4>Patient: {report.patientId?.prenom} {report.patientId?.nom}</h4>
+                  <span className="report-date">{formatDate(report.createdAt)}</span>
+                </div>
+                <p className="report-description">{report.description}</p>
+                <div className="report-actions">
+                  <a 
+                    href={`http://localhost:5001/${report.fileUrl}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="view-report-btn"
+                  >
+                    📄 Voir le rapport
+                  </a>
+                  <button 
+                    onClick={() => handleDelete(report._id)}
+                    className="delete-report-btn"
+                    disabled={loading}
+                  >
+                    🗑️ Supprimer
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const DoctorDashboard = () => {
   const navigate = useNavigate();
 
@@ -902,6 +1618,9 @@ const DoctorDashboard = () => {
             <li><Link to="messages">💬 Messages Patients</Link></li>
             <li><Link to="lab-messages">🔬 Messages Laboratoires</Link></li>
             <li><Link to="articles">📝 Articles</Link></li>
+            <li>
+              <Link to="medical-reports">Rapports Médicaux</Link>
+            </li>
           </ul>
         </nav>
       </aside>
@@ -915,6 +1634,7 @@ const DoctorDashboard = () => {
           <Route path="messages" element={<MessagesView />} />
           <Route path="lab-messages" element={<LabMessagesView />} />
           <Route path="articles" element={<ArticlesView />} />
+          <Route path="medical-reports" element={<MedicalReportsView />} />
         </Routes>
       </div>
     </div>

@@ -7,7 +7,7 @@ const API_BASE_URL = 'http://localhost:5001';
 const AppointmentForm = ({ userId }) => {
   const [doctors, setDoctors] = useState([]);
   const [selectedDoctor, setSelectedDoctor] = useState('');
-  const [date, setDate] = useState('');
+  const [appointmentDate, setAppointmentDate] = useState('');
   const [reason, setReason] = useState('');
   const [message, setMessage] = useState('');
 
@@ -20,8 +20,18 @@ const AppointmentForm = ({ userId }) => {
       const response = await axios.get(`${API_BASE_URL}/api/medecins-valides`);
       setDoctors(response.data);
     } catch (error) {
-      setMessage("❌ Erreur lors de la récupération des médecins.");
+      setMessage("Erreur lors de la récupération des médecins.");
     }
+  };
+
+  const getMinDateTime = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
   const handleSubmit = async (e) => {
@@ -30,12 +40,12 @@ const AppointmentForm = ({ userId }) => {
       await axios.post(`${API_BASE_URL}/api/appointments`, {
         doctorId: selectedDoctor,
         patientId: userId,
-        date,
+        date: appointmentDate,
         reason
       });
       setMessage("✅ Rendez-vous enregistré avec succès !");
       setSelectedDoctor('');
-      setDate('');
+      setAppointmentDate('');
       setReason('');
     } catch (error) {
       setMessage("❌ Erreur lors de l'enregistrement du rendez-vous.");
@@ -45,7 +55,6 @@ const AppointmentForm = ({ userId }) => {
   return (
     <div className="appointment-form">
       {message && <div className="alert">{message}</div>}
-      
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label>Médecin :</label>
@@ -57,7 +66,7 @@ const AppointmentForm = ({ userId }) => {
             <option value="">Sélectionnez un médecin</option>
             {doctors.map(doctor => (
               <option key={doctor._id} value={doctor._id}>
-                Dr. {doctor.prenom} {doctor.nom} - {doctor.specialty}
+                Dr. {doctor.nom} {doctor.prenom} - {doctor.specialty}
               </option>
             ))}
           </select>
@@ -67,19 +76,20 @@ const AppointmentForm = ({ userId }) => {
           <label>Date et heure :</label>
           <input
             type="datetime-local"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
+            value={appointmentDate}
+            onChange={(e) => setAppointmentDate(e.target.value)}
+            min={getMinDateTime()}
             required
           />
         </div>
 
         <div className="form-group">
-          <label>Motif de consultation :</label>
+          <label>Motif de la consultation :</label>
           <textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
+            placeholder="Décrivez brièvement la raison de votre visite"
             required
-            placeholder="Décrivez brièvement le motif de votre consultation..."
           />
         </div>
 

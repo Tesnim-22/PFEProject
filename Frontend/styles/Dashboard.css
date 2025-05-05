@@ -1422,3 +1422,200 @@ select {
   background: #f5f5f5;
   border-radius: 8px;
 }
+
+.medical-reports-container {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.medical-reports-container h2 {
+  color: #2c3e50;
+  margin-bottom: 20px;
+  font-size: 24px;
+}
+
+.medical-report-form {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.medical-report-form .form-group {
+  margin-bottom: 20px;
+}
+
+.medical-report-form label {
+  display: block;
+  margin-bottom: 8px;
+  color: #34495e;
+  font-weight: 500;
+}
+
+.medical-report-form select,
+.medical-report-form textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.medical-report-form textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.medical-report-form .submit-button {
+  background-color: #3498db;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  width: 100%;
+}
+
+.medical-report-form .submit-button:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+}
+
+.medical-report-form .submit-button:hover:not(:disabled) {
+  background-color: #2980b9;
+}
+
+.error-message {
+  background-color: #ff6b6b;
+  color: white;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.success-message {
+  background-color: #51cf66;
+  color: white;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.medical-reports-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  margin-top: 20px;
+}
+
+.form-section {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.reports-list {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.reports-list h3 {
+  margin-bottom: 20px;
+  color: #2c3e50;
+  font-size: 1.2rem;
+}
+
+.report-card {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+  border-left: 4px solid #1976d2;
+}
+
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.report-header h4 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1rem;
+}
+
+.report-date {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.report-description {
+  color: #666;
+  margin: 10px 0;
+  font-size: 0.95rem;
+}
+
+.view-report-btn {
+  display: inline-block;
+  padding: 8px 16px;
+  background-color: #1976d2;
+  color: white;
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.view-report-btn:hover {
+  background-color: #1565c0;
+}
+
+@media (max-width: 1024px) {
+  .medical-reports-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.report-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.delete-report-btn {
+  padding: 8px 16px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.delete-report-btn:hover {
+  background-color: #c82333;
+}
+
+.delete-report-btn:disabled {
+  background-color: #dc354580;
+  cursor: not-allowed;
+}
+
+.no-reports {
+  text-align: center;
+  color: #666;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  margin-top: 10px;
+}

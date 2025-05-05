@@ -5,6 +5,32 @@ import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:5001';
 
+const styles = {
+  formGroup: {
+    marginBottom: '1rem'
+  },
+  select: {
+    width: '100%',
+    padding: '0.5rem',
+    borderRadius: '4px',
+    border: '1px solid #ccc',
+    marginTop: '0.5rem'
+  },
+  label: {
+    display: 'block',
+    marginBottom: '0.5rem',
+    fontWeight: 'bold'
+  },
+  textarea: {
+    width: '100%',
+    padding: '0.5rem',
+    borderRadius: '4px',
+    border: '1px solid #ccc',
+    minHeight: '100px',
+    marginTop: '0.5rem'
+  }
+};
+
 const PatientDashboard = () => {
   const [activeSection, setActiveSection] = useState('profile');
   const [profile, setProfile] = useState({});
@@ -21,7 +47,6 @@ const PatientDashboard = () => {
   const [chatLoading, setChatLoading] = useState(false);
   const [labs, setLabs] = useState([]);
   const [selectedLab, setSelectedLab] = useState('');
-  const [labAppointmentDate, setLabAppointmentDate] = useState('');
   const [labAppointmentReason, setLabAppointmentReason] = useState('');
   const [labAppointments, setLabAppointments] = useState([]);
   const [labResults, setLabResults] = useState([]);
@@ -30,8 +55,41 @@ const PatientDashboard = () => {
   const [selectedHospital, setSelectedHospital] = useState('');
   const [selectedSpecialty, setSelectedSpecialty] = useState('');
   const [hospitalAppointments, setHospitalAppointments] = useState([]);
+  const [medicalReports, setMedicalReports] = useState([]);
+  const [selectedDoctor, setSelectedDoctor] = useState('');
+  const [appointmentReason, setAppointmentReason] = useState('');
+  const [doctors, setDoctors] = useState([]);
+  const [selectedRegion, setSelectedRegion] = useState('');
 
-  // Liste des spécialités disponibles
+  // Liste des régions de la Tunisie
+  const regions = [
+    'Tunis',
+    'Ariana',
+    'Ben Arous',
+    'Manouba',
+    'Nabeul',
+    'Zaghouan',
+    'Bizerte',
+    'Béja',
+    'Jendouba',
+    'Le Kef',
+    'Siliana',
+    'Sousse',
+    'Monastir',
+    'Mahdia',
+    'Sfax',
+    'Kairouan',
+    'Kasserine',
+    'Sidi Bouzid',
+    'Gabès',
+    'Medenine',
+    'Tataouine',
+    'Gafsa',
+    'Tozeur',
+    'Kebili'
+  ];
+
+  // Liste des spécialités
   const specialties = [
     'Cardiologie',
     'Dermatologie',
@@ -82,7 +140,33 @@ const PatientDashboard = () => {
     if (activeSection === 'all-appointments') {
       fetchHospitalAppointments(storedId);
     }
+    if (activeSection === 'medical-reports') {
+      fetchMedicalReports(storedId);
+    }
+    if (userId) {
+      fetchDoctors();
+    }
+  }, [activeSection, userId]);
+
+  // Ajout d'un useEffect spécifique pour les médecins
+  useEffect(() => {
+    if (activeSection === 'appointment') {
+      console.log("🏥 Section rendez-vous médecin active, chargement des médecins...");
+      fetchDoctors();
+    }
   }, [activeSection]);
+
+  // Ajout d'un useEffect pour filtrer les médecins quand la région ou la spécialité change
+  useEffect(() => {
+    if (selectedRegion || selectedSpecialty) {
+      console.log("🔄 Filtrage des médecins avec:", { selectedRegion, selectedSpecialty });
+      const filteredDoctors = doctors.filter(doctor => 
+        (!selectedRegion || doctor.region === selectedRegion) &&
+        (!selectedSpecialty || doctor.specialty === selectedSpecialty)
+      );
+      console.log("✅ Médecins filtrés:", filteredDoctors);
+    }
+  }, [selectedRegion, selectedSpecialty]);
 
   const fetchProfile = async (id) => {
     try {
@@ -245,12 +329,10 @@ const PatientDashboard = () => {
       await axios.post(`${API_BASE_URL}/api/lab-appointments`, {
         labId: selectedLab,
         patientId: userId,
-        date: labAppointmentDate,
         reason: labAppointmentReason
       });
       setMessage("✅ Rendez-vous laboratoire enregistré avec succès !");
       setSelectedLab('');
-      setLabAppointmentDate('');
       setLabAppointmentReason('');
       fetchLabAppointments(userId);
     } catch (error) {
@@ -312,6 +394,93 @@ const PatientDashboard = () => {
     } catch (error) {
       console.error("❌ Erreur création rendez-vous hôpital:", error);
       setMessage("Erreur lors de la création du rendez-vous.");
+    }
+  };
+
+  const fetchMedicalReports = async (patientId) => {
+    try {
+      setIsLoading(true);
+      const response = await axios.get(`${API_BASE_URL}/api/medical-reports/patient/${patientId}`);
+      setMedicalReports(response.data);
+    } catch (error) {
+      console.error('❌ Erreur lors de la récupération des rapports médicaux:', error);
+      setMessage("Erreur lors de la récupération des rapports médicaux.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getMinDateTime = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  const handleCancelAppointment = async (appointmentId, type) => {
+    try {
+      let endpoint;
+      switch(type) {
+        case 'medical':
+          endpoint = '/api/appointments';
+          break;
+        case 'laboratory':
+          endpoint = '/api/lab-appointments';
+          break;
+        case 'hospital':
+          endpoint = '/api/hospital-appointments';
+          break;
+        default:
+          throw new Error('Type de rendez-vous invalide');
+      }
+
+      await axios.put(`${API_BASE_URL}${endpoint}/${appointmentId}/status`, {
+        status: 'cancelled'
+      });
+
+      setMessage("✅ Rendez-vous annulé avec succès !");
+
+      // Rafraîchir les listes de rendez-vous
+      fetchAllAppointments(userId);
+    } catch (error) {
+      console.error('❌ Erreur lors de l\'annulation:', error);
+      setMessage("❌ Erreur lors de l'annulation du rendez-vous.");
+    }
+  };
+
+  const handleAppointmentSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API_BASE_URL}/api/appointments`, {
+        doctorId: selectedDoctor,
+        patientId: userId,
+        reason: appointmentReason
+      });
+      setMessage("✅ Demande de rendez-vous envoyée avec succès !");
+      setSelectedDoctor('');
+      setAppointmentReason('');
+      fetchAllAppointments(userId);
+    } catch (error) {
+      console.error("❌ Erreur création rendez-vous:", error);
+      setMessage("Erreur lors de la création du rendez-vous.");
+    }
+  };
+
+  const fetchDoctors = async () => {
+    try {
+      console.log("🔍 Récupération des médecins...");
+      const response = await axios.get(`${API_BASE_URL}/api/medecins-valides`);
+      console.log("✅ Médecins reçus:", response.data);
+      setDoctors(response.data.filter(user => 
+        user.roles.includes('Doctor') || 
+        user.roles.includes('doctor')
+      ));
+    } catch (error) {
+      console.error("❌ Erreur lors de la récupération des médecins:", error);
+      setMessage("Erreur lors de la récupération de la liste des médecins.");
     }
   };
 
@@ -379,10 +548,17 @@ const PatientDashboard = () => {
           <div className="menu-group">
             <div className="menu-group-title">Résultats & Communication</div>
             <button 
+              className={activeSection === 'medical-reports' ? 'active' : ''} 
+              onClick={() => setActiveSection('medical-reports')}
+            >
+              <span className="icon">📋</span>
+              Rapports Médicaux
+            </button>
+            <button 
               className={activeSection === 'lab-results' ? 'active' : ''} 
               onClick={() => setActiveSection('lab-results')}
             >
-              <span className="icon">📋</span>
+              <span className="icon">🔬</span>
               Résultats Laboratoire
             </button>
             <button 
@@ -443,8 +619,81 @@ const PatientDashboard = () => {
 
             {activeSection === 'appointment' && (
               <>
-                <h2>📅 Nouveau rendez-vous</h2>
-                <AppointmentForm userId={userId} />
+                <h2>🏥 Nouveau rendez-vous médecin</h2>
+                <div className="appointment-form">
+                  <form onSubmit={handleAppointmentSubmit}>
+                    <div className="form-group" style={styles.formGroup}>
+                      <label style={styles.label}>Région :</label>
+                      <select 
+                        value={selectedRegion} 
+                        onChange={(e) => setSelectedRegion(e.target.value)}
+                        required
+                        style={styles.select}
+                      >
+                        <option value="">Sélectionnez une région</option>
+                        {regions.map(region => (
+                          <option key={region} value={region}>
+                            {region}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="form-group" style={styles.formGroup}>
+                      <label style={styles.label}>Spécialité :</label>
+                      <select 
+                        value={selectedSpecialty} 
+                        onChange={(e) => setSelectedSpecialty(e.target.value)}
+                        required
+                        style={styles.select}
+                      >
+                        <option value="">Sélectionnez une spécialité</option>
+                        {specialties.map(specialty => (
+                          <option key={specialty} value={specialty}>
+                            {specialty}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="form-group" style={styles.formGroup}>
+                      <label style={styles.label}>Médecin :</label>
+                      <select 
+                        value={selectedDoctor} 
+                        onChange={(e) => setSelectedDoctor(e.target.value)}
+                        required
+                        style={styles.select}
+                      >
+                        <option value="">Sélectionnez un médecin</option>
+                        {doctors
+                          .filter(doctor => 
+                            (!selectedRegion || doctor.region === selectedRegion) &&
+                            (!selectedSpecialty || doctor.specialty === selectedSpecialty)
+                          )
+                          .map(doctor => (
+                            <option key={doctor._id} value={doctor._id}>
+                              Dr. {doctor.nom} {doctor.prenom} {doctor.specialty ? `- ${doctor.specialty}` : ''}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+
+                    <div className="form-group" style={styles.formGroup}>
+                      <label style={styles.label}>Motif de la consultation :</label>
+                      <textarea
+                        value={appointmentReason}
+                        onChange={(e) => setAppointmentReason(e.target.value)}
+                        placeholder="Décrivez brièvement la raison de votre visite"
+                        required
+                        style={styles.textarea}
+                      />
+                    </div>
+
+                    <button type="submit" className="submit-btn">
+                      Demander un rendez-vous
+                    </button>
+                  </form>
+                </div>
               </>
             )}
 
@@ -546,24 +795,54 @@ const PatientDashboard = () => {
               <div className="messagerie-section">
                 <h2>💬 Messagerie avec mes médecins</h2>
                 <div className="messagerie-layout">
-                  <div className="appointments-list">
-                    <h3>Mes rendez-vous</h3>
+                  <div className="doctors-list">
+                    <h3>Mes médecins</h3>
                     {appointments.length === 0 ? (
-                      <p>Aucun rendez-vous trouvé.</p>
+                      <p>Aucun médecin trouvé.</p>
                     ) : (
                       <ul>
-                        {appointments.map((apt) => (
+                        {Object.values(
+                          appointments.reduce((acc, apt) => {
+                            if (!acc[apt.doctorId]) {
+                              acc[apt.doctorId] = {
+                                id: apt.doctorId,
+                                name: apt.doctorName || apt.doctorEmail || 'Médecin',
+                                lastAppointment: apt.date,
+                                appointments: [apt]
+                              };
+                            } else {
+                              acc[apt.doctorId].appointments.push(apt);
+                              if (new Date(apt.date) > new Date(acc[apt.doctorId].lastAppointment)) {
+                                acc[apt.doctorId].lastAppointment = apt.date;
+                              }
+                            }
+                            return acc;
+                          }, {})
+                        )
+                        .sort((a, b) => new Date(b.lastAppointment) - new Date(a.lastAppointment))
+                        .map((doctor) => (
                           <li
-                            key={apt._id}
-                            className={selectedAppointment && selectedAppointment._id === apt._id ? 'selected' : ''}
+                            key={doctor.id}
+                            className={selectedAppointment && selectedAppointment.doctorId === doctor.id ? 'selected' : ''}
                             onClick={() => {
-                              setSelectedAppointment(apt);
-                              fetchChatMessages(apt._id);
+                              // Sélectionner le dernier rendez-vous avec ce médecin
+                              const lastAppointment = doctor.appointments
+                                .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+                              setSelectedAppointment(lastAppointment);
+                              fetchChatMessages(lastAppointment._id);
                             }}
                           >
-                            <strong>{apt.doctorName || apt.doctorEmail || 'Médecin'}</strong>
-                            <br />
-                            <small>{apt.date ? new Date(apt.date).toLocaleString('fr-FR') : ''}</small>
+                            <div className="doctor-chat-item">
+                              <div className="doctor-info">
+                                <strong>{doctor.name}</strong>
+                                <span className="appointment-count">
+                                  {doctor.appointments.length} rendez-vous
+                                </span>
+                              </div>
+                              <small className="last-appointment">
+                                Dernier RDV: {new Date(doctor.lastAppointment).toLocaleDateString('fr-FR')}
+                              </small>
+                            </div>
                           </li>
                         ))}
                       </ul>
@@ -573,23 +852,29 @@ const PatientDashboard = () => {
                   <div className="chat-box">
                     {selectedAppointment ? (
                       <>
+                        <div className="chat-header">
+                          <h3>{selectedAppointment.doctorName || selectedAppointment.doctorEmail || 'Médecin'}</h3>
+                          <p>Rendez-vous du: {new Date(selectedAppointment.date).toLocaleString('fr-FR')}</p>
+                        </div>
                         <div className="chat-messages">
                           {chatLoading ? (
                             <div className="loading-messages">Chargement...</div>
                           ) : chatMessages.length === 0 ? (
-                            <div className="no-messages">Aucun message.</div>
+                            <div className="no-messages">Aucun message. Commencez la conversation !</div>
                           ) : (
-                            chatMessages.map((msg) => (
-                              <div 
-                                key={msg._id} 
-                                className={msg.senderId === userId ? 'msg-patient' : 'msg-doctor'}
-                              >
-                                <div className="message-content">{msg.content}</div>
-                                <div className="msg-date">
-                                  {new Date(msg.sentAt || msg.createdAt).toLocaleString('fr-FR')}
+                            <div className="messages-container">
+                              {chatMessages.map((msg) => (
+                                <div 
+                                  key={msg._id} 
+                                  className={`message ${msg.senderId === userId ? 'message-sent' : 'message-received'}`}
+                                >
+                                  <div className="message-content">{msg.content}</div>
+                                  <div className="message-time">
+                                    {new Date(msg.sentAt || msg.createdAt).toLocaleString('fr-FR')}
+                                  </div>
                                 </div>
-                              </div>
-                            ))
+                              ))}
+                            </div>
                           )}
                         </div>
                         <div className="chat-input">
@@ -600,11 +885,18 @@ const PatientDashboard = () => {
                             placeholder="Écrivez votre message..."
                             onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
                           />
-                          <button onClick={handleSendMessage}>Envoyer</button>
+                          <button onClick={handleSendMessage}>
+                            <span>Envoyer</span>
+                          </button>
                         </div>
                       </>
                     ) : (
-                      <div>Sélectionnez un rendez-vous pour discuter avec le médecin.</div>
+                      <div className="no-chat-selected">
+                        <div className="empty-state">
+                          <span className="icon">💬</span>
+                          <p>Sélectionnez un médecin pour voir vos messages</p>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -645,18 +937,28 @@ const PatientDashboard = () => {
                                   </span>
                                 </td>
                                 <td>
-                                  {apt.status !== 'cancelled' && (
-                                    <button
-                                      onClick={() => {
-                                        setSelectedAppointment(apt);
-                                        fetchChatMessages(apt._id);
-                                        setActiveSection('messagerie');
-                                      }}
-                                      className="chat-button"
-                                    >
-                                      💬 Chat
-                                    </button>
-                                  )}
+                                  <div className="appointment-actions">
+                                    {apt.status !== 'cancelled' && (
+                                      <>
+                                        <button
+                                          onClick={() => {
+                                            setSelectedAppointment(apt);
+                                            fetchChatMessages(apt._id);
+                                            setActiveSection('messagerie');
+                                          }}
+                                          className="chat-button"
+                                        >
+                                          💬 Chat
+                                        </button>
+                                        <button
+                                          onClick={() => handleCancelAppointment(apt._id, 'medical')}
+                                          className="cancel-button"
+                                        >
+                                          ❌ Annuler
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
                                 </td>
                               </tr>
                             ))}
@@ -679,12 +981,13 @@ const PatientDashboard = () => {
                               <th>Date</th>
                               <th>Motif</th>
                               <th>Statut</th>
+                              <th>Actions</th>
                             </tr>
                           </thead>
                           <tbody>
                             {labAppointments.map(apt => (
                               <tr key={apt._id} className={`appointment-row ${apt.status}`}>
-                                <td>{apt.doctorName}</td>
+                                <td>{apt.lab?.nom || 'Laboratoire'}</td>
                                 <td>{new Date(apt.date).toLocaleString('fr-FR')}</td>
                                 <td>{apt.reason}</td>
                                 <td>
@@ -693,6 +996,16 @@ const PatientDashboard = () => {
                                     {apt.status === 'confirmed' && 'Confirmé'}
                                     {apt.status === 'cancelled' && 'Annulé'}
                                   </span>
+                                </td>
+                                <td>
+                                  {apt.status !== 'cancelled' && (
+                                    <button
+                                      onClick={() => handleCancelAppointment(apt._id, 'laboratory')}
+                                      className="cancel-button"
+                                    >
+                                      ❌ Annuler
+                                    </button>
+                                  )}
                                 </td>
                               </tr>
                             ))}
@@ -715,20 +1028,31 @@ const PatientDashboard = () => {
                               <th>Date</th>
                               <th>Service</th>
                               <th>Statut</th>
+                              <th>Actions</th>
                             </tr>
                           </thead>
                           <tbody>
                             {hospitalAppointments.map(apt => (
                               <tr key={apt._id} className={`appointment-row ${apt.status}`}>
-                                <td>{apt.hospitalName}</td>
-                                <td>{new Date(apt.date).toLocaleString('fr-FR')}</td>
-                                <td>{apt.service}</td>
+                                <td>{apt.hospitalId?.nom || 'Hôpital'}</td>
+                                <td>{apt.appointmentDate ? new Date(apt.appointmentDate).toLocaleString('fr-FR') : 'Non planifié'}</td>
+                                <td>{apt.specialty}</td>
                                 <td>
                                   <span className={`status-badge ${apt.status}`}>
                                     {apt.status === 'pending' && 'En attente'}
                                     {apt.status === 'confirmed' && 'Confirmé'}
                                     {apt.status === 'cancelled' && 'Annulé'}
                                   </span>
+                                </td>
+                                <td>
+                                  {apt.status !== 'cancelled' && (
+                                    <button
+                                      onClick={() => handleCancelAppointment(apt._id, 'hospital')}
+                                      className="cancel-button"
+                                    >
+                                      ❌ Annuler
+                                    </button>
+                                  )}
                                 </td>
                               </tr>
                             ))}
@@ -746,39 +1070,67 @@ const PatientDashboard = () => {
                 <h2>🔬 Rendez-vous Laboratoire</h2>
                 <div className="appointment-form">
                   <form onSubmit={handleLabAppointmentSubmit}>
-                    <div className="form-group">
-                      <label>Laboratoire :</label>
+                    <div className="form-group" style={styles.formGroup}>
+                      <label style={styles.label}>Région :</label>
                       <select 
-                        value={selectedLab} 
-                        onChange={(e) => setSelectedLab(e.target.value)}
+                        value={selectedRegion} 
+                        onChange={(e) => setSelectedRegion(e.target.value)}
                         required
+                        style={styles.select}
                       >
-                        <option value="">Sélectionnez un laboratoire</option>
-                        {labs.map(lab => (
-                          <option key={lab._id} value={lab._id}>
-                            {lab.nom} - {lab.adresse}
+                        <option value="">Sélectionnez une région</option>
+                        {regions.map(region => (
+                          <option key={region} value={region}>
+                            {region}
                           </option>
                         ))}
                       </select>
                     </div>
 
-                    <div className="form-group">
-                      <label>Date et heure :</label>
-                      <input
-                        type="datetime-local"
-                        value={labAppointmentDate}
-                        onChange={(e) => setLabAppointmentDate(e.target.value)}
+                    <div className="form-group" style={styles.formGroup}>
+                      <label style={styles.label}>Spécialité d'analyse :</label>
+                      <select 
+                        value={selectedSpecialty} 
+                        onChange={(e) => setSelectedSpecialty(e.target.value)}
                         required
-                      />
+                        style={styles.select}
+                      >
+                        <option value="">Sélectionnez une spécialité</option>
+                        <option value="Analyses sanguines">Analyses sanguines</option>
+                        <option value="Analyses d'urine">Analyses d'urine</option>
+                        <option value="Microbiologie">Microbiologie</option>
+                        <option value="Immunologie">Immunologie</option>
+                        <option value="Hormonologie">Hormonologie</option>
+                      </select>
                     </div>
 
-                    <div className="form-group">
-                      <label>Raison / Type d'analyse :</label>
+                    <div className="form-group" style={styles.formGroup}>
+                      <label style={styles.label}>Laboratoire :</label>
+                      <select 
+                        value={selectedLab} 
+                        onChange={(e) => setSelectedLab(e.target.value)}
+                        required
+                        style={styles.select}
+                      >
+                        <option value="">Sélectionnez un laboratoire</option>
+                        {labs
+                          .filter(lab => !selectedRegion || lab.region === selectedRegion)
+                          .map(lab => (
+                            <option key={lab._id} value={lab._id}>
+                              {lab.nom} - {lab.adresse}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+
+                    <div className="form-group" style={styles.formGroup}>
+                      <label style={styles.label}>Motif / Type d'analyse :</label>
                       <textarea
                         value={labAppointmentReason}
                         onChange={(e) => setLabAppointmentReason(e.target.value)}
                         placeholder="Décrivez le type d'analyse ou la raison de votre visite"
                         required
+                        style={styles.textarea}
                       />
                     </div>
 
@@ -848,33 +1200,92 @@ const PatientDashboard = () => {
               </>
             )}
 
+            {activeSection === 'medical-reports' && (
+              <>
+                <h2>📋 Rapports Médicaux</h2>
+                <div className="medical-reports-section">
+                  {medicalReports.length === 0 ? (
+                    <p>Aucun rapport médical disponible.</p>
+                  ) : (
+                    <div className="reports-by-doctor">
+                      {Object.entries(
+                        medicalReports.reduce((acc, report) => {
+                          const doctorId = report.doctorId?._id;
+                          const doctorName = `Dr. ${report.doctorId?.nom} ${report.doctorId?.prenom}`;
+                          if (!acc[doctorId]) {
+                            acc[doctorId] = {
+                              doctorName,
+                              reports: []
+                            };
+                          }
+                          acc[doctorId].reports.push(report);
+                          return acc;
+                        }, {})
+                      ).map(([doctorId, { doctorName, reports }]) => (
+                        <div key={doctorId} className="doctor-reports-section">
+                          <h3 className="doctor-name">{doctorName}</h3>
+                          <div className="reports-grid">
+                            {reports.map((report) => (
+                              <div key={report._id} className="report-card">
+                                <div className="report-header">
+                                  <span className="report-date">
+                                    {new Date(report.createdAt).toLocaleString('fr-FR')}
+                                  </span>
+                                </div>
+                                <div className="report-content">
+                                  <p><strong>Rendez-vous du:</strong> {new Date(report.appointmentId?.date).toLocaleString('fr-FR')}</p>
+                                  <p><strong>Description:</strong> {report.description}</p>
+                                </div>
+                                <div className="report-actions">
+                                  <a
+                                    href={`${API_BASE_URL}/${report.fileUrl}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="view-btn"
+                                  >
+                                    📄 Voir le rapport
+                                  </a>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
             {activeSection === 'hospital-appointment' && (
               <>
                 <h2>🏥 Rendez-vous Hôpital</h2>
                 <div className="hospital-appointment-section">
                   <form onSubmit={handleHospitalAppointmentSubmit} className="hospital-form">
-                    <div className="form-group">
-                      <label>Hôpital :</label>
+                    <div className="form-group" style={styles.formGroup}>
+                      <label style={styles.label}>Région :</label>
                       <select 
-                        value={selectedHospital} 
-                        onChange={(e) => setSelectedHospital(e.target.value)}
+                        value={selectedRegion} 
+                        onChange={(e) => setSelectedRegion(e.target.value)}
                         required
+                        style={styles.select}
                       >
-                        <option value="">Sélectionnez un hôpital</option>
-                        {hospitals.map(hospital => (
-                          <option key={hospital._id} value={hospital._id}>
-                            {hospital.nom} - {hospital.adresse}
+                        <option value="">Sélectionnez une région</option>
+                        {regions.map(region => (
+                          <option key={region} value={region}>
+                            {region}
                           </option>
                         ))}
                       </select>
                     </div>
 
-                    <div className="form-group">
-                      <label>Spécialité :</label>
+                    <div className="form-group" style={styles.formGroup}>
+                      <label style={styles.label}>Spécialité :</label>
                       <select 
                         value={selectedSpecialty} 
                         onChange={(e) => setSelectedSpecialty(e.target.value)}
                         required
+                        style={styles.select}
                       >
                         <option value="">Sélectionnez une spécialité</option>
                         {specialties.map(specialty => (
@@ -882,6 +1293,27 @@ const PatientDashboard = () => {
                             {specialty}
                           </option>
                         ))}
+                      </select>
+                    </div>
+
+                    <div className="form-group" style={styles.formGroup}>
+                      <label style={styles.label}>Hôpital :</label>
+                      <select 
+                        value={selectedHospital} 
+                        onChange={(e) => setSelectedHospital(e.target.value)}
+                        required
+                        style={styles.select}
+                      >
+                        <option value="">Sélectionnez un hôpital</option>
+                        {hospitals
+                          .filter(hospital => 
+                            (!selectedRegion || hospital.region === selectedRegion)
+                          )
+                          .map(hospital => (
+                            <option key={hospital._id} value={hospital._id}>
+                              {hospital.nom} - {hospital.adresse}
+                            </option>
+                          ))}
                       </select>
                     </div>
 

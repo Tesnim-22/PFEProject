@@ -12,8 +12,7 @@ const appointmentSchema = new mongoose.Schema({
         required: true
     },
     date: {
-        type: Date,
-        required: true
+        type: Date
     },
     reason: {
         type: String,
@@ -28,6 +27,9 @@ const appointmentSchema = new mongoose.Schema({
         type: String,
         enum: ['medical', 'laboratory'],
         default: 'medical'
+    },
+    requiredDocuments: {
+        type: String
     }
 }, {
     timestamps: true

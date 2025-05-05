@@ -23,6 +23,7 @@ const AmbulanceReport = require('./models/AmbulanceReport');
 const Vehicle = require('./models/Vehicle');
 const Article = require('./models/Article');
 const Comment = require('./models/Comment');
+const MedicalReport = require('./models/MedicalReport');
 
 // Configuration CORS
 app.use(cors({
@@ -176,7 +177,36 @@ const userSchema = new mongoose.Schema({
     diploma: { type: String },
     photo: { type: String },
     linkedDoctorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-
+    region: {
+        type: String,
+        enum: [
+            'Tunis',
+            'Ariana',
+            'Ben Arous',
+            'Manouba',
+            'Nabeul',
+            'Zaghouan',
+            'Bizerte',
+            'Béja',
+            'Jendouba',
+            'Le Kef',
+            'Siliana',
+            'Sousse',
+            'Monastir',
+            'Mahdia',
+            'Sfax',
+            'Kairouan',
+            'Kasserine',
+            'Sidi Bouzid',
+            'Gabès',
+            'Medenine',
+            'Tataouine',
+            'Gafsa',
+            'Tozeur',
+            'Kebili'
+        ],
+        required: true
+    },
     // 🔥 ➡️ AJOUTE ICI et BIEN fermer l'accolade !
     resetPasswordToken: { type: String },
     resetPasswordExpires: { type: Date }
@@ -193,6 +223,71 @@ const notificationSchema = new mongoose.Schema({
     date: { type: Date, default: Date.now }
 });
 
+// ... existing code ...
+
+// Route pour récupérer les documents médicaux
+app.get('/api/patient/medical-documents/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const patient = await Patient.findOne({ userId });
+
+        if (!patient) {
+            console.log('❌ Patient non trouvé pour userId:', userId);
+            return res.status(404).json({ message: "Patient non trouvé." });
+        }
+
+        console.log('✅ Documents médicaux trouvés:', patient.medicalDocuments);
+        res.status(200).json(patient.medicalDocuments || []);
+    } catch (error) {
+        console.error('❌ Erreur récupération documents:', error);
+        res.status(500).json({ message: "Erreur lors de la récupération des documents." });
+    }
+});
+
+// Route pour télécharger un document médical
+app.post('/api/patient/medical-documents/:userId', uploadMedicalDoc.single('document'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: "Aucun fichier n'a été téléchargé." });
+        }
+
+        const { userId } = req.params;
+        const { description } = req.body;
+
+        let patient = await Patient.findOne({ userId });
+
+        if (!patient) {
+            // Si le patient n'existe pas, on le crée
+            const user = await User.findById(userId);
+            if (!user) {
+                return res.status(404).json({ message: "Utilisateur non trouvé." });
+            }
+
+            patient = new Patient({
+                userId: user._id,
+                medicalDocuments: []
+            });
+        }
+
+        patient.medicalDocuments.push({
+            fileName: req.file.originalname,
+            fileType: req.file.mimetype,
+            filePath: req.file.path,
+            description
+        });
+
+        await patient.save();
+
+        res.status(200).json({
+            message: "Document médical téléchargé avec succès",
+            document: patient.medicalDocuments[patient.medicalDocuments.length - 1]
+        });
+
+    } catch (error) {
+        console.error('❌ Erreur upload document:', error);
+        res.status(500).json({ message: "Erreur lors du téléchargement du document." });
+    }
+});
 
 // Routes
 // Sign Up
@@ -206,10 +301,11 @@ app.post('/signup', async(req, res) => {
         adresse,
         cin,
         password,
-        role
+        role,
+        region
     } = req.body;
 
-    if (!nom || !prenom || !dateNaissance || !email || !telephone || !adresse || !cin || !password || !role) {
+    if (!nom || !prenom || !dateNaissance || !email || !telephone || !adresse || !cin || !password || !role || !region) {
         return res.status(400).json({ message: 'Tous les champs sont obligatoires.' });
     }
 
@@ -231,13 +327,14 @@ app.post('/signup', async(req, res) => {
             adresse,
             cin,
             password: hashedPassword,
-            roles: [role]
+            roles: [role],
+            region
         });
 
         await newUser.save();
         res.status(201).json({ message: 'Utilisateur inscrit avec succès !' });
     } catch (error) {
-        console.error('❌ Erreur d\enregistrement :', error);
+        console.error('❌ Erreur d\'enregistrement :', error);
         res.status(500).json({ message: 'Erreur serveur.' });
     }
 });
@@ -990,11 +1087,12 @@ app.get('/api/labs-valides', async(req, res) => {
 app.get('/api/medecins-valides', async(req, res) => {
     try {
         const doctors = await User.find({
-            roles: { $in: ['cabinet', 'hopital', 'Doctor', 'Hospital'] },
+            roles: { $in: ['Doctor', 'doctor'] },
             isValidated: true,
             profileCompleted: true
-        }).select('_id nom prenom email specialty roles');
+        }).select('_id nom prenom email specialty region roles');
 
+        console.log("✅ Médecins trouvés:", doctors);
         res.status(200).json(doctors);
     } catch (error) {
         console.error("❌ Erreur récupération médecins :", error);
@@ -1080,22 +1178,32 @@ app.get('/api/notifications/:userId', async(req, res) => {
 // 🆕 Route pour créer un rendez-vous patient
 app.post('/api/appointments', async(req, res) => {
     try {
-        const { doctorId, patientId, date, reason } = req.body;
+        const { doctorId, patientId, reason } = req.body;
 
-        if (!doctorId || !patientId || !date) {
+        if (!doctorId || !patientId || !reason) {
             return res.status(400).json({ message: "Champs obligatoires manquants." });
         }
 
         const appointment = new Appointment({
             doctorId,
             patientId,
-            date,
-            reason
+            reason,
+            type: 'medical',
+            status: 'pending'
         });
 
-        await appointment.save();
+        const savedAppointment = await appointment.save();
 
-        res.status(201).json({ message: "✅ Rendez-vous enregistré avec succès !" });
+        // Créer une notification pour le médecin
+        await Notification.create({
+            userId: doctorId,
+            message: `Nouvelle demande de rendez-vous reçue`
+        });
+
+        res.status(201).json({ 
+            message: "✅ Rendez-vous enregistré avec succès !",
+            appointment: savedAppointment
+        });
     } catch (error) {
         console.error("❌ Erreur création rendez-vous :", error);
         res.status(500).json({ message: "Erreur serveur lors de la création du rendez-vous." });
@@ -1121,18 +1229,19 @@ app.post('/api/patient/medical-documents/:userId', uploadMedicalDoc.single('docu
             });
         }
 
-        patient.medicalDocuments.push({
-            fileName: req.file.originalname,
+        const newDocument = {            fileName: req.file.originalname,
             fileType: req.file.mimetype,
             filePath: req.file.path,
-            description
-        });
+            description: description || ''
+
+        };
+        patient.medicalDocuments.push(newDocument);
 
         await patient.save();
 
         res.status(200).json({
             message: "Document médical téléchargé avec succès",
-            document: patient.medicalDocuments[patient.medicalDocuments.length - 1]
+            document: newDocument
         });
 
     } catch (error) {
@@ -1265,17 +1374,16 @@ app.get('/api/appointments', async (req, res) => {
 // Route pour créer un rendez-vous laboratoire
 app.post('/api/lab-appointments', async(req, res) => {
     try {
-        const { labId, patientId, date, reason } = req.body;
-        console.log('📝 Création rendez-vous laboratoire:', { labId, patientId, date, reason });
+        const { labId, patientId, reason } = req.body;
+        console.log('📝 Création rendez-vous laboratoire:', { labId, patientId, reason });
 
-        if (!labId || !patientId || !date || !reason) {
+        if (!labId || !patientId || !reason) {
             return res.status(400).json({ message: "Tous les champs sont requis." });
         }
 
         const appointment = new Appointment({
             doctorId: labId,
             patientId,
-            date,
             reason,
             type: 'laboratory',
             status: 'pending'
@@ -1287,7 +1395,7 @@ app.post('/api/lab-appointments', async(req, res) => {
         // Créer une notification pour le laboratoire
         await Notification.create({
             userId: labId,
-            message: `Nouveau rendez-vous demandé pour le ${new Date(date).toLocaleString('fr-FR')}`
+            message: `Nouvelle demande de rendez-vous reçue`
         });
 
         res.status(201).json({ 
@@ -1981,4 +2089,224 @@ app.delete('/api/comments/:commentId', async (req, res) => {
 // Lancer le serveur
 app.listen(5001, () => {
     console.log('🚀 Server is running at http://localhost:5001');
+});
+
+// Configuration pour les rapports médicaux
+const medicalReportStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const path = './uploads/medical-reports';
+    if (!fs.existsSync(path)) {
+      fs.mkdirSync(path, { recursive: true });
+    }
+    cb(null, path);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, `medical-report-${uniqueSuffix}${path.extname(file.originalname)}`);
+  }
+});
+
+const uploadMedicalReport = multer({
+  storage: medicalReportStorage,
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Format de fichier non supporté. Utilisez PDF, JPEG ou PNG.'));
+    }
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB max
+  }
+});
+
+// Route pour créer un rapport médical
+app.post('/api/medical-reports', uploadMedicalReport.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "Aucun fichier n'a été téléchargé." });
+    }
+
+    const { doctorId, patientId, appointmentId, description } = req.body;
+
+    const medicalReport = new MedicalReport({
+      doctorId,
+      patientId,
+      appointmentId,
+      fileUrl: req.file.path.replace('Backend/', ''),
+      description
+    });
+
+    await medicalReport.save();
+
+    // Créer une notification pour le patient
+    await Notification.create({
+      userId: patientId,
+      message: "Un nouveau rapport médical est disponible"
+    });
+
+    res.status(201).json({
+      message: "✅ Rapport médical créé avec succès !",
+      report: medicalReport
+    });
+  } catch (error) {
+    console.error("❌ Erreur création rapport médical:", error);
+    res.status(500).json({ message: "Erreur lors de la création du rapport médical." });
+  }
+});
+
+// Route pour récupérer les rapports médicaux d'un patient
+app.get('/api/medical-reports/patient/:patientId', async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    const reports = await MedicalReport.find({ patientId })
+      .populate('doctorId', 'nom prenom')
+      .populate('appointmentId', 'date')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(reports);
+  } catch (error) {
+    console.error("❌ Erreur récupération rapports:", error);
+    res.status(500).json({ message: "Erreur lors de la récupération des rapports." });
+  }
+});
+
+// Route pour récupérer les rapports médicaux créés par un docteur
+app.get('/api/medical-reports/doctor/:doctorId', async (req, res) => {
+  try {
+    const { doctorId } = req.params;
+    const reports = await MedicalReport.find({ doctorId })
+      .populate('patientId', 'nom prenom')
+      .populate('appointmentId', 'date')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(reports);
+  } catch (error) {
+    console.error("❌ Erreur récupération rapports:", error);
+    res.status(500).json({ message: "Erreur lors de la récupération des rapports." });
+  }
+});
+
+// Route pour récupérer les patients liés à un docteur (via les rendez-vous)
+app.get('/api/doctor/:doctorId/patients', async (req, res) => {
+  try {
+    const { doctorId } = req.params;
+    
+    // Trouver tous les rendez-vous du docteur
+    const appointments = await Appointment.find({ doctorId })
+      .populate('patientId', 'nom prenom email telephone')
+      .sort({ date: -1 });
+
+    // Créer un Set pour éviter les doublons de patients
+    const uniquePatients = new Set();
+    const patients = appointments
+      .filter(apt => {
+        if (!uniquePatients.has(apt.patientId?._id.toString())) {
+          uniquePatients.add(apt.patientId?._id.toString());
+          return true;
+        }
+        return false;
+      })
+      .map(apt => apt.patientId);
+
+    res.status(200).json(patients);
+  } catch (error) {
+    console.error("❌ Erreur récupération patients:", error);
+    res.status(500).json({ message: "Erreur lors de la récupération des patients." });
+  }
+});
+
+// Route pour supprimer un rapport médical
+app.delete('/api/medical-reports/:reportId', async (req, res) => {
+  try {
+    const { reportId } = req.params;
+    
+    // Trouver le rapport avant de le supprimer pour récupérer le chemin du fichier
+    const report = await MedicalReport.findById(reportId);
+    
+    if (!report) {
+      return res.status(404).json({ message: "Rapport non trouvé." });
+    }
+
+    // Supprimer le fichier physique
+    const filePath = path.join(__dirname, report.fileUrl);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    // Supprimer le rapport de la base de données
+    await MedicalReport.findByIdAndDelete(reportId);
+
+    res.status(200).json({ message: "✅ Rapport supprimé avec succès !" });
+  } catch (error) {
+    console.error("❌ Erreur suppression rapport:", error);
+    res.status(500).json({ message: "Erreur lors de la suppression du rapport." });
+  }
+});
+
+// Route pour la planification d'un rendez-vous médical
+app.put('/api/appointments/:appointmentId/planning', async (req, res) => {
+    try {
+        const { appointmentId } = req.params;
+        const { appointmentDate, requiredDocuments, status } = req.body;
+
+        const appointment = await Appointment.findByIdAndUpdate(
+            appointmentId,
+            { 
+                date: appointmentDate,
+                requiredDocuments,
+                status
+            },
+            { new: true }
+        ).populate('patientId', 'nom prenom email');
+
+        if (!appointment) {
+            return res.status(404).json({ message: "Rendez-vous non trouvé." });
+        }
+
+        // Créer une notification pour le patient
+        await Notification.create({
+            userId: appointment.patientId._id,
+            message: `Votre rendez-vous médical a été planifié pour le ${new Date(appointmentDate).toLocaleString('fr-FR')}. Documents requis : ${requiredDocuments}`
+        });
+
+        res.status(200).json(appointment);
+    } catch (error) {
+        console.error("❌ Erreur lors de la planification du rendez-vous:", error);
+        res.status(500).json({ message: "Erreur serveur." });
+    }
+});
+
+// Route pour la planification d'un rendez-vous laboratoire
+app.put('/api/lab-appointments/:appointmentId/planning', async (req, res) => {
+    try {
+        const { appointmentId } = req.params;
+        const { appointmentDate, requiredDocuments, status } = req.body;
+
+        const appointment = await Appointment.findByIdAndUpdate(
+            appointmentId,
+            { 
+                date: appointmentDate,
+                requiredDocuments,
+                status
+            },
+            { new: true }
+        ).populate('patientId', 'nom prenom email');
+
+        if (!appointment) {
+            return res.status(404).json({ message: "Rendez-vous non trouvé." });
+        }
+
+        // Créer une notification pour le patient
+        await Notification.create({
+            userId: appointment.patientId._id,
+            message: `Votre rendez-vous au laboratoire a été planifié pour le ${new Date(appointmentDate).toLocaleString('fr-FR')}. Documents requis : ${requiredDocuments}`
+        });
+
+        res.status(200).json(appointment);
+    } catch (error) {
+        console.error("❌ Erreur lors de la planification du rendez-vous:", error);
+        res.status(500).json({ message: "Erreur serveur." });
+    }
 });
