@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
+import '../styles/PatientSignupForm.css';
 const PatientSignupForm = () => {
   const [emergencyPhone, setEmergencyPhone] = useState('');
   const [bloodType, setBloodType] = useState('');

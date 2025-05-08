@@ -112,7 +112,9 @@
     transform: translateY(-2px) !important;
 }
 
+
 /* Scrollbar styles pour la sidebar */
+
 .sidebar-menu::-webkit-scrollbar {
     width: 4px;
 }
@@ -130,7 +132,9 @@
     background: rgba(255, 255, 255, 0.2);
 }
 
+
 /* Responsive design pour la sidebar */
+
 @media (max-width: 768px) {
     .sidebar {
         width: 100%;
@@ -138,16 +142,13 @@
         position: relative;
         overflow: visible;
     }
-
     .sidebar-menu {
         max-height: none;
         overflow: visible;
     }
-
     .menu-group {
         margin-bottom: 1rem;
     }
-
     .sidebar-menu button:hover {
         transform: none;
     }
@@ -205,7 +206,7 @@
     border-radius: 8px;
     padding: 15px;
     margin-bottom: 10px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     transition: transform 0.2s;
 }
 
@@ -264,31 +265,28 @@ h2 {
         height: auto;
         position: relative;
     }
-
     .dashboard {
         margin-left: 0;
     }
-
     .profile-card {
         flex-direction: column;
     }
-
     .profile-photo {
         margin-right: 0;
         margin-bottom: 1.5rem;
     }
-
     .sidebar-menu {
         height: auto;
         padding-bottom: 1rem;
     }
-
     .sidebar-menu button:last-child {
         margin-top: 1rem;
     }
 }
 
+
 /* Ajout des styles pour la section documents médicaux */
+
 .medical-docs-section {
     background: white;
     border-radius: 12px;
@@ -410,37 +408,41 @@ h2 {
     background-color: #fecaca;
 }
 
+
 /* Responsive design pour les documents */
+
 @media (max-width: 768px) {
     .documents-grid {
         grid-template-columns: 1fr;
     }
-
     .upload-form {
         gap: 0.75rem;
     }
-
     .document-actions {
         flex-direction: column;
     }
 }
 
+
 /* Messagerie patient-médecin */
+
 .messagerie-section {
     width: 100%;
-    height: calc(100vh - 100px); /* Augmenter la hauteur utilisable */
+    height: calc(100vh - 100px);
+    /* Augmenter la hauteur utilisable */
     padding: 20px;
     box-sizing: border-box;
 }
 
 .messagerie-layout {
     display: grid;
-    grid-template-columns: 280px 1fr; /* Réduire légèrement la largeur de la liste */
+    grid-template-columns: 280px 1fr;
+    /* Réduire légèrement la largeur de la liste */
     gap: 20px;
     height: 100%;
     background: #fff;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .appointments-list {
@@ -501,7 +503,8 @@ h2 {
     margin-bottom: 15px;
 }
 
-.msg-patient, .msg-doctor {
+.msg-patient,
+.msg-doctor {
     margin-bottom: 12px;
     max-width: 75%;
     padding: 12px;
@@ -540,7 +543,7 @@ h2 {
     padding: 15px;
     background: #fff;
     border-radius: 8px;
-    box-shadow: 0 -2px 4px rgba(0,0,0,0.05);
+    box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .chat-input input {
@@ -696,7 +699,9 @@ h2 {
     color: white;
 }
 
+
 /* Styles pour la section rendez-vous hôpital */
+
 .hospital-appointment-section {
     background: white;
     border-radius: 12px;
@@ -770,18 +775,21 @@ h2 {
     margin-top: 0.5rem;
 }
 
+
 /* Responsive design pour la section hôpital */
+
 @media (max-width: 768px) {
     .hospital-form {
         max-width: 100%;
     }
-
     .hospital-appointments-list .appointments-grid {
         grid-template-columns: 1fr;
     }
 }
 
+
 /* Styles pour les tableaux de rendez-vous */
+
 .appointments-list {
     width: 100%;
     overflow-x: auto;
@@ -867,21 +875,20 @@ h2 {
     border-bottom: 2px solid #3b82f6;
 }
 
+
 /* Responsive design pour les tableaux */
+
 @media (max-width: 768px) {
     .appointments-list {
         margin: 0 -1rem;
         border-radius: 0;
     }
-    
     .appointments-list table {
         min-width: 600px;
     }
-    
     .appointments-category h3 {
         margin: 0 1rem;
     }
-    
     .no-appointments-message {
         margin: 1rem;
         border-radius: var(--radius-md);
@@ -1023,7 +1030,6 @@ h2 {
     .doctor-reports-section {
         padding: 1rem;
     }
-    
     .doctor-reports-section .reports-grid {
         grid-template-columns: 1fr;
     }

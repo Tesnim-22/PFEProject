@@ -764,7 +764,7 @@ const PatientDashboard = () => {
 
             {activeSection === 'documents' && (
               <>
-                <h2>📄 Mes documents médicaux</h2>
+                <h4>📄 Mes documents médicaux</h4>
                 <div className="medical-docs-section">
                   <div className="upload-section">
                     <h3>Ajouter un document</h3>

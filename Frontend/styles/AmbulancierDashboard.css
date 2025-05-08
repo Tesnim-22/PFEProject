@@ -71,17 +71,14 @@
     .ambulance-dashboard {
         padding: 1rem;
     }
-
     .dashboard-header {
         flex-direction: column;
         gap: 1rem;
         text-align: center;
     }
-
     .back-btn {
         width: 100%;
     }
-
     .dashboard-card-grid {
         grid-template-columns: 1fr;
     }

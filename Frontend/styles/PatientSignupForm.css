@@ -1,71 +1,100 @@
+/* === Global reset & background === */
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f5f9fa;
+}
+
+
+/* === Wrapper with spacing under fixed navbar === */
+
 .patient-form-wrapper {
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 40px 20px;
+    padding: 120px 20px 60px;
+    /* ✅ grand espace haut et bas */
     min-height: 100vh;
-    background-color: #f5f9fa;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    scroll-margin-top: 100px;
 }
 
+
+/* === Card style === */
+
 .patient-form-card {
-    background: #fff;
-    padding: 30px 40px;
-    border-radius: 12px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-    max-width: 600px;
+    background: #ffffff;
+    padding: 40px 50px;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    max-width: 640px;
     width: 100%;
+    transition: box-shadow 0.3s ease;
 }
 
 .patient-form-card h2 {
-    font-size: 1.5rem;
-    margin-bottom: 20px;
-    color: #333;
+    font-size: 2rem;
+    margin-bottom: 10px;
+    color: #222;
+    text-align: center;
 }
 
-.patient-form-card h2 span {
-    color: #007d91;
+.patient-form-card p {
+    font-size: 1rem;
+    color: #555;
+    margin-bottom: 25px;
+    text-align: center;
 }
+
+
+/* === Form layout === */
 
 form {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 18px;
 }
 
 label {
-    font-weight: 500;
-    color: #444;
+    font-weight: 600;
+    color: #333;
     font-size: 0.95rem;
     display: flex;
     flex-direction: column;
+    gap: 6px;
 }
 
 input[type="text"],
 input[type="tel"],
 input[type="date"] {
-    padding: 10px 12px;
+    padding: 12px 14px;
     font-size: 1rem;
     border-radius: 8px;
     border: 1px solid #ccc;
-    transition: border 0.3s ease;
+    background-color: #fff;
+    transition: border 0.3s ease, box-shadow 0.3s ease;
 }
 
 input:focus {
-    border-color: #0097a7;
+    border-color: #007d91;
     outline: none;
-    box-shadow: 0 0 5px rgba(0, 151, 167, 0.2);
+    box-shadow: 0 0 6px rgba(0, 125, 145, 0.2);
 }
 
+
+/* === Capture Button === */
+
 .capture-btn {
-    margin-top: 6px;
-    padding: 8px 14px;
+    margin-top: 4px;
+    padding: 10px 16px;
     background-color: #007d91;
     color: white;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
-    transition: 0.3s;
+    font-size: 0.95rem;
+    transition: background-color 0.3s ease;
     width: fit-content;
 }
 
@@ -77,28 +106,51 @@ input:focus {
     background-color: #28a745;
 }
 
+
+/* === Submit Button === */
+
 .submit-btn {
-    margin-top: 10px;
-    background-color: #0097a7;
+    margin-top: 15px;
+    background: linear-gradient(135deg, #174357, #14554d);
     color: white;
     border: none;
-    padding: 12px;
-    border-radius: 8px;
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 1rem;
     font-weight: bold;
     cursor: pointer;
-    transition: 0.3s;
+    transition: all 0.3s ease;
 }
 
 .submit-btn:hover {
-    background-color: #007d91;
+    transform: translateY(-2px);
+    background-color: #0f404f;
 }
+
+
+/* === Success Message === */
 
 .success-message {
     margin-bottom: 15px;
     background-color: #e6f9e7;
     border-left: 5px solid #4caf50;
-    padding: 10px 15px;
-    border-radius: 6px;
+    padding: 12px 18px;
+    border-radius: 8px;
     color: #2e7d32;
     font-weight: 500;
+    font-size: 0.95rem;
+}
+
+
+/* === Responsive === */
+
+@media (max-width: 768px) {
+    .patient-form-card {
+        padding: 30px 25px;
+    }
+    .submit-btn,
+    .capture-btn {
+        width: 100%;
+        text-align: center;
+    }
 }

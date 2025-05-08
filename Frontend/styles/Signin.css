@@ -1,144 +1,266 @@
-:root {
-    --primary-bg: #fdf6f0;
-    --form-bg: #fffaf7;
-    --border-color: #d8cfc8;
-    --accent: #7a5c58;
-    --text-dark: #3e2f2c;
-    --placeholder: #a38e87;
-    --focus-shadow: rgba(122, 92, 88, 0.2);
-}
+/* Reset and Global Styles */
 
 body {
     margin: 0;
     padding: 0;
     font-family: 'Segoe UI', sans-serif;
-    background-color: var(--primary-bg);
+    background-color: #f4f9fb;
 }
+
+
+/* Navbar */
+
+.navbar {
+    background: linear-gradient(90deg, #0b4446, #437577);
+    padding: 0.6rem 1.5rem;
+    color: white;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+}
+
+.nav-links {
+    display: flex;
+    justify-content: center;
+    gap: 1.2rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-links li a {
+    color: #fff;
+    text-decoration: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+
+/* Sign-in Page */
 
 .signin-page {
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
-    padding: 1.5rem;
+    min-height: calc(100vh - 70px);
+    padding-top: 80px;
+    /* Augmenter la distance entre la navbar et le contenu */
+    background-color: #f4f9fb;
 }
 
 .signin-container {
     display: flex;
     flex-direction: row;
-    width: 100%;
-    max-width: 700px;
-    background: var(--form-bg);
+    max-width: 720px;
+    width: 95%;
+    background: #fff;
     border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
     overflow: hidden;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
 }
 
 .signin-left {
     flex: 1;
-    background-color: #f9f6f3;
+    background-color: #f9fafa;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 1.5rem;
 }
 
-.signin-left {
-    align-items: stretch;
-    /* ou center si tu préfères recentré */
-}
+
+/* Style de l'image dans le formulaire */
 
 .signin-left img {
-    max-width: 95%;
+    width: 110%;
     height: auto;
-    object-fit: contain;
+    object-fit: cover;
+    border-radius: 50%;
+    transition: transform 0.3s ease, filter 0.3s ease;
+    margin-left: 1%;
+    -webkit-transition: transform 0.3s ease, filter 0.3s ease;
+    -moz-transition: transform 0.3s ease, filter 0.3s ease;
+    -ms-transition: transform 0.3s ease, filter 0.3s ease;
+    -o-transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+.signin-left img:hover {
+    transform: scale(1.2);
+    /* Agrandir l'image davantage au survol */
+    filter: brightness(1.2);
+    /* Augmenter la luminosité au survol */
 }
 
 .signin-box {
     flex: 1.2;
-    padding: 1.5rem;
+    padding: 1rem 1.2rem;
     display: flex;
     flex-direction: column;
     justify-content: center;
 }
 
 .signin-header h2 {
-    font-size: 1.5rem;
-    font-weight: 600;
-    margin-bottom: 1.2rem;
-    color: var(--text-dark);
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+    color: #023d35;
+    text-align: center;
+}
+
+
+/* Form Styles */
+
+.signup-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
 }
 
 .signup-form input,
 .signup-form select,
-.react-datepicker-custom {
-    display: block;
+.signup-form .react-datepicker-custom {
     width: 100%;
-    margin-bottom: 0.75rem;
-    padding: 0.6rem 0.9rem;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    font-size: 0.95rem;
-    background-color: #fff;
-    color: var(--text-dark);
-    outline: none;
-    transition: 0.2s ease;
+    padding: 0.4rem 0.6rem;
+    /* uniforme */
+    font-size: 0.9rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    background-color: #ffffff;
+    box-sizing: border-box;
 }
 
-.signup-form input:focus,
-.signup-form select:focus,
-.react-datepicker-custom:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--focus-shadow);
-}
 
-input::placeholder,
-.react-datepicker-custom::placeholder {
-    color: var(--placeholder);
-}
+/* Grouped Fields */
 
 .name-fields,
 .password-fields {
     display: flex;
-    gap: 0.75rem;
-    margin-bottom: 0.75rem;
+    gap: 1rem;
+    width: 100%;
 }
 
 .name-fields input,
-.password-fields input {
+.password-fields input,
+.select-fields select {
     flex: 1;
-    margin-bottom: 0;
+    min-width: 0;
+    /* empêche les débordements */
+    padding: 0.4rem 0.6rem;
+    /* même padding que ci-dessus */
+    font-size: 0.9rem;
 }
 
-.submit-btn {
-    background-color: var(--accent);
-    color: white;
-    font-size: 1rem;
-    padding: 0.6rem;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
+
+/* Password Info */
+
+.password-hint {
+    font-size: 0.7rem;
+    margin-bottom: 0.5rem;
+    color: #666;
+}
+
+
+/* Role/Region Select */
+
+
+/* Role and Region Fields */
+
+.select-fields {
+    display: flex;
+    gap: 1rem;
+    /* Ajoute un espace entre les champs */
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
     width: 100%;
-    transition: background-color 0.3s ease;
-    margin-top: 0.75rem;
+}
+
+.select-fields select {
+    flex: 1;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.75rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    background-color: #fff;
+}
+
+
+/* Submit Button */
+
+
+/* Bouton */
+
+.submit-btn {
+    background-color: #4CAF50 !important;
+    /* Couleur plus brillante */
+    color: #ffffff !important;
+    font-size: 1rem !important;
+    /* Taille un peu plus petite */
+    padding: 0.3rem 1rem !important;
+    /* Réduire un peu la taille */
+    border: none;
+    border-radius: 3px;
+    margin: 0.4rem auto 0;
+    cursor: pointer;
+    width: fit-content;
+    display: block;
+    transition: background 0.3s ease;
 }
 
 .submit-btn:hover {
-    background-color: #664a46;
+    background-color: #66bb6a !important;
+    /* Une teinte plus claire sur hover */
 }
 
-.login-link {
-    text-align: center;
-    margin-top: 1rem;
+
+/* DatePicker */
+
+.react-datepicker-wrapper {
+    width: 100%;
+}
+
+.react-datepicker__input-container input {
+    padding: 0.4rem 0.6rem;
     font-size: 0.9rem;
-    color: #7a5c58;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    background-color: #ffffff;
 }
 
-.login-link a {
-    color: var(--accent);
-    text-decoration: none;
-    font-weight: 500;
+
+/* Footer Text */
+
+.signin-footer {
+    text-align: center;
+    /* Centre le texte */
+    margin-top: 20px;
+    font-size: 0.9rem;
+    color: #023d35;
+    /* Couleur de texte de base */
 }
+
+.signin-footer p {
+    margin: 0;
+}
+
+
+/* Lien Se connecter */
+
+.signin-link {
+    color: #50a7aa;
+    /* Couleur brillante pour le lien */
+    text-decoration: none;
+    font-weight: bold;
+    transition: color 0.3s ease;
+}
+
+.signin-link:hover {
+    color: #308764;
+    /* Couleur plus foncée au survol */
+}
+
+
+/* Responsive Design */
 
 @media (max-width: 768px) {
     .signin-container {
@@ -147,8 +269,12 @@ input::placeholder,
     .signin-left {
         display: none;
     }
-    .name-fields,
-    .password-fields {
+    .signin-box {
+        flex: 1;
+        padding: 1rem 1.2rem;
+    }
+    .password-fields,
+    .select-fields {
         flex-direction: column;
     }
 }

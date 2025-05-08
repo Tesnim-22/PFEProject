@@ -112,7 +112,7 @@ const Signin = () => {
     <div className="signin-page">
       <div className="signin-container">
         <div className="signin-left">
-          <img src="/assets/logo-medical.jpg" alt="Patient Care Logo" />
+          <img src="/assets/logovert.jpg" alt="Patient Care Logo" />
         </div>
 
         <motion.div className="signin-box" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }}>
@@ -123,12 +123,14 @@ const Signin = () => {
           {message && <div className="message">{message}</div>}
 
           <form className="signin-form signup-form" onSubmit={handleSubmit}>
-            <div className="name-fields">
-              <input type="text" placeholder="Nom" value={nom} onChange={(e) => setNom(e.target.value)} required />
-              <input type="text" placeholder="Prénom" value={prenom} onChange={(e) => setPrenom(e.target.value)} required />
-            </div>
+          <div className="name-fields">
+    <input type="text" placeholder="Nom" value={nom} onChange={(e) => setNom(e.target.value)} required />
+    <input type="text" placeholder="Prénom" value={prenom} onChange={(e) => setPrenom(e.target.value)} required />
+</div>
 
-            <div className="date-field">
+
+
+<div className="full-width">
               <DatePicker
                 selected={dateNaissance}
                 onChange={(date) => setDateNaissance(date)}
@@ -155,31 +157,37 @@ const Signin = () => {
 
             <small className="password-hint">8 caractères min. avec majuscule, minuscule, chiffre, symbole.</small>
 
-            <select value={role} onChange={(e) => setRole(e.target.value)} required>
-              <option value="">-- Sélectionnez un rôle --</option>
-              <option value="Patient">Patient</option>
-              <option value="Doctor">Doctor</option>
-              <option value="Labs">Labs</option>
-              <option value="Hospital">Hospital</option>
-              <option value="Cabinet">Cabinet</option>
-              <option value="Ambulancier">Ambulancier</option>
-            </select>
+            <div className="select-fields">
+  <select value={role} onChange={(e) => setRole(e.target.value)} required>
+    <option value="">-- Sélectionnez un rôle --</option>
+    <option value="Patient">Patient</option>
+    <option value="Doctor">Doctor</option>
+    <option value="Labs">Labs</option>
+    <option value="Hospital">Hospital</option>
+    <option value="Cabinet">Cabinet</option>
+    <option value="Ambulancier">Ambulancier</option>
+  </select>
 
-            <select value={region} onChange={(e) => setRegion(e.target.value)} required>
-              <option value="">-- Sélectionnez une région --</option>
-              {regions.map((reg) => (
-                <option key={reg} value={reg}>{reg}</option>
-              ))}
-            </select>
+  <select value={region} onChange={(e) => setRegion(e.target.value)} required>
+    <option value="">-- Sélectionnez une région --</option>
+    {regions.map((reg) => (
+      <option key={reg} value={reg}>{reg}</option>
+    ))}
+  </select>
+</div>
 
-            <button type="submit" className="submit-btn" disabled={loading}>
-              {loading ? 'Création...' : 'Créer un compte'}
-            </button>
+
+            <button type="submit" className="submit-btn">
+  {loading ? 'Création...' : 'Créer un compte'}
+</button>
+
+          
           </form>
 
-          <div className="login-link">
-            Déjà inscrit ? <Link to="/login">Se connecter</Link>
-          </div>
+          <div class="signin-footer">
+    <p>Déjà inscrit ? <a href="/login" class="signin-link">Se connecter</a></p>
+</div>
+
         </motion.div>
       </div>
     </div>

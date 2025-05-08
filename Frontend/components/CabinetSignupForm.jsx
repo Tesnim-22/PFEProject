@@ -14,7 +14,6 @@ const CabinetSignupForm = () => {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Liste des régions de Tunisie
   const tunisianRegions = [
     'Tunis', 'Ariana', 'Ben Arous', 'Manouba', 'Nabeul', 'Zaghouan', 'Bizerte',
     'Béja', 'Jendouba', 'Le Kef', 'Siliana', 'Sousse', 'Monastir', 'Mahdia',
@@ -26,16 +25,11 @@ const CabinetSignupForm = () => {
     const fetchDoctors = async () => {
       try {
         const response = await axios.get('http://localhost:5001/api/medecins-valides');
-        console.log('Médecins récupérés:', response.data);
         setDoctors(response.data);
-
-        // Extraire les spécialités uniques
         const uniqueSpecialties = [...new Set(response.data
           .map(doc => doc.specialty?.trim())
           .filter(Boolean))].sort();
         setSpecialties(uniqueSpecialties);
-
-        // Initialiser les médecins filtrés avec tous les médecins
         setFilteredDoctors(response.data);
       } catch (err) {
         console.error('❌ Erreur récupération médecins:', err);
@@ -45,7 +39,6 @@ const CabinetSignupForm = () => {
     fetchDoctors();
   }, []);
 
-  // Mettre à jour les médecins filtrés à chaque changement de filtre
   useEffect(() => {
     const filtered = doctors.filter((doc) => {
       const matchesSpecialty = !selectedSpecialty || doc.specialty?.trim() === selectedSpecialty;
@@ -53,11 +46,8 @@ const CabinetSignupForm = () => {
       const matchesSearch = !search || 
         doc.nom?.toLowerCase().includes(search.toLowerCase()) ||
         doc.prenom?.toLowerCase().includes(search.toLowerCase());
-
       return matchesSpecialty && matchesRegion && matchesSearch;
     });
-
-    console.log('Médecins filtrés:', filtered);
     setFilteredDoctors(filtered);
   }, [search, selectedSpecialty, selectedRegion, doctors]);
 
@@ -102,49 +92,40 @@ const CabinetSignupForm = () => {
           </div>
         )}
         <form onSubmit={handleSubmit}>
-          <div className="form-row">
-            <label>
-              Spécialité :
-              <select
-                value={selectedSpecialty}
-                onChange={(e) => setSelectedSpecialty(e.target.value)}
-                required
-              >
-                <option value="">-- Sélectionner une spécialité --</option>
-                {specialties.map((spec, idx) => (
-                  <option key={idx} value={spec}>{spec}</option>
-                ))}
-              </select>
-            </label>
 
-            <label>
-              Région :
-              <select
-                value={selectedRegion}
-                onChange={(e) => setSelectedRegion(e.target.value)}
-              >
-                <option value="">-- Toutes les régions --</option>
-                {tunisianRegions.map((region, idx) => (
-                  <option key={idx} value={region}>{region}</option>
-                ))}
-              </select>
-            </label>
+          <div className="form-row">
+            <label htmlFor="specialty"><span>Spécialité :</span></label>
+            <select
+              id="specialty"
+              value={selectedSpecialty}
+              onChange={(e) => setSelectedSpecialty(e.target.value)}
+              required
+            >
+              <option value="">-- Sélectionner une spécialité --</option>
+              {specialties.map((spec, idx) => (
+                <option key={idx} value={spec}>{spec}</option>
+              ))}
+            </select>
           </div>
 
-          <label>
-            Rechercher un médecin :
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher par nom ou prénom"
-              className="search-input"
-            />
-          </label>
-
-          <label>
-            Médecin à associer :
+          <div className="form-row">
+            <label htmlFor="region"><span>Région :</span></label>
             <select
+              id="region"
+              value={selectedRegion}
+              onChange={(e) => setSelectedRegion(e.target.value)}
+            >
+              <option value="">-- Toutes les régions --</option>
+              {tunisianRegions.map((region, idx) => (
+                <option key={idx} value={region}>{region}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-row">
+            <label htmlFor="doctor"><span>Médecin à associer :</span></label>
+            <select
+              id="doctor"
               value={selectedDoctor}
               onChange={(e) => setSelectedDoctor(e.target.value)}
               required
@@ -160,18 +141,19 @@ const CabinetSignupForm = () => {
             {filteredDoctors.length === 0 && (
               <p className="no-results">Aucun médecin ne correspond aux critères sélectionnés</p>
             )}
-          </label>
+          </div>
 
-          <label>
-            Adresse du cabinet :
+          <div className="form-row">
+            <label htmlFor="adresse"><span>Adresse du cabinet :</span></label>
             <input
+              id="adresse"
               type="text"
               value={cabinetAddress}
               onChange={(e) => setCabinetAddress(e.target.value)}
               placeholder="Adresse complète du cabinet"
               required
             />
-          </label>
+          </div>
 
           <button type="submit" disabled={loading} className="submit-button">
             {loading ? 'Traitement...' : 'Valider l\'inscription'}

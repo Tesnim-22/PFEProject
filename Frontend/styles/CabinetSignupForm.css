@@ -1,128 +1,128 @@
-:root {
-    --primary-bg: #fdfaf7;
-    --card-bg: #ffffff;
-    --accent: #7a5c58;
-    /* Marron doux */
-    --accent-hover: #5c4036;
-    --input-border: #d3c5be;
-    --input-focus: #b49b8f;
-    --success: #2e7d32;
-    --error: #c62828;
-    --text-dark: #3a2f2d;
-    --text-muted: #7b6f6a;
-    --shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+body {
+    background-color: #ffffff;
+    font-family: 'Segoe UI', sans-serif;
+    margin: 0;
+    padding: 0;
 }
+
+
+/* === Layout === */
 
 .cabinet-form-wrapper {
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 2rem;
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    padding: 4rem 1.5rem;
+    background: linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%);
 }
 
 .cabinet-form-card {
-    background: white;
-    padding: 2rem;
-    border-radius: 15px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    background: #ffffff;
+    padding: 3rem;
+    border-radius: 16px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
     width: 100%;
-    max-width: 600px;
+    max-width: 640px;
+    transition: box-shadow 0.3s ease;
 }
 
 .cabinet-form-card h2 {
-    color: #2c3e50;
-    margin-bottom: 0.5rem;
-    font-size: 1.8rem;
+    color: #0c0c0b;
+    margin-bottom: 0.4rem;
+    font-size: 2.1rem;
     text-align: center;
 }
 
 .cabinet-form-card p {
-    color: #64748b;
+    color: #555;
     text-align: center;
-    margin-bottom: 2rem;
+    margin-bottom: 2.5rem;
+    font-size: 1.05rem;
 }
 
+
+/* === Form Layout: vertical === */
+
 .form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1.5rem;
 }
 
 label {
     display: block;
-    margin-bottom: 1.5rem;
-}
-
-label > span {
-    display: block;
-    margin-bottom: 0.5rem;
-    color: #334155;
-    font-weight: 500;
+    font-weight: 600;
+    color: #333;
+    font-size: 0.95rem;
+    margin-bottom: 0.6rem;
 }
 
 select,
 input {
     width: 100%;
-    padding: 0.75rem;
-    border: 1px solid #e2e8f0;
+    padding: 0.8rem 1rem;
+    border: 1px solid #d6d6d6;
     border-radius: 8px;
     font-size: 1rem;
-    color: #334155;
-    background-color: white;
-    transition: all 0.2s;
+    color: #2e2c2c;
+    background-color: #fff;
+    transition: border-color 0.25s, box-shadow 0.25s;
 }
 
 select:focus,
 input:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: #007b8a;
+    box-shadow: 0 0 0 3px rgba(0, 123, 138, 0.15);
 }
 
-.search-input {
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>');
-    background-repeat: no-repeat;
-    background-position: 12px center;
-    padding-left: 40px;
-}
+
+/* === Doctor Selector === */
 
 .doctor-select {
-    max-height: 200px;
+    max-height: 220px;
+    overflow-y: auto;
 }
 
 .no-results {
     color: #ef4444;
-    font-size: 0.9rem;
-    margin-top: 0.5rem;
+    font-size: 0.92rem;
+    margin-top: 0.6rem;
     text-align: center;
 }
 
+
+/* === Submit Button === */
+
 .submit-button {
     width: 100%;
-    padding: 0.75rem;
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    color: white;
+    padding: 0.95rem 1.2rem;
+    background: linear-gradient(135deg, #174357 0%, #14554d 100%);
+    color: #ffffff;
     border: none;
     border-radius: 8px;
     font-size: 1rem;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
+    margin-top: 1.2rem;
 }
 
 .submit-button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(37, 99, 235, 0.3);
 }
 
 .submit-button:disabled {
     background: #94a3b8;
     cursor: not-allowed;
+    box-shadow: none;
     transform: none;
 }
+
+
+/* === Message Styles === */
 
 .message {
     padding: 1rem;
@@ -130,28 +130,27 @@ input:focus {
     margin-bottom: 1.5rem;
     text-align: center;
     font-weight: 500;
+    font-size: 1rem;
 }
 
 .message.success {
     background-color: #dcfce7;
-    color: #166534;
+    color: #2e7d32;
 }
 
 .message.error {
     background-color: #fee2e2;
-    color: #991b1b;
+    color: #c62828;
 }
 
-@media (max-width: 640px) {
-    .form-row {
-        grid-template-columns: 1fr;
-    }
 
+/* === Responsive === */
+
+@media (max-width: 768px) {
     .cabinet-form-card {
-        padding: 1.5rem;
+        padding: 2rem;
     }
-
     .cabinet-form-wrapper {
-        padding: 1rem;
+        padding: 2rem 1rem;
     }
 }

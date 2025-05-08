@@ -10,14 +10,20 @@ const Contact = () => {
 
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
+  const confirmSubmit = (e) => {
     e.preventDefault();
+    setShowModal(true);
+  };
+
+  const handleFinalSubmit = async () => {
     setLoading(true);
+    setShowModal(false);
     setStatus('');
 
     try {
@@ -31,14 +37,13 @@ const Contact = () => {
 
       const data = await res.json();
       if (res.ok) {
-        setStatus('✅ Message sent successfully!');
+        setStatus('✅ Message envoyé avec succès !');
         setForm({ name: '', email: '', message: '' });
       } else {
-        setStatus(`❌ ${data.message || 'Something went wrong.'}`);
+        setStatus(`❌ ${data.message || 'Une erreur est survenue.'}`);
       }
     } catch (err) {
-      console.error(err);
-      setStatus('❌ Could not send message. Please try again later.');
+      setStatus('❌ Impossible d’envoyer le message. Veuillez réessayer plus tard.');
     } finally {
       setLoading(false);
     }
@@ -47,42 +52,53 @@ const Contact = () => {
   return (
     <div className="contact-page">
       <div className="contact-box">
-        <h2>Contact Us</h2>
-        <form onSubmit={handleSubmit}>
+        <h2>Contactez-nous</h2>
+        <form onSubmit={confirmSubmit}>
           <input
             type="text"
             name="name"
-            placeholder="Your Name"
+            placeholder="Votre nom"
             value={form.name}
             onChange={handleChange}
             required
           />
-
           <input
             type="email"
             name="email"
-            placeholder="Your Email"
+            placeholder="Votre email"
             value={form.email}
             onChange={handleChange}
             required
           />
-
           <textarea
             name="message"
-            placeholder="Your Message"
+            placeholder="Votre message"
             rows="6"
             value={form.message}
             onChange={handleChange}
             required
           />
-
           <button type="submit" disabled={loading}>
-            {loading ? 'Sending...' : 'Send Message'}
+            {loading ? 'Envoi en cours...' : 'Envoyer le message'}
           </button>
-
           {status && <p className="status-message">{status}</p>}
         </form>
       </div>
+
+      {showModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>Confirmer l’envoi</h3>
+            <p><strong>Nom:</strong> {form.name}</p>
+            <p><strong>Email:</strong> {form.email}</p>
+            <p><strong>Message:</strong><br />{form.message}</p>
+            <div className="modal-buttons">
+              <button onClick={handleFinalSubmit} className="confirm-btn">Confirmer</button>
+              <button onClick={() => setShowModal(false)} className="cancel-btn">Annuler</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

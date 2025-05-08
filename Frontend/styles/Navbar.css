@@ -1,12 +1,26 @@
 /* Navbar container with elegant gradient */
 
 .navbar {
-    background: linear-gradient(90deg, #2C3E50 0%, #4B6587 100%);
-    padding: 1rem 2rem;
+    background: linear-gradient(90deg, #7099c3 0%, #4B6587 100%);
+    padding: 0.3rem 2rem;
+    /* ⬅️ hauteur réduite */
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    position: sticky;
+    position: fixed;
     top: 0;
+    width: 100%;
     z-index: 1000;
+    transition: transform 0.3s ease;
+}
+
+
+/* Show/hide classes */
+
+.navbar.show {
+    transform: translateY(0);
+}
+
+.navbar.hide {
+    transform: translateY(-100%);
 }
 
 
@@ -55,4 +69,12 @@
 .logout-button:hover {
     background-color: #34495E;
     color: #ffffff;
+}
+
+
+/* Adjust page content to not be hidden under navbar */
+
+body {
+    padding-top: 60px;
+    /* ⬅️ ajusté pour s'adapter à la hauteur réduite */
 }

@@ -12,28 +12,27 @@ const ArticlesPage = () => {
   const [categories, setCategories] = useState([]);
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const articlesPerPage = 6;
 
   useEffect(() => {
     fetchArticles();
   }, []);
 
   useEffect(() => {
-    if (showModal) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
+    document.body.style.overflow = showModal ? 'hidden' : 'unset';
+    return () => { document.body.style.overflow = 'unset'; };
   }, [showModal]);
+
+  useEffect(() => {
+    setCurrentPage(1); // reset page on filter/search
+  }, [selectedCategory, searchTerm]);
 
   const fetchArticles = async () => {
     try {
       setLoading(true);
       const response = await axios.get('http://localhost:5001/api/articles');
       setArticles(response.data);
-      
       const uniqueCategories = [...new Set(response.data.map(article => article.category))];
       setCategories(uniqueCategories);
     } catch (error) {
@@ -56,17 +55,30 @@ const ArticlesPage = () => {
 
   const filteredArticles = articles.filter(article => {
     const matchesCategory = selectedCategory === 'all' || article.category === selectedCategory;
-    const matchesSearch = article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         article.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (article.authorId?.nom + ' ' + article.authorId?.prenom).toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesDoctor =
+      article.authorId &&
+      (
+        `${article.authorId.prenom} ${article.authorId.nom}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        `${article.authorId.nom} ${article.authorId.prenom}`.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    const matchesSearch =
+      article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      article.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      matchesDoctor;
+
     return matchesCategory && matchesSearch;
   });
+
+  const totalPages = Math.ceil(filteredArticles.length / articlesPerPage);
+  const indexOfLast = currentPage * articlesPerPage;
+  const indexOfFirst = indexOfLast - articlesPerPage;
+  const currentArticles = filteredArticles.slice(indexOfFirst, indexOfLast);
 
   const ArticleModal = ({ article, onClose }) => {
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
     const [loading, setLoading] = useState(false);
-    const userId = localStorage.getItem('userId'); // Assurez-vous d'avoir l'ID de l'utilisateur connecté
+    const userId = localStorage.getItem('userId');
 
     useEffect(() => {
       fetchComments();
@@ -114,9 +126,7 @@ const ArticlesPage = () => {
     return (
       <div className="article-modal-overlay" onClick={onClose}>
         <div className="article-modal-content" onClick={e => e.stopPropagation()}>
-          <button className="modal-close-button" onClick={onClose}>
-            <FaTimes />
-          </button>
+          <button className="modal-close-button" onClick={onClose}><FaTimes /></button>
           {article.imageUrl && (
             <div className="modal-article-image">
               <img src={article.imageUrl} alt={article.title} className="article-image" />
@@ -125,22 +135,11 @@ const ArticlesPage = () => {
           <div className="modal-article-content">
             <h2>{article.title}</h2>
             <div className="article-metadata">
-              <span className="author">
-                <FaUser />
-                Dr. {article.authorId?.prenom} {article.authorId?.nom}
-              </span>
-              <span className="date">
-                <FaCalendar />
-                {new Date(article.createdAt).toLocaleDateString('fr-FR')}
-              </span>
+              <span className="author"><FaUser /> Dr. {article.authorId?.prenom} {article.authorId?.nom}</span>
+              <span className="date"><FaCalendar /> {new Date(article.createdAt).toLocaleDateString('fr-FR')}</span>
             </div>
-            <div className="article-category">
-              <FaFolder />
-              {article.category}
-            </div>
-            <div className="article-full-content">
-              {article.content}
-            </div>
+            <div className="article-category"><FaFolder /> {article.category}</div>
+            <div className="article-full-content">{article.content}</div>
             {article.tags && article.tags.length > 0 && (
               <div className="article-tags">
                 <FaTag />
@@ -150,12 +149,8 @@ const ArticlesPage = () => {
               </div>
             )}
           </div>
-
-          {/* Section commentaires */}
           <div className="article-comments">
             <h3>Commentaires</h3>
-            
-            {/* Formulaire d'ajout de commentaire */}
             <div className="comment-form">
               <textarea
                 value={newComment}
@@ -163,7 +158,7 @@ const ArticlesPage = () => {
                 placeholder="Ajouter un commentaire..."
                 rows="3"
               />
-              <button 
+              <button
                 onClick={handleAddComment}
                 disabled={loading || !newComment.trim()}
                 className="comment-submit"
@@ -171,27 +166,16 @@ const ArticlesPage = () => {
                 {loading ? 'Envoi...' : 'Publier'}
               </button>
             </div>
-
-            {/* Liste des commentaires */}
             <div className="comments-list">
               {comments.map((comment) => (
                 <div key={comment._id} className="comment">
                   <div className="comment-header">
-                    <span className="comment-author">
-                      Dr. {comment.authorId.prenom} {comment.authorId.nom}
-                    </span>
-                    <span className="comment-date">
-                      {new Date(comment.createdAt).toLocaleDateString('fr-FR')}
-                    </span>
+                    <span className="comment-author">Dr. {comment.authorId.prenom} {comment.authorId.nom}</span>
+                    <span className="comment-date">{new Date(comment.createdAt).toLocaleDateString('fr-FR')}</span>
                   </div>
                   <p className="comment-content">{comment.content}</p>
                   {comment.authorId._id === userId && (
-                    <button
-                      onClick={() => handleDeleteComment(comment._id)}
-                      className="delete-comment"
-                    >
-                      Supprimer
-                    </button>
+                    <button onClick={() => handleDeleteComment(comment._id)} className="delete-comment">Supprimer</button>
                   )}
                 </div>
               ))}
@@ -220,21 +204,20 @@ const ArticlesPage = () => {
       <div className="articles-header">
         <h1>Articles Médicaux</h1>
         <div className="articles-filters">
-          <div className="search-bar">
-            <input
-              type="text"
-              placeholder="Rechercher un article..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+          <input
+            type="text"
+            className="filter-input"
+            placeholder="Rechercher un article..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
           <select
+            className="filter-select"
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="category-filter"
           >
             <option value="all">Toutes les catégories</option>
-            {categories.map(category => (
+            {categories.map((category) => (
               <option key={category} value={category}>{category}</option>
             ))}
           </select>
@@ -242,7 +225,7 @@ const ArticlesPage = () => {
       </div>
 
       <div className="articles-grid">
-        {filteredArticles.map(article => (
+        {currentArticles.map(article => (
           <article key={article._id} className="article-card">
             {article.imageUrl && (
               <div className="article-image">
@@ -252,19 +235,10 @@ const ArticlesPage = () => {
             <div className="article-content">
               <h2>{article.title}</h2>
               <div className="article-metadata">
-                <span className="author">
-                  <FaUser />
-                  Dr. {article.authorId?.prenom} {article.authorId?.nom}
-                </span>
-                <span className="date">
-                  <FaCalendar />
-                  {new Date(article.createdAt).toLocaleDateString('fr-FR')}
-                </span>
+                <span className="author"><FaUser /> Dr. {article.authorId?.prenom} {article.authorId?.nom}</span>
+                <span className="date"><FaCalendar /> {new Date(article.createdAt).toLocaleDateString('fr-FR')}</span>
               </div>
-              <div className="article-category">
-                <FaFolder />
-                {article.category}
-              </div>
+              <div className="article-category"><FaFolder /> {article.category}</div>
               <p className="article-excerpt">{article.content.substring(0, 150)}...</p>
               {article.tags && article.tags.length > 0 && (
                 <div className="article-tags">
@@ -281,6 +255,20 @@ const ArticlesPage = () => {
           </article>
         ))}
       </div>
+
+      {totalPages > 1 && (
+        <div className="pagination">
+          {Array.from({ length: totalPages }, (_, index) => (
+            <button
+              key={index}
+              className={`page-btn ${currentPage === index + 1 ? 'active' : ''}`}
+              onClick={() => setCurrentPage(index + 1)}
+            >
+              {index + 1}
+            </button>
+          ))}
+        </div>
+      )}
 
       {showModal && <ArticleModal article={selectedArticle} onClose={closeModal} />}
     </div>
