@@ -63,18 +63,15 @@ const AmbulanceReports = () => {
         }
     };
 
-    const fetchHospitals = async () => {
-        try {
-            const response = await axios.get(`${API_BASE_URL}/api/medecins-valides`);
-            const hospitalsList = response.data.filter(user => 
-                user.roles.includes('Hospital') || user.roles.includes('hopital')
-            );
-            setHospitals(hospitalsList);
-        } catch (error) {
-            console.error('❌ Erreur:', error);
-            setMessage('Erreur lors de la récupération des hôpitaux.');
-        }
-    };
+  const fetchHospitals = async () => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/hospitals`);
+    setHospitals(response.data); // la liste est bien stockée ici
+  } catch (error) {
+    console.error('❌ Erreur:', error);
+    setMessage('Erreur lors de la récupération des hôpitaux.');
+  }
+};
 
     const handleInputChange = (section, field, value) => {
         if (section === 'root') {
@@ -292,14 +289,21 @@ const AmbulanceReports = () => {
                                         />
                                     </div>
                                     <div className="form-group">
-                                        <label>Heure de prise en charge</label>
-                                        <input
-                                            type="datetime-local"
-                                            value={formData.missionDetails.pickupTime}
-                                            onChange={(e) => handleInputChange('missionDetails', 'pickupTime', e.target.value)}
-                                            required
-                                        />
-                                    </div>
+  <label>Hôpital de destination</label>
+  <select
+    value={formData.hospitalId}
+    onChange={(e) => handleInputChange('root', 'hospitalId', e.target.value)}
+    required
+  >
+    <option value="">Sélectionnez un hôpital</option>
+    {hospitals.map(hospital => (
+      <option key={hospital._id} value={hospital._id}>
+        {hospital.nom} {hospital.prenom} – {hospital.adresse}
+      </option>
+    ))}
+  </select>
+</div>
+
                                     <div className="form-group">
                                         <label>Heure d'arrivée</label>
                                         <input
