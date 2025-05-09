@@ -82,83 +82,75 @@ const CabinetSignupForm = () => {
   };
 
   return (
-    <div className="cabinet-form-wrapper">
-      <div className="cabinet-form-card">
-        <h2>Inscription Cabinet</h2>
-        <p>Associez votre cabinet à un médecin existant</p>
-        {message && (
-          <div className={`message ${message.includes('✅') ? 'success' : 'error'}`}>
-            {message}
-          </div>
-        )}
-        <form onSubmit={handleSubmit}>
+    <div className="cabinet-signup-form">
+      <div className="cabinet-form-wrapper">
+        <div className="cabinet-form-card">
+          <h2>Inscription Cabinet</h2>
+          <p>Associez votre cabinet à un médecin existant</p>
+          {message && (
+            <div className={`message ${message.includes('✅') ? 'success' : 'error'}`}>
+              {message}
+            </div>
+          )}
+          <form onSubmit={handleSubmit}>
+            <div className="form-row">
+              <label htmlFor="specialty"><span>Spécialité :</span></label>
+              <select id="specialty" value={selectedSpecialty} onChange={(e) => setSelectedSpecialty(e.target.value)} required>
+                <option value="">-- Sélectionner une spécialité --</option>
+                {specialties.map((spec, idx) => (
+                  <option key={idx} value={spec}>{spec}</option>
+                ))}
+              </select>
+            </div>
 
-          <div className="form-row">
-            <label htmlFor="specialty"><span>Spécialité :</span></label>
-            <select
-              id="specialty"
-              value={selectedSpecialty}
-              onChange={(e) => setSelectedSpecialty(e.target.value)}
-              required
-            >
-              <option value="">-- Sélectionner une spécialité --</option>
-              {specialties.map((spec, idx) => (
-                <option key={idx} value={spec}>{spec}</option>
-              ))}
-            </select>
-          </div>
+            <div className="form-row">
+              <label htmlFor="region"><span>Région :</span></label>
+              <select id="region" value={selectedRegion} onChange={(e) => setSelectedRegion(e.target.value)}>
+                <option value="">-- Toutes les régions --</option>
+                {tunisianRegions.map((region, idx) => (
+                  <option key={idx} value={region}>{region}</option>
+                ))}
+              </select>
+            </div>
 
-          <div className="form-row">
-            <label htmlFor="region"><span>Région :</span></label>
-            <select
-              id="region"
-              value={selectedRegion}
-              onChange={(e) => setSelectedRegion(e.target.value)}
-            >
-              <option value="">-- Toutes les régions --</option>
-              {tunisianRegions.map((region, idx) => (
-                <option key={idx} value={region}>{region}</option>
-              ))}
-            </select>
-          </div>
+            <div className="form-row">
+              <label htmlFor="doctor"><span>Médecin à associer :</span></label>
+              <select
+                id="doctor"
+                value={selectedDoctor}
+                onChange={(e) => setSelectedDoctor(e.target.value)}
+                required
+                className="doctor-select"
+              >
+                <option value="">-- Sélectionner un médecin --</option>
+                {filteredDoctors.map((doc) => (
+                  <option key={doc._id} value={doc._id}>
+                    Dr. {doc.prenom} {doc.nom} - {doc.specialty} ({doc.region || 'Région non spécifiée'})
+                  </option>
+                ))}
+              </select>
+              {filteredDoctors.length === 0 && (
+                <p className="no-results">Aucun médecin ne correspond aux critères sélectionnés</p>
+              )}
+            </div>
 
-          <div className="form-row">
-            <label htmlFor="doctor"><span>Médecin à associer :</span></label>
-            <select
-              id="doctor"
-              value={selectedDoctor}
-              onChange={(e) => setSelectedDoctor(e.target.value)}
-              required
-              className="doctor-select"
-            >
-              <option value="">-- Sélectionner un médecin --</option>
-              {filteredDoctors.map((doc) => (
-                <option key={doc._id} value={doc._id}>
-                  Dr. {doc.prenom} {doc.nom} - {doc.specialty} ({doc.region || 'Région non spécifiée'})
-                </option>
-              ))}
-            </select>
-            {filteredDoctors.length === 0 && (
-              <p className="no-results">Aucun médecin ne correspond aux critères sélectionnés</p>
-            )}
-          </div>
+            <div className="form-row">
+              <label htmlFor="adresse"><span>Adresse du cabinet :</span></label>
+              <input
+                id="adresse"
+                type="text"
+                value={cabinetAddress}
+                onChange={(e) => setCabinetAddress(e.target.value)}
+                placeholder="Adresse complète du cabinet"
+                required
+              />
+            </div>
 
-          <div className="form-row">
-            <label htmlFor="adresse"><span>Adresse du cabinet :</span></label>
-            <input
-              id="adresse"
-              type="text"
-              value={cabinetAddress}
-              onChange={(e) => setCabinetAddress(e.target.value)}
-              placeholder="Adresse complète du cabinet"
-              required
-            />
-          </div>
-
-          <button type="submit" disabled={loading} className="submit-button">
-            {loading ? 'Traitement...' : 'Valider l\'inscription'}
-          </button>
-        </form>
+            <button type="submit" disabled={loading} className="submit-button">
+              {loading ? 'Traitement...' : 'Valider l\'inscription'}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

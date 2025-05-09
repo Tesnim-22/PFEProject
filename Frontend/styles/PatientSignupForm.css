@@ -1,155 +1,123 @@
-/* === Global reset & background === */
-
-body {
-    margin: 0;
-    padding: 0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f5f9fa;
-}
-
-
-/* === Wrapper with spacing under fixed navbar === */
-
-.patient-form-wrapper {
+.patient-signup-form .patient-form-wrapper {
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 120px 20px 60px;
-    /* ✅ grand espace haut et bas */
+    padding: 80px 20px;
     min-height: 100vh;
-    scroll-margin-top: 100px;
+    background-color: #f0f4f8;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-
-/* === Card style === */
-
-.patient-form-card {
+.patient-signup-form .patient-form-card {
     background: #ffffff;
-    padding: 40px 50px;
-    border-radius: 16px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
-    max-width: 640px;
+    padding: 30px 35px;
+    border-radius: 4px;
+    /* carré */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    max-width: 460px;
     width: 100%;
     transition: box-shadow 0.3s ease;
 }
 
-.patient-form-card h2 {
-    font-size: 2rem;
+.patient-signup-form .patient-form-card h2 {
+    font-size: 1.6rem;
     margin-bottom: 10px;
-    color: #222;
+    color: #1b3c47;
     text-align: center;
 }
 
-.patient-form-card p {
-    font-size: 1rem;
-    color: #555;
-    margin-bottom: 25px;
-    text-align: center;
-}
-
-
-/* === Form layout === */
-
-form {
+.patient-signup-form .patient-form-card form {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 16px;
 }
 
-label {
+.patient-signup-form .patient-form-card label {
     font-weight: 600;
-    color: #333;
+    color: #222;
     font-size: 0.95rem;
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
 
-input[type="text"],
-input[type="tel"],
-input[type="date"] {
-    padding: 12px 14px;
-    font-size: 1rem;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    background-color: #fff;
+.patient-signup-form .patient-form-card input[type="tel"],
+.patient-signup-form .patient-form-card input[type="file"],
+.patient-signup-form .patient-form-card select,
+.patient-signup-form .patient-form-card textarea {
+    padding: 10px 12px;
+    font-size: 0.95rem;
+    border-radius: 4px;
+    /* carré */
+    border: 1px solid #b0c6cf;
+    background-color: #fefefe;
     transition: border 0.3s ease, box-shadow 0.3s ease;
 }
 
-input:focus {
-    border-color: #007d91;
+.patient-signup-form .patient-form-card input:focus,
+.patient-signup-form .patient-form-card select:focus,
+.patient-signup-form .patient-form-card textarea:focus {
+    border-color: #337ab7;
     outline: none;
-    box-shadow: 0 0 6px rgba(0, 125, 145, 0.2);
+    box-shadow: 0 0 4px rgba(51, 122, 183, 0.2);
 }
 
+.patient-signup-form .preview-container {
+    margin-top: 10px;
+}
 
-/* === Capture Button === */
+.patient-signup-form .preview-container img {
+    max-width: 90px;
+    border-radius: 4px;
+    /* carré */
+}
 
-.capture-btn {
-    margin-top: 4px;
+.patient-signup-form .success-message {
+    margin-bottom: 12px;
+    background-color: #e4f5eb;
+    border-left: 4px solid #3e8e41;
     padding: 10px 16px;
-    background-color: #007d91;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.95rem;
-    transition: background-color 0.3s ease;
-    width: fit-content;
-}
-
-.capture-btn:hover {
-    background-color: #005e6b;
-}
-
-.capture-btn.captured {
-    background-color: #28a745;
-}
-
-
-/* === Submit Button === */
-
-.submit-btn {
-    margin-top: 15px;
-    background: linear-gradient(135deg, #174357, #14554d);
-    color: white;
-    border: none;
-    padding: 14px;
-    border-radius: 10px;
-    font-size: 1rem;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.submit-btn:hover {
-    transform: translateY(-2px);
-    background-color: #0f404f;
-}
-
-
-/* === Success Message === */
-
-.success-message {
-    margin-bottom: 15px;
-    background-color: #e6f9e7;
-    border-left: 5px solid #4caf50;
-    padding: 12px 18px;
-    border-radius: 8px;
-    color: #2e7d32;
+    border-radius: 4px;
+    color: #1a5e20;
     font-weight: 500;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
 }
 
+.patient-signup-form .error-message {
+    margin-bottom: 12px;
+    background-color: #fdecea;
+    border-left: 4px solid #c62828;
+    padding: 10px 16px;
+    border-radius: 4px;
+    color: #8b1c1c;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
 
-/* === Responsive === */
+.patient-signup-form .submit-btn {
+    margin-top: 10px;
+    background: #286090;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 4px;
+    /* carré */
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.patient-signup-form .submit-btn:hover {
+    background-color: #1b4f72;
+    transform: translateY(-1px);
+}
 
 @media (max-width: 768px) {
-    .patient-form-card {
-        padding: 30px 25px;
+    .patient-signup-form .patient-form-card {
+        padding: 25px 20px;
     }
-    .submit-btn,
-    .capture-btn {
+    .patient-signup-form .submit-btn {
         width: 100%;
         text-align: center;
     }

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import '../styles/HospitalSignupForm.css';
 
 const HospitalSignupForm = () => {
   const [adresse, setAdresse] = useState('');
@@ -40,23 +41,24 @@ const HospitalSignupForm = () => {
   };
 
   return (
-    <div style={{ padding: '2rem', textAlign: 'center' }}>
-      <h2>Bienvenue, Hôpital</h2>
-      <p>Veuillez renseigner l'adresse de l'établissement.</p>
+    <div className="hospital-signup-form">
+      <div className="hospital-form-card">
+        <h2>Bienvenue, Hôpital</h2>
+        <p>Veuillez renseigner l'adresse de l'établissement.</p>
 
-      <input
-        type="text"
-        placeholder="Adresse de l'hôpital"
-        value={adresse}
-        onChange={(e) => setAdresse(e.target.value)}
-        style={{ padding: '10px', width: '80%', marginBottom: '1rem' }}
-      />
+        <input
+          type="text"
+          placeholder="Adresse de l'hôpital"
+          value={adresse}
+          onChange={(e) => setAdresse(e.target.value)}
+        />
 
-      {message && <p>{message}</p>}
+        {message && <p className="message">{message}</p>}
 
-      <button onClick={handleValidate} disabled={loading}>
-        {loading ? "Chargement..." : "Valider"}
-      </button>
+        <button onClick={handleValidate} disabled={loading}>
+          {loading ? "Chargement..." : "Valider"}
+        </button>
+      </div>
     </div>
   );
 };

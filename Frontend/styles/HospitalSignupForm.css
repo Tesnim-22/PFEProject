@@ -1,0 +1,80 @@
+.hospital-signup-form {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #eaf6fb 0%, #ffffff 100%);
+    font-family: 'Segoe UI', sans-serif;
+    padding: 2rem;
+}
+
+.hospital-form-card {
+    background-color: #ffffff;
+    padding: 2.5rem;
+    border-radius: 12px;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+    text-align: center;
+}
+
+.hospital-form-card h2 {
+    font-size: 1.6rem;
+    color: #174357;
+    margin-bottom: 0.5rem;
+}
+
+.hospital-form-card p {
+    color: #444;
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.hospital-form-card input[type="text"] {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+    border-radius: 8px;
+    border: 1px solid #ccdbe3;
+    background-color: #fdfefe;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    margin-bottom: 1rem;
+}
+
+.hospital-form-card input[type="text"]:focus {
+    border-color: #007b8a;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 123, 138, 0.15);
+}
+
+.hospital-form-card .message {
+    margin-bottom: 1rem;
+    font-weight: 500;
+    font-size: 0.95rem;
+    color: #d32f2f;
+}
+
+.hospital-form-card .message:contains("✅") {
+    color: #2e7d32;
+}
+
+.hospital-form-card button {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.95rem;
+    background-color: #007b8a;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.hospital-form-card button:hover {
+    background-color: #005f6a;
+}
+
+.hospital-form-card button:disabled {
+    background-color: #a0bfc4;
+    cursor: not-allowed;
+}

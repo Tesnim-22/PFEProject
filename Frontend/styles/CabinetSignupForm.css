@@ -1,156 +1,156 @@
-body {
-    background-color: #ffffff;
-    font-family: 'Segoe UI', sans-serif;
+.cabinet-signup-form body {
     margin: 0;
     padding: 0;
+    background-color: #ffffff;
+    font-family: 'Segoe UI', sans-serif;
 }
 
 
-/* === Layout === */
+/* === Layout compact === */
 
-.cabinet-form-wrapper {
+.cabinet-signup-form .cabinet-form-wrapper {
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 4rem 1.5rem;
-    background: linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%);
+    padding: 3rem 1rem;
+    background: linear-gradient(135deg, #eaf6fb 0%, #ffffff 100%);
 }
 
-.cabinet-form-card {
+.cabinet-signup-form .cabinet-form-card {
     background: #ffffff;
-    padding: 3rem;
-    border-radius: 16px;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
     width: 100%;
-    max-width: 640px;
+    max-width: 420px;
     transition: box-shadow 0.3s ease;
 }
 
-.cabinet-form-card h2 {
-    color: #0c0c0b;
-    margin-bottom: 0.4rem;
-    font-size: 2.1rem;
+.cabinet-signup-form .cabinet-form-card h2 {
+    color: #1e2b33;
+    margin-bottom: 0.3rem;
+    font-size: 1.5rem;
     text-align: center;
 }
 
-.cabinet-form-card p {
-    color: #555;
+.cabinet-signup-form .cabinet-form-card p {
+    color: #444;
     text-align: center;
-    margin-bottom: 2.5rem;
-    font-size: 1.05rem;
+    margin-bottom: 2rem;
+    font-size: 0.95rem;
 }
 
 
-/* === Form Layout: vertical === */
+/* === Form Layout === */
 
-.form-row {
+.cabinet-signup-form .form-row {
     display: flex;
     flex-direction: column;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
 }
 
-label {
+.cabinet-signup-form label {
     display: block;
     font-weight: 600;
-    color: #333;
-    font-size: 0.95rem;
-    margin-bottom: 0.6rem;
+    color: #2c2c2c;
+    font-size: 0.9rem;
+    margin-bottom: 0.4rem;
 }
 
-select,
-input {
+.cabinet-signup-form select,
+.cabinet-signup-form input {
     width: 100%;
-    padding: 0.8rem 1rem;
-    border: 1px solid #d6d6d6;
-    border-radius: 8px;
-    font-size: 1rem;
-    color: #2e2c2c;
-    background-color: #fff;
+    padding: 0.6rem 0.9rem;
+    border: 1px solid #cfdce2;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    color: #1e2b33;
+    background-color: #fdfefe;
     transition: border-color 0.25s, box-shadow 0.25s;
 }
 
-select:focus,
-input:focus {
+.cabinet-signup-form select:focus,
+.cabinet-signup-form input:focus {
     outline: none;
     border-color: #007b8a;
     box-shadow: 0 0 0 3px rgba(0, 123, 138, 0.15);
 }
 
 
-/* === Doctor Selector === */
+/* === Doctor Scroll === */
 
-.doctor-select {
-    max-height: 220px;
+.cabinet-signup-form .doctor-select {
+    max-height: 180px;
     overflow-y: auto;
 }
 
-.no-results {
-    color: #ef4444;
-    font-size: 0.92rem;
-    margin-top: 0.6rem;
+.cabinet-signup-form .no-results {
+    color: #e53935;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
     text-align: center;
 }
 
 
 /* === Submit Button === */
 
-.submit-button {
+.cabinet-signup-form .submit-button {
     width: 100%;
-    padding: 0.95rem 1.2rem;
-    background: linear-gradient(135deg, #174357 0%, #14554d 100%);
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, #007b8a, #0097a7);
     color: #ffffff;
     border: none;
-    border-radius: 8px;
+    border-radius: 6px;
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
-    margin-top: 1.2rem;
+    margin-top: 1rem;
 }
 
-.submit-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(37, 99, 235, 0.3);
+.cabinet-signup-form .submit-button:hover {
+    transform: translateY(-1px);
+    background: #006573;
 }
 
-.submit-button:disabled {
-    background: #94a3b8;
+.cabinet-signup-form .submit-button:disabled {
+    background: #a6bfc5;
     cursor: not-allowed;
-    box-shadow: none;
     transform: none;
+    box-shadow: none;
 }
 
 
-/* === Message Styles === */
+/* === Messages === */
 
-.message {
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 1.5rem;
+.cabinet-signup-form .message {
+    padding: 0.9rem;
+    border-radius: 6px;
+    margin-bottom: 1.2rem;
     text-align: center;
     font-weight: 500;
-    font-size: 1rem;
+    font-size: 0.95rem;
 }
 
-.message.success {
-    background-color: #dcfce7;
-    color: #2e7d32;
+.cabinet-signup-form .message.success {
+    background-color: #dbf3e4;
+    color: #20764d;
 }
 
-.message.error {
-    background-color: #fee2e2;
+.cabinet-signup-form .message.error {
+    background-color: #fdecea;
     color: #c62828;
 }
 
 
 /* === Responsive === */
 
-@media (max-width: 768px) {
-    .cabinet-form-card {
-        padding: 2rem;
+@media (max-width: 600px) {
+    .cabinet-signup-form .cabinet-form-card {
+        padding: 1.5rem;
     }
-    .cabinet-form-wrapper {
+    .cabinet-signup-form .cabinet-form-wrapper {
         padding: 2rem 1rem;
     }
 }

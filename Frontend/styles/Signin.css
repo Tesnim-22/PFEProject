@@ -1,6 +1,6 @@
-/* Reset and Global Styles */
+/* === SCOPED SIGNIN STYLES === */
 
-body {
+.signin-page-wrapper body {
     margin: 0;
     padding: 0;
     font-family: 'Segoe UI', sans-serif;
@@ -8,60 +8,29 @@ body {
 }
 
 
-/* Navbar */
+/* === Page Layout === */
 
-.navbar {
-    background: linear-gradient(90deg, #0b4446, #437577);
-    padding: 0.6rem 1.5rem;
-    color: white;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    z-index: 1000;
-}
-
-.nav-links {
-    display: flex;
-    justify-content: center;
-    gap: 1.2rem;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-.nav-links li a {
-    color: #fff;
-    text-decoration: none;
-    font-size: 0.95rem;
-    font-weight: 500;
-}
-
-
-/* Sign-in Page */
-
-.signin-page {
+.signin-page-wrapper .signin-page {
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: calc(100vh - 70px);
     padding-top: 80px;
-    /* Augmenter la distance entre la navbar et le contenu */
     background-color: #f4f9fb;
 }
 
-.signin-container {
+.signin-page-wrapper .signin-container {
     display: flex;
     flex-direction: row;
     max-width: 720px;
     width: 95%;
     background: #fff;
-    border-radius: 12px;
+    border-radius: 16px;
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
     overflow: hidden;
 }
 
-.signin-left {
+.signin-page-wrapper .signin-left {
     flex: 1;
     background-color: #f9fafa;
     display: flex;
@@ -70,30 +39,24 @@ body {
     padding: 1.5rem;
 }
 
-
-/* Style de l'image dans le formulaire */
-
-.signin-left img {
+.signin-page-wrapper .signin-left img {
     width: 110%;
     height: auto;
     object-fit: cover;
     border-radius: 50%;
     transition: transform 0.3s ease, filter 0.3s ease;
     margin-left: 1%;
-    -webkit-transition: transform 0.3s ease, filter 0.3s ease;
-    -moz-transition: transform 0.3s ease, filter 0.3s ease;
-    -ms-transition: transform 0.3s ease, filter 0.3s ease;
-    -o-transition: transform 0.3s ease, filter 0.3s ease;
 }
 
-.signin-left img:hover {
+.signin-page-wrapper .signin-left img:hover {
     transform: scale(1.2);
-    /* Agrandir l'image davantage au survol */
     filter: brightness(1.2);
-    /* Augmenter la luminosité au survol */
 }
 
-.signin-box {
+
+/* === Form Section === */
+
+.signin-page-wrapper .signin-box {
     flex: 1.2;
     padding: 1rem 1.2rem;
     display: flex;
@@ -101,180 +64,171 @@ body {
     justify-content: center;
 }
 
-.signin-header h2 {
+.signin-page-wrapper .signin-header h2 {
     font-size: 1.3rem;
     margin-bottom: 1rem;
     color: #023d35;
     text-align: center;
 }
 
-
-/* Form Styles */
-
-.signup-form {
+.signin-page-wrapper .signin-form {
     display: flex;
     flex-direction: column;
-    gap: 0.3rem;
+    gap: 0.4rem;
 }
 
-.signup-form input,
-.signup-form select,
-.signup-form .react-datepicker-custom {
+.signin-page-wrapper .signin-form input,
+.signin-page-wrapper .signin-form select,
+.signin-page-wrapper .signin-form .react-datepicker-custom {
     width: 100%;
-    padding: 0.4rem 0.6rem;
-    /* uniforme */
+    padding: 0.5rem 0.75rem;
     font-size: 0.9rem;
     border: 1px solid #cbd5e1;
-    border-radius: 4px;
+    border-radius: 12px;
+    /* Rounded style applied here */
     background-color: #ffffff;
     box-sizing: border-box;
 }
 
 
-/* Grouped Fields */
+/* === Grouped Fields === */
 
-.name-fields,
-.password-fields {
+.signin-page-wrapper .name-fields,
+.signin-page-wrapper .password-fields {
     display: flex;
     gap: 1rem;
     width: 100%;
 }
 
-.name-fields input,
-.password-fields input,
-.select-fields select {
+.signin-page-wrapper .name-fields input,
+.signin-page-wrapper .password-fields input,
+.signin-page-wrapper .select-fields select {
     flex: 1;
     min-width: 0;
-    /* empêche les débordements */
-    padding: 0.4rem 0.6rem;
-    /* même padding que ci-dessus */
+    padding: 0.5rem 0.75rem;
     font-size: 0.9rem;
+    border-radius: 12px;
 }
 
 
-/* Password Info */
+/* === Password Info === */
 
-.password-hint {
+.signin-page-wrapper .password-hint {
     font-size: 0.7rem;
     margin-bottom: 0.5rem;
     color: #666;
 }
 
 
-/* Role/Region Select */
+/* === Select Fields === */
 
-
-/* Role and Region Fields */
-
-.select-fields {
+.signin-page-wrapper .select-fields {
     display: flex;
     gap: 1rem;
-    /* Ajoute un espace entre les champs */
     margin-top: 0.5rem;
     margin-bottom: 0.5rem;
     width: 100%;
 }
 
-.select-fields select {
+.signin-page-wrapper .select-fields select {
     flex: 1;
-    padding: 0.3rem 0.5rem;
+    padding: 0.4rem 0.6rem;
     font-size: 0.75rem;
     border: 1px solid #cbd5e1;
-    border-radius: 5px;
+    border-radius: 12px;
+    /* Rounded */
     background-color: #fff;
 }
 
 
-/* Submit Button */
+/* === Submit Button === */
 
-
-/* Bouton */
-
-.submit-btn {
-    background-color: #4CAF50 !important;
-    /* Couleur plus brillante */
+.signin-page-wrapper .submit-btn {
+    background-color: #173135;
     color: #ffffff !important;
     font-size: 1rem !important;
-    /* Taille un peu plus petite */
-    padding: 0.3rem 1rem !important;
-    /* Réduire un peu la taille */
+    padding: 0.4rem 1.2rem !important;
     border: none;
-    border-radius: 3px;
-    margin: 0.4rem auto 0;
+    border-radius: 14px;
+    /* Rounded button */
+    margin: 0.6rem auto 0;
     cursor: pointer;
     width: fit-content;
     display: block;
     transition: background 0.3s ease;
 }
 
-.submit-btn:hover {
+.signin-page-wrapper .submit-btn:hover {
     background-color: #66bb6a !important;
-    /* Une teinte plus claire sur hover */
 }
 
 
-/* DatePicker */
+/* === DatePicker === */
 
-.react-datepicker-wrapper {
+.signin-page-wrapper .react-datepicker-wrapper {
     width: 100%;
 }
 
-.react-datepicker__input-container input {
-    padding: 0.4rem 0.6rem;
+.signin-page-wrapper .react-datepicker__input-container input {
+    padding: 0.5rem 0.75rem;
     font-size: 0.9rem;
     border: 1px solid #cbd5e1;
-    border-radius: 4px;
+    border-radius: 12px;
     background-color: #ffffff;
 }
 
 
-/* Footer Text */
+/* === Message === */
 
-.signin-footer {
+.signin-page-wrapper .message {
     text-align: center;
-    /* Centre le texte */
-    margin-top: 20px;
+    margin-bottom: 10px;
+    font-weight: 500;
+    color: #d32f2f;
     font-size: 0.9rem;
-    color: #023d35;
-    /* Couleur de texte de base */
 }
 
-.signin-footer p {
+
+/* === Footer === */
+
+.signin-page-wrapper .signin-footer {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 0.9rem;
+    color: #186d62;
+}
+
+.signin-page-wrapper .signin-footer p {
     margin: 0;
 }
 
-
-/* Lien Se connecter */
-
-.signin-link {
-    color: #50a7aa;
-    /* Couleur brillante pour le lien */
+.signin-page-wrapper .signin-link {
+    color: #16241f;
     text-decoration: none;
     font-weight: bold;
     transition: color 0.3s ease;
 }
 
-.signin-link:hover {
-    color: #308764;
-    /* Couleur plus foncée au survol */
+.signin-page-wrapper .signin-link:hover {
+    color: #0f5f3f;
 }
 
 
-/* Responsive Design */
+/* === Responsive === */
 
 @media (max-width: 768px) {
-    .signin-container {
+    .signin-page-wrapper .signin-container {
         flex-direction: column;
     }
-    .signin-left {
+    .signin-page-wrapper .signin-left {
         display: none;
     }
-    .signin-box {
+    .signin-page-wrapper .signin-box {
         flex: 1;
         padding: 1rem 1.2rem;
     }
-    .password-fields,
-    .select-fields {
+    .signin-page-wrapper .password-fields,
+    .signin-page-wrapper .select-fields {
         flex-direction: column;
     }
 }

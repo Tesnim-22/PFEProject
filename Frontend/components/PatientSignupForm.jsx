@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/PatientSignupForm.css';
+
 const PatientSignupForm = () => {
   const [emergencyPhone, setEmergencyPhone] = useState('');
   const [bloodType, setBloodType] = useState('');
@@ -56,61 +57,65 @@ const PatientSignupForm = () => {
   };
 
   return (
-    <div style={{ padding: '30px', maxWidth: '500px', margin: '0 auto' }}>
-      <h2>Complétez votre inscription - Patient</h2>
-      {message && <p style={{ color: message.startsWith('✅') ? 'green' : 'red' }}>{message}</p>}
-      <form onSubmit={handleSubmit} encType="multipart/form-data">
-        <label>
-          Numéro de téléphone d'urgence :
-          <input
-            type="tel"
-            value={emergencyPhone}
-            onChange={(e) => setEmergencyPhone(e.target.value)}
-            required
-          />
-        </label>
-        <br /><br />
+    <div className="patient-signup-form">
+      <div className="patient-form-wrapper">
+        <div className="patient-form-card">
+          <h2>Complétez votre inscription - Patient</h2>
+          {message && (
+            <p className={message.startsWith('✅') ? 'success-message' : 'error-message'}>
+              {message}
+            </p>
+          )}
+          <form onSubmit={handleSubmit} encType="multipart/form-data">
+            <label>
+              Numéro de téléphone d'urgence :
+              <input
+                type="tel"
+                value={emergencyPhone}
+                onChange={(e) => setEmergencyPhone(e.target.value)}
+                required
+              />
+            </label>
 
-        <label>
-          Groupe sanguin (optionnel) :
-          <select value={bloodType} onChange={(e) => setBloodType(e.target.value)}>
-            <option value="">-- Sélectionnez --</option>
-            <option value="A+">A+</option>
-            <option value="A-">A-</option>
-            <option value="B+">B+</option>
-            <option value="B-">B-</option>
-            <option value="AB+">AB+</option>
-            <option value="AB-">AB-</option>
-            <option value="O+">O+</option>
-            <option value="O-">O-</option>
-          </select>
-        </label>
-        <br /><br />
+            <label>
+              Groupe sanguin (optionnel) :
+              <select value={bloodType} onChange={(e) => setBloodType(e.target.value)}>
+                <option value="">-- Sélectionnez --</option>
+                <option value="A+">A+</option>
+                <option value="A-">A-</option>
+                <option value="B+">B+</option>
+                <option value="B-">B-</option>
+                <option value="AB+">AB+</option>
+                <option value="AB-">AB-</option>
+                <option value="O+">O+</option>
+                <option value="O-">O-</option>
+              </select>
+            </label>
 
-        <label>
-          Maladies chroniques (optionnel) :
-          <textarea
-            value={chronicDiseases}
-            onChange={(e) => setChronicDiseases(e.target.value)}
-            placeholder="Diabète, hypertension, etc."
-          />
-        </label>
-        <br /><br />
+            <label>
+              Maladies chroniques (optionnel) :
+              <textarea
+                value={chronicDiseases}
+                onChange={(e) => setChronicDiseases(e.target.value)}
+                placeholder="Diabète, hypertension, etc."
+              />
+            </label>
 
-        <label>
-          Photo de profil :
-          <input type="file" accept="image/*" onChange={handlePhotoChange} />
-        </label>
-        <br />
-        {preview && (
-          <div style={{ marginTop: '10px' }}>
-            <img src={preview} alt="Aperçu" style={{ maxWidth: '100px', borderRadius: '8px' }} />
-          </div>
-        )}
-        <br />
+            <label>
+              Photo de profil :
+              <input type="file" accept="image/*" onChange={handlePhotoChange} />
+            </label>
 
-        <button type="submit">Valider</button>
-      </form>
+            {preview && (
+              <div className="preview-container">
+                <img src={preview} alt="Aperçu" />
+              </div>
+            )}
+
+            <button type="submit" className="submit-btn">Valider</button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 };
