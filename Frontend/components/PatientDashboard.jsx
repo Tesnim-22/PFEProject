@@ -364,10 +364,30 @@ const PatientDashboard = () => {
   const fetchProfile = async (id) => {
     try {
       setIsLoading(true);
-      const res = await axios.get(`${API_BASE_URL}/api/users/${id}`);
-      setProfile(res.data);
+      // Récupérer les informations de l'utilisateur
+      const userRes = await axios.get(`${API_BASE_URL}/api/users/${id}`);
+      
+      // Récupérer les informations du patient
+      const patientRes = await axios.get(`${API_BASE_URL}/api/patients/user/${id}`);
+      
+      // Combiner les informations
+      const combinedProfile = {
+        ...userRes.data,
+        bloodType: patientRes.data.bloodType || '',
+        chronicDiseases: patientRes.data.chronicDiseases || '',
+        emergencyPhone: patientRes.data.emergencyContact?.phone || '',
+        emergencyContactName: patientRes.data.emergencyContact?.name || '',
+        emergencyContactRelation: patientRes.data.emergencyContact?.relationship || ''
+      };
+      
+      setProfile(combinedProfile);
     } catch (error) {
-      setMessage("❌ Erreur récupération profil.");
+      console.error('❌ Erreur récupération profil:', error);
+      if (error.response?.status === 404) {
+        setMessage("Profil non trouvé. Veuillez compléter votre profil.");
+      } else {
+        setMessage("❌ Erreur lors de la récupération du profil.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -385,10 +405,14 @@ const PatientDashboard = () => {
   const fetchMedicalDocuments = async (id) => {
     try {
       const res = await axios.get(`${API_BASE_URL}/api/patient/medical-documents/${id}`);
-      setMedicalDocuments(res.data);
+      setMedicalDocuments(res.data || []);
     } catch (error) {
       console.error("❌ Erreur récupération documents:", error);
-      setMessage("Erreur lors de la récupération des documents médicaux.");
+      if (error.response?.status === 404) {
+        setMedicalDocuments([]); // Set empty array for new patients
+      } else {
+        setMessage("Erreur lors de la récupération des documents médicaux.");
+      }
     }
   };
 
@@ -873,8 +897,37 @@ const PatientDashboard = () => {
 
   const handleUpdateProfile = async () => {
     try {
-      const response = await axios.put(`${API_BASE_URL}/api/users/${userId}`, editedProfile);
-      setProfile(response.data);
+      // Séparer les données entre User et Patient
+      const userUpdateData = {
+        nom: editedProfile.nom,
+        prenom: editedProfile.prenom,
+        email: editedProfile.email,
+        telephone: editedProfile.telephone,
+        adresse: editedProfile.adresse,
+      };
+
+      const patientUpdateData = {
+        bloodType: editedProfile.bloodType,
+        chronicDiseases: editedProfile.chronicDiseases,
+        emergencyContact: {
+          phone: editedProfile.emergencyPhone,
+          name: editedProfile.emergencyContactName || '',
+          relationship: editedProfile.emergencyContactRelation || ''
+        }
+      };
+
+      // Mettre à jour les informations de l'utilisateur
+      const userResponse = await axios.put(`${API_BASE_URL}/api/users/${userId}`, userUpdateData);
+      
+      // Mettre à jour les informations du patient
+      const patientResponse = await axios.put(`${API_BASE_URL}/api/patients/${userId}`, patientUpdateData);
+
+      // Mettre à jour l'état local avec les données combinées
+      setProfile({
+        ...userResponse.data,
+        ...patientResponse.data
+      });
+      
       setIsEditing(false);
       setMessage("✅ Profil mis à jour avec succès !");
     } catch (error) {

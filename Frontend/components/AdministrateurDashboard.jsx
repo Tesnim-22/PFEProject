@@ -110,10 +110,10 @@ const AdminDashboard = () => {
         setFilteredUsers(allUsers);
         break;
       case "validated":
-        setFilteredUsers(allUsers.filter((u) => u.profileCompleted));
+        setFilteredUsers(allUsers.filter((u) => u.profileCompleted && !u.roles.includes('Patient')));
         break;
       case "pending":
-        setFilteredUsers(allUsers.filter((u) => !u.profileCompleted));
+        setFilteredUsers(allUsers.filter((u) => !u.profileCompleted && !u.roles.includes('Patient')));
         break;
       default:
         break;
@@ -157,14 +157,14 @@ const AdminDashboard = () => {
                   <div className="stat-icon">✅</div>
                   <div className="stat-info">
                     <h3>{overview.validatedUsers}</h3>
-                    <p>Comptes validés</p>
+                    <p>Comptes professionnels validés</p>
                   </div>
                 </div>
                 <div className="stat-card red" onClick={() => filterUsers("pending")}>
                   <div className="stat-icon">📄</div>
                   <div className="stat-info">
                     <h3>{overview.docsToValidate}</h3>
-                    <p>Profils à valider</p>
+                    <p>Profils professionnels à valider</p>
                   </div>
                 </div>
               </div>

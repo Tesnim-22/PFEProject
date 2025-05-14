@@ -27,6 +27,17 @@ const PatientSignupForm = () => {
       return;
     }
 
+    const userId = localStorage.getItem('userId');
+    const email = localStorage.getItem('email');
+
+    if (!userId || !email) {
+      setMessage("Session expirée. Veuillez vous reconnecter.");
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 2000);
+      return;
+    }
+
     const formData = new FormData();
     formData.append('emergencyPhone', emergencyPhone);
     formData.append('bloodType', bloodType);
@@ -34,7 +45,6 @@ const PatientSignupForm = () => {
     if (photo) formData.append('photo', photo);
 
     try {
-      const userId = localStorage.getItem('userId');
       const response = await fetch(`http://localhost:5001/patient/profile/${userId}`, {
         method: 'PUT',
         body: formData,
@@ -43,6 +53,7 @@ const PatientSignupForm = () => {
       const result = await response.json();
 
       if (response.ok) {
+        localStorage.setItem('profileCompleted', 'true');
         setMessage('✅ Profil patient complété avec succès !');
         setTimeout(() => {
           navigate('/patient-dashboard');

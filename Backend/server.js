@@ -229,11 +229,19 @@ const notificationSchema = new mongoose.Schema({
 app.get('/api/patient/medical-documents/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
-        const patient = await Patient.findOne({ userId });
+        let patient = await Patient.findOne({ userId });
 
+        // Si le patient n'existe pas, on le crée
         if (!patient) {
-            console.log('❌ Patient non trouvé pour userId:', userId);
-            return res.status(404).json({ message: "Patient non trouvé." });
+            const user = await User.findById(userId);
+            if (!user) {
+                return res.status(404).json({ message: "Utilisateur non trouvé." });
+            }
+            patient = new Patient({
+                userId: user._id,
+                medicalDocuments: []
+            });
+            await patient.save();
         }
 
         console.log('✅ Documents médicaux trouvés:', patient.medicalDocuments);
@@ -257,30 +265,25 @@ app.post('/api/patient/medical-documents/:userId', uploadMedicalDoc.single('docu
         let patient = await Patient.findOne({ userId });
 
         if (!patient) {
-            // Si le patient n'existe pas, on le crée
-            const user = await User.findById(userId);
-            if (!user) {
-                return res.status(404).json({ message: "Utilisateur non trouvé." });
-            }
-
             patient = new Patient({
-                userId: user._id,
+                userId,
                 medicalDocuments: []
             });
         }
 
-        patient.medicalDocuments.push({
-            fileName: req.file.originalname,
+        const newDocument = {            fileName: req.file.originalname,
             fileType: req.file.mimetype,
             filePath: req.file.path,
-            description
-        });
+            description: description || ''
+
+        };
+        patient.medicalDocuments.push(newDocument);
 
         await patient.save();
 
         res.status(200).json({
             message: "Document médical téléchargé avec succès",
-            document: patient.medicalDocuments[patient.medicalDocuments.length - 1]
+            document: newDocument
         });
 
     } catch (error) {
@@ -318,6 +321,9 @@ app.post('/signup', async(req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        // Déterminer si l'utilisateur est un patient
+        const isPatient = role.toLowerCase() === 'patient';
+
         const newUser = new User({
             nom,
             prenom,
@@ -328,11 +334,17 @@ app.post('/signup', async(req, res) => {
             cin,
             password: hashedPassword,
             roles: [role],
-            region
+            region,
+            // Validation automatique pour les patients uniquement
+            isValidated: isPatient,
+            profileCompleted: isPatient
         });
 
         await newUser.save();
-        res.status(201).json({ message: 'Utilisateur inscrit avec succès !' });
+        res.status(201).json({ 
+            message: 'Utilisateur inscrit avec succès !',
+            userId: newUser._id
+        });
     } catch (error) {
         console.error('❌ Erreur d\'enregistrement :', error);
         res.status(500).json({ message: 'Erreur serveur.' });
@@ -535,14 +547,39 @@ app.post('/reset-password/:token', async(req, res) => {
 // Patient Profile Update
 app.put('/patient/profile/:id', upload.single('photo'), async(req, res) => {
     const { id } = req.params;
+    
+    if (!id || id === 'null' || id === 'undefined') {
+        return res.status(400).json({ message: "ID patient invalide." });
+    }
+
     const { emergencyPhone, bloodType, chronicDiseases } = req.body;
     const photoPath = req.file ? `/uploads/${req.file.filename}` : undefined;
 
+    if (!emergencyPhone) {
+        return res.status(400).json({ message: "Le téléphone d'urgence est obligatoire." });
+    }
+
     try {
+        // Vérifier si l'utilisateur existe
+        const user = await User.findById(id);
+        if (!user) {
+            return res.status(404).json({ message: "Patient non trouvé." });
+        }
+
+        // Créer ou mettre à jour le profil patient
+        let patient = await Patient.findOne({ userId: id });
+        if (!patient) {
+            patient = new Patient({ userId: id });
+        }
+
+        // Mettre à jour les informations du patient
+        patient.emergencyContact = { phone: emergencyPhone };
+        patient.bloodType = bloodType;
+        patient.chronicDiseases = chronicDiseases;
+        await patient.save();
+
+        // Mettre à jour l'utilisateur
         const updateData = {
-            emergencyPhone,
-            bloodType,
-            chronicDiseases,
             profileCompleted: true
         };
 
@@ -550,14 +587,23 @@ app.put('/patient/profile/:id', upload.single('photo'), async(req, res) => {
             updateData.photo = photoPath;
         }
 
-        const updated = await User.findByIdAndUpdate(id, updateData, { new: true });
+        const updated = await User.findByIdAndUpdate(
+            id,
+            updateData,
+            { new: true }
+        );
 
-        if (!updated) return res.status(404).json({ message: "Patient non trouvé." });
-
-        res.status(200).json({ message: "Profil patient mis à jour avec succès ✅", user: updated });
+        res.status(200).json({
+            message: "Profil patient mis à jour avec succès ✅",
+            user: updated,
+            patient: patient
+        });
     } catch (error) {
         console.error("❌ Erreur mise à jour profil patient :", error);
-        res.status(500).json({ message: "Erreur serveur lors de la mise à jour." });
+        res.status(500).json({
+            message: "Erreur serveur lors de la mise à jour.",
+            error: error.message
+        });
     }
 });
 
@@ -969,11 +1015,17 @@ app.delete('/api/articles/:id', async (req, res) => {
 app.get('/admin/overview', async(req, res) => {
     try {
         const totalUsers = await User.countDocuments();
-        const validatedUsers = await User.countDocuments({ profileCompleted: true });
-        const docsToValidate = await User.countDocuments({ profileCompleted: false });
+        const validatedUsers = await User.countDocuments({ 
+            profileCompleted: true,
+            roles: { $nin: ['Patient'] }
+        });
+        const docsToValidate = await User.countDocuments({ 
+            profileCompleted: false,
+            roles: { $nin: ['Patient'] }
+        });
 
         const recentUsers = await User.find()
-            .sort({ createdAt: -1 }) // ou _id si pas de timestamp
+            .sort({ createdAt: -1 })
             .limit(5)
             .select('nom prenom email roles');
 
@@ -2636,3 +2688,57 @@ app.get('/api/messages/:senderId/:receiverId', async (req, res) => {
 });
 
 // ... existing code ...
+
+// Route pour mettre à jour les informations du patient
+app.put('/api/patients/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const updateData = req.body;
+
+        // Trouver le patient par userId
+        const patient = await Patient.findOne({ userId });
+
+        if (!patient) {
+            return res.status(404).json({ message: "Patient non trouvé" });
+        }
+
+        // Mettre à jour les informations du patient
+        const updatedPatient = await Patient.findByIdAndUpdate(
+            patient._id,
+            { 
+                $set: {
+                    bloodType: updateData.bloodType,
+                    chronicDiseases: updateData.chronicDiseases,
+                    'emergencyContact.phone': updateData.emergencyContact.phone,
+                    'emergencyContact.name': updateData.emergencyContact.name,
+                    'emergencyContact.relationship': updateData.emergencyContact.relationship
+                }
+            },
+            { new: true }
+        );
+
+        res.json(updatedPatient);
+    } catch (error) {
+        console.error('Erreur lors de la mise à jour du patient:', error);
+        res.status(500).json({ message: "Erreur lors de la mise à jour du patient" });
+    }
+});
+
+// ... existing code ...
+
+// Route pour récupérer les informations du patient par userId
+app.get('/api/patients/user/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const patient = await Patient.findOne({ userId });
+        
+        if (!patient) {
+            return res.status(404).json({ message: "Patient non trouvé" });
+        }
+        
+        res.json(patient);
+    } catch (error) {
+        console.error('Erreur lors de la récupération du patient:', error);
+        res.status(500).json({ message: "Erreur lors de la récupération du patient" });
+    }
+});

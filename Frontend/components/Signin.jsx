@@ -78,6 +78,7 @@ const Signin = () => {
       if (response.ok) {
         setMessage('Inscription réussie ! Redirection...');
         localStorage.setItem("email", email.toLowerCase());
+        localStorage.setItem("userId", data.userId);
         setTimeout(() => {
           switch (role) {
             case 'Patient': navigate('/signup/patient'); break;
