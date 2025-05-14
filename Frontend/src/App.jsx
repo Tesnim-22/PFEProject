@@ -1,6 +1,5 @@
 import React from 'react';
-import {BrowserRouter as Router,Routes, Route, Navigate, useLocation} from 'react-router-dom';
-
+import {BrowserRouter as Router, Routes, Route, Navigate, useLocation} from 'react-router-dom';
 
 import Navbar from '../components/Navbar';
 import Home from '../components/Home';
@@ -30,7 +29,6 @@ import ForgotPassword from "../components/ForgotPassword";
 import ResetPassword from "../components/ResetPassword";
 import ArticlesPage from '../components/ArticlesPage';
 
-
 // 🔒 Route protégée
 const ProtectedRoute = ({ children }) => {
   const loggedIn = localStorage.getItem('loggedIn');
@@ -41,26 +39,22 @@ const ProtectedRoute = ({ children }) => {
 const AppWrapper = () => {
   const location = useLocation();
 
-  const dashboardRoutes = [
-    '/patient-dashboard',
-    '/doctor-dashboard',
-    '/labs-dashboard',
-    '/hospital-dashboard',
-    '/cabinet-dashboard',
-    '/ambulancier-dashboard',
-    '/ambulancier/location',
-    '/dashboard-admin',
-    '/ambulance/calls',
-    '/ambulance/status',
-    '/ambulance/reports',
-    '/ambulance/vehicle-info'
+  // Liste des routes où la Navbar doit apparaître
+  const showNavbarRoutes = [
+    '/',
+    '/about',
+    '/articles',
+    '/contact',
+    '/login',
+    '/signin'
   ];
 
-  const hideNavbar = dashboardRoutes.includes(location.pathname);
+  // Vérifier si la route actuelle doit afficher la Navbar
+  const shouldShowNavbar = showNavbarRoutes.includes(location.pathname);
 
   return (
     <>
-      {!hideNavbar && <Navbar />}
+      {shouldShowNavbar && <Navbar />}
       <ChatBotButton />
       <Routes>
         {/* Pages publiques */}
@@ -85,7 +79,6 @@ const AppWrapper = () => {
         {/* Dashboards sécurisés */}
         <Route path="/patient-dashboard" element={<ProtectedRoute><PatientDashboard /></ProtectedRoute>} />
         <Route path="/doctor-dashboard/*" element={<ProtectedRoute><DoctorDashboard /></ProtectedRoute>} />
-
         <Route path="/labs-dashboard" element={<ProtectedRoute><LabsDashboard /></ProtectedRoute>} />
         <Route path="/hospital-dashboard" element={<ProtectedRoute><HospitalDashboard /></ProtectedRoute>} />
         <Route path="/cabinet-dashboard" element={<ProtectedRoute><CabinetDashboard /></ProtectedRoute>} />
@@ -98,19 +91,10 @@ const AppWrapper = () => {
         <Route path="/ambulance/status" element={<ProtectedRoute><div>✅ Mise à jour du statut</div></ProtectedRoute>} />
         <Route path="/ambulance/reports" element={<ProtectedRoute><div>📄 Rapports</div></ProtectedRoute>} />
         <Route path="/ambulance/vehicle-info" element={<ProtectedRoute><div>🛠️ Infos véhicule</div></ProtectedRoute>} />
+        
+        {/* Pages de réinitialisation de mot de passe */}
         <Route path="/forgot-password" element={<ForgotPassword/>} />
         <Route path="/reset-password/:token" element={<ResetPassword/>} />
-
-      
-
-
-
-        <Route path="/" element={<Home />} />
-        <Route path="/signup" element={<Signin />} />
-
-
-        
-
       </Routes>
     </>
   );

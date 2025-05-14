@@ -1301,22 +1301,45 @@ app.delete('/api/patient/medical-documents/:userId/:documentId', async (req, res
 // Envoyer un message (patient -> médecin ou médecin -> patient)
 app.post('/api/messages', async (req, res) => {
   try {
-    const { senderId, receiverId, appointmentId, content } = req.body;
-    if (!senderId || !receiverId || !appointmentId || !content) {
-      return res.status(400).json({ message: 'Champs manquants.' });
+    const { senderId, receiverId, content } = req.body;
+    console.log('Received message request:', { senderId, receiverId, content });
+    
+    if (!senderId || !receiverId || !content) {
+      console.log('Missing required fields:', { senderId, receiverId, content });
+      return res.status(400).json({ 
+        message: 'Tous les champs sont requis.',
+        missing: {
+          senderId: !senderId,
+          receiverId: !receiverId,
+          content: !content
+        }
+      });
     }
-    const message = new Message({ 
-      senderId, 
-      receiverId, 
-      appointmentId, 
+
+    const message = new Message({
+      senderId,
+      receiverId,
       content,
-      isRead: false // Explicitement définir isRead à false
+      isRead: false
     });
+
+    console.log('Creating message:', message);
     await message.save();
+    console.log('Message saved successfully');
+
+    // Create a notification for the receiver
+    await Notification.create({
+      userId: receiverId,
+      message: 'Nouveau message reçu'
+    });
+
     res.status(201).json({ message: 'Message envoyé.', data: message });
   } catch (error) {
-    console.error('❌ Erreur envoi message:', error);
-    res.status(500).json({ message: 'Erreur serveur.' });
+    console.error('Error in /api/messages:', error);
+    res.status(500).json({ 
+      message: 'Erreur serveur.',
+      error: error.message 
+    });
   }
 });
 
@@ -2416,3 +2439,200 @@ app.put('/api/messages/read', async (req, res) => {
     res.status(500).json({ message: 'Erreur serveur.' });
   }
 });
+
+// ... existing code ...
+
+// Route pour mettre à jour le profil utilisateur
+app.put('/api/users/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const updateData = req.body;
+        
+        // Supprimer les champs sensibles qui ne doivent pas être modifiés
+        delete updateData.password;
+        delete updateData.roles;
+        delete updateData.isValidated;
+        delete updateData.profileCompleted;
+
+        // Mettre à jour l'utilisateur
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { $set: updateData },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedUser) {
+            return res.status(404).json({ message: "Utilisateur non trouvé" });
+        }
+
+        // Ne pas renvoyer le mot de passe dans la réponse
+        const userResponse = updatedUser.toObject();
+        delete userResponse.password;
+
+        res.json(userResponse);
+    } catch (error) {
+        console.error('Erreur lors de la mise à jour du profil:', error);
+        res.status(500).json({ 
+            message: "Erreur lors de la mise à jour du profil",
+            error: error.message 
+        });
+    }
+});
+
+// ... rest of the code ...
+
+// Modèle pour les messages entre laboratoires et patients
+const LabPatientMessageSchema = new mongoose.Schema({
+  senderId: { type: mongoose.Schema.Types.ObjectId, required: true },
+  receiverId: { type: mongoose.Schema.Types.ObjectId, required: true },
+  content: { type: String, required: true },
+  isRead: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const LabPatientMessage = mongoose.model('LabPatientMessage', LabPatientMessageSchema);
+
+// ... existing code ...
+
+// Routes pour la messagerie laboratoire-patient
+app.get('/api/lab-patients/:labId', async (req, res) => {
+  try {
+    // Récupérer tous les patients qui ont eu des rendez-vous avec ce laboratoire
+    const appointments = await LabAppointment.find({ lab: req.params.labId })
+      .populate('patient', 'nom prenom email telephone');
+    
+    // Extraire les patients uniques
+    const uniquePatients = Array.from(
+      new Map(
+        appointments.map(apt => [
+          apt.patient._id.toString(),
+          apt.patient
+        ])
+      ).values()
+    );
+    
+    res.json(uniquePatients);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des patients:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+app.get('/api/lab-patient-messages/:labId/:patientId', async (req, res) => {
+  try {
+    const messages = await LabPatientMessage.find({
+      $or: [
+        { senderId: req.params.labId, receiverId: req.params.patientId },
+        { senderId: req.params.patientId, receiverId: req.params.labId }
+      ]
+    }).sort({ createdAt: 1 });
+    
+    res.json(messages);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des messages:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+app.post('/api/lab-patient-messages', async (req, res) => {
+  try {
+    const { senderId, receiverId, content } = req.body;
+    
+    const message = new LabPatientMessage({
+      senderId,
+      receiverId,
+      content
+    });
+    
+    await message.save();
+    res.status(201).json(message);
+  } catch (error) {
+    console.error('Erreur lors de l\'envoi du message:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+app.put('/api/lab-patient-messages/read', async (req, res) => {
+  try {
+    const { senderId, receiverId } = req.body;
+    
+    await LabPatientMessage.updateMany(
+      { senderId, receiverId, isRead: false },
+      { isRead: true }
+    );
+    
+    res.json({ message: 'Messages marqués comme lus' });
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour des messages:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// ... existing code ...
+
+// Route pour les messages entre patients et laboratoires
+app.post('/api/messages', async (req, res) => {
+  try {
+    const { senderId, receiverId, content } = req.body;
+    console.log('Received message request:', { senderId, receiverId, content });
+    
+    if (!senderId || !receiverId || !content) {
+      console.log('Missing required fields:', { senderId, receiverId, content });
+      return res.status(400).json({ 
+        message: 'Tous les champs sont requis.',
+        missing: {
+          senderId: !senderId,
+          receiverId: !receiverId,
+          content: !content
+        }
+      });
+    }
+
+    const message = new Message({
+      senderId,
+      receiverId,
+      content,
+      isRead: false
+    });
+
+    console.log('Creating message:', message);
+    await message.save();
+    console.log('Message saved successfully');
+
+    // Create a notification for the receiver
+    await Notification.create({
+      userId: receiverId,
+      message: 'Nouveau message reçu'
+    });
+
+    res.status(201).json({ message: 'Message envoyé.', data: message });
+  } catch (error) {
+    console.error('Error in /api/messages:', error);
+    res.status(500).json({ 
+      message: 'Erreur serveur.',
+      error: error.message 
+    });
+  }
+});
+
+// Route pour récupérer les messages entre un patient et un laboratoire
+app.get('/api/messages/:senderId/:receiverId', async (req, res) => {
+  try {
+    const { senderId, receiverId } = req.params;
+    const messages = await Message.find({
+      $or: [
+        { senderId, receiverId },
+        { senderId: receiverId, receiverId: senderId }
+      ],
+      type: 'lab-patient'
+    })
+    .sort({ createdAt: 1 });
+
+    res.status(200).json(messages);
+  } catch (error) {
+    console.error('❌ Erreur récupération messages:', error);
+    res.status(500).json({ message: 'Erreur serveur.' });
+  }
+});
+
+// ... existing code ...

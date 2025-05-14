@@ -1,25 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import AppointmentForm from './AppointmentForm';
 import '../styles/PatientDashboard.css';
 import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:5001';
 
+// Image par défaut en base64 (une petite image grise avec une icône de document)
+const DEFAULT_IMAGE_BASE64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAACXBIWXMAAAsTAAALEwEAmpwYAAAFHWlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNy4yLWMwMDAgNzkuMWI2NWE3OWI0LCAyMDIyLzA2LzEzLTIyOjAxOjAxICAgICAgICAiPiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPiA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOnhtcE1NPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvbW0vIiB4bWxuczpzdEV2dD0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL3NUeXBlL1Jlc291cmNlRXZlbnQjIiB4bWxuczpkYz0iaHR0cDovL3B1cmwub3JnL2RjL2VsZW1lbnRzLzEuMS8iIHhtbG5zOnBob3Rvc2hvcD0iaHR0cDovL25zLmFkb2JlLmNvbS9waG90b3Nob3AvMS4wLyIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgMjQuMCAoTWFjaW50b3NoKSIgeG1wOkNyZWF0ZURhdGU9IjIwMjQtMDMtMTlUMTU6NDc6MTgrMDE6MDAiIHhtcDpNZXRhZGF0YURhdGU9IjIwMjQtMDMtMTlUMTU6NDc6MTgrMDE6MDAiIHhtcDpNb2RpZnlEYXRlPSIyMDI0LTAzLTE5VDE1OjQ3OjE4KzAxOjAwIiB4bWBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjY2ZjI5ZjFiLTQ4ZDYtNDZhNi1hZTM0LTNkYjNhOTNmMWE2ZiIgZGM6Zm9ybWF0PSJpbWFnZS9wbmciIHBob3Rvc2hvcDpDb2xvck1vZGU9IjMiPiA8eG1wTU06SGlzdG9yeT4gPHJkZjpTZXE+IDxyZGY6bGkgc3RFdnQ6YWN0aW9uPSJjcmVhdGVkIiBzdEV2dDppbnN0YW5jZUlEPSJ4bXAuaWlkOjY2ZjI5ZjFiLTQ4ZDYtNDZhNi1hZTM0LTNkYjNhOTNmMWE2ZiIgc3RFdnQ6d2hlbj0iMjAyNC0wMy0xOVQxNTo0NzoxOCswMTowMCIgc3RFdnQ6c29mdHdhcmVBZ2VudD0iQWRvYmUgUGhvdG9zaG9wIDI0LjAgKE1hY2ludG9zaCkiLz4gPC9yZGY6U2VxPiA8L3htcE1NOkhpc3Rvcnk+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+YjqoRwAABGxJREFUaIHtmU9oHFUcxz/vzczO7G42m91kN0mbNKlpqkWqVkGkKFiwelBEevDiqQcv3qQXEVE8ehL04EFE8KAH/4AHwYNVKyoWqW1Tg7U1pmmTbLLZ3c3uzO7szrwedrOZnZ3ZzP5Jk0I/EJZ5v/d77/t93/vN7828UZRSPMxQH3TnQwCDxkMPYNAY9BK6I1RVxXGcO0LTNFRF6Rp3L3BXAVi2hWmauK6L4zgAhEIhwuEwmqbdKyj3DoBpmhiGgeu6GIaBpmkIIQiFQoRCIRRFQdf1ewVi8ADa7Ta2bSOlxHVdXNdFVVU0TUPTNKSUWJaFbduEw2E0TRsokIECsG0by7JQVRXP8/A8D1VViUQiRCIRVFVFCEGr1cKyLCKRCJFIZGAgBgbAcRxM00QIged5CCGIRCJEo1HC4TCKouA4DkIIDMNACEE0Gh0IiIEAkFLS6XSQUuJ5HoqiEI1GiUajhEKhzn3gOA62bSOEwHVdPM8jGo2i6/p9AyGklNi2jed5nQtZVVVisRixWKxrXpumSbvdxvM8FEUhHA4TiUTQdf2+LKl7PoVc18UwDKSUGIaBpmkMDQ0Ri8W6wgPE43GGhoY6S0kIQbvdxjTNe76k7vkMmKaJbduYpomiKMTjceLxOLquI4RA13U0TcNxHGzbxnVdPM8jFAoRiUTQNO2egbinAKSUtFotXNfFtm10XScejxOPxwmHw52LVwiBbduYponrugghCIfDRKPR+wLingGQUmIYBp7n0W63URSFoaEhEokEuq4jhMA0TaSUtNtthBB4noeu68RiMcLh8IABtNttLMvCcRwsy0LXdRKJBMlkknA4jBACwzBwXRfLsnAcB8/z0DSNeDxOKBQaHADXdWm1WkgpabfbqKpKMpkkmUyi6zqe59FqtZBSYpomtm13Zmd4eJhwODw4AJZlYRgGnufRbDYJhUIkk0mSySSRSATXdWk0GriuS6vVwnEcpJREo1Hi8TihUGhwAEzTxLIsXNel0WigaRrDw8OkUimGhoZwHIdGo4HjODQaDaSUeJ5HPB4nkUigquqDXUKGYeC6LrZt02g00DSNVCpFOp0mFoth2zb1ep12u02z2cTzPFRVJZFIkEgkBgfAsixarRau61Kv11FVlXQ6TTqdJhaL0W63qdVqtNtter0eQghisRipVGpwABzHodls4nkejUYDRVFIp9NkMhni8TiWZVGr1bAsi3q9jpSSUChEMpkkkUgMDoDneRiGgZQSwzBQFIVMJsPIyAjJZBLTNKnVajQaDer1Op7noWka6XSaZDI5OABSSprNJlJKms0mnueRyWQYHR0llUphGAa1Wo1arUaz2cTzPMLhMJlMhlQqNTgAUkpqtRpSSur1Oq7rks1mGR0dJZ1OY5omlUqFarVKq9XC8zwikQiZTIZ0Oj04AEIIqtUqnufRaDSwbZtsNsvY2BiZTIZWq0WlUqFSqdBut/E8j2g0SjabJZPJDA6AoijUajWklNTrdRzHYWRkhLGxMbLZLM1mk3K5TLlcpt1u43ke0WiUbDbL6Ojo4AAoikKlUsG2ber1Oq7rMjo6yvj4ONlslnq9TqlUolQq0el0OgDGx8cHCwDgP0H/v9H/AIrWUWwj8nFjAAAAAElFTkSuQmCC';
+
 const styles = {
   formGroup: {
-    marginBottom: '1rem'
+    marginBottom: '1rem',
+    opacity: 1,
+    transform: 'translateY(0)',
+    transition: 'all 0.3s ease-in-out'
   },
   select: {
     width: '100%',
     padding: '0.5rem',
     borderRadius: '4px',
     border: '1px solid #ccc',
-    marginTop: '0.5rem'
+    marginTop: '0.5rem',
+    transition: 'all 0.3s ease-in-out'
   },
   label: {
     display: 'block',
     marginBottom: '0.5rem',
-    fontWeight: 'bold'
+    fontWeight: 'bold',
+    transition: 'all 0.3s ease-in-out'
   },
   textarea: {
     width: '100%',
@@ -27,7 +35,8 @@ const styles = {
     borderRadius: '4px',
     border: '1px solid #ccc',
     minHeight: '100px',
-    marginTop: '0.5rem'
+    marginTop: '0.5rem',
+    transition: 'all 0.3s ease-in-out'
   },
   newMessageBadge: {
     backgroundColor: '#ff4444',
@@ -48,8 +57,159 @@ const styles = {
   },
   hasUnread: {
     borderLeft: '3px solid #ff4444'
+  },
+  formContainer: {
+    opacity: 0,
+    transform: 'translateY(20px)',
+    animation: 'fadeInUp 0.5s ease forwards'
+  },
+  messagerie: {
+    contacts: {
+      width: '300px',
+      borderRight: '1px solid #e0e0e0',
+      backgroundColor: '#f8f9fa'
+    },
+    category: {
+      marginBottom: '1.5rem'
+    },
+    categoryTitle: {
+      padding: '0.75rem 1rem',
+      fontWeight: 'bold',
+      backgroundColor: '#f1f3f5',
+      borderBottom: '1px solid #e0e0e0'
+    },
+    contactItem: {
+      padding: '0.75rem 1rem',
+      cursor: 'pointer',
+      transition: 'background-color 0.2s',
+      '&:hover': {
+        backgroundColor: '#f1f3f5'
+      }
+    },
+    selected: {
+      backgroundColor: '#e3f2fd'
+    },
+    hasUnread: {
+      borderLeft: '3px solid #2196f3'
+    },
+    unreadBadge: {
+      backgroundColor: '#2196f3',
+      color: 'white',
+      padding: '2px 6px',
+      borderRadius: '10px',
+      fontSize: '0.75rem'
+    },
+    chatHeader: {
+      padding: '1rem',
+      borderBottom: '1px solid #e0e0e0',
+      backgroundColor: '#fff'
+    },
+    messageWrapper: {
+      margin: '0.5rem 0',
+      display: 'flex',
+      flexDirection: 'column'
+    },
+    message: {
+      maxWidth: '70%',
+      padding: '0.75rem',
+      borderRadius: '12px',
+      marginBottom: '0.25rem'
+    },
+    sent: {
+      alignSelf: 'flex-end',
+      backgroundColor: '#2196f3',
+      color: 'white'
+    },
+    received: {
+      alignSelf: 'flex-start',
+      backgroundColor: '#f1f3f5'
+    },
+    messageTime: {
+      fontSize: '0.75rem',
+      opacity: 0.7
+    },
+    chatInput: {
+      padding: '1rem',
+      borderTop: '1px solid #e0e0e0',
+      backgroundColor: '#fff',
+      display: 'flex',
+      gap: '0.5rem'
+    }
   }
 };
+
+// Ajouter les styles CSS pour les animations
+const additionalStyles = `
+  :root {
+    --primary-color: #4CAF50;
+    --primary-dark: #388E3C;
+    --primary-light: #C8E6C9;
+    --text-primary: #212121;
+    --text-secondary: #757575;
+    --bg-primary: #E8F5E9 !important;
+    --bg-secondary: #F1F8E9 !important;
+    --bg-hover: #DCEDC8;
+    --border-color: #A5D6A7;
+    --sidebar-bg: #2E7D32;
+    --sidebar-hover: #388E3C;
+    --sidebar-active: #43A047;
+    --sidebar-text: #ffffff;
+    --sidebar-text-hover: #E8F5E9;
+  }
+
+  body, html {
+    background-color: var(--bg-primary) !important;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+  }
+
+  .dashboard-wrapper {
+    display: flex;
+    min-height: 100vh;
+    background-color: var(--bg-primary) !important;
+  }
+
+  .dashboard {
+    flex: 1;
+    margin-left: 280px;
+    padding: 2rem;
+    background-color: var(--bg-primary) !important;
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    width: 280px;
+    background: linear-gradient(180deg, var(--sidebar-bg) 0%, var(--primary-dark) 100%);
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    color: var(--sidebar-text);
+    z-index: 1000;
+  }
+
+  .profile-card {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.1);
+  }
+
+  @media (max-width: 768px) {
+    .dashboard {
+      margin-left: 0;
+      padding: 1rem;
+    }
+
+    .sidebar {
+      position: relative;
+      width: 100%;
+      height: auto;
+    }
+  }
+`;
 
 const PatientDashboard = () => {
   const [activeSection, setActiveSection] = useState('profile');
@@ -82,6 +242,21 @@ const PatientDashboard = () => {
   const [selectedRegion, setSelectedRegion] = useState('');
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [hasNewMessages, setHasNewMessages] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedProfile, setEditedProfile] = useState({});
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const fileInputRef = useRef(null);
+  const [appointmentType, setAppointmentType] = useState('medical');
+  const [expandedContact, setExpandedContact] = useState(null);
+  const [expandedMessages, setExpandedMessages] = useState({});
+  const [expandedCategories, setExpandedCategories] = useState({
+    doctors: true,
+    labs: true,
+    hospitals: true
+  });
+
+  const [expandedContacts, setExpandedContacts] = useState({});
 
   // Liste des régions de la Tunisie
   const regions = [
@@ -137,11 +312,7 @@ const PatientDashboard = () => {
     setUserId(storedId);
     fetchProfile(storedId);
     fetchNotifications(storedId);
-    
-    // Charger les documents médicaux si nécessaire
-    if (activeSection === 'documents') {
       fetchMedicalDocuments(storedId);
-    }
     
     // Charger les rendez-vous si on est dans la section messages ou rendez-vous
     if (activeSection === 'messages' || activeSection === 'all-appointments') {
@@ -254,13 +425,75 @@ const PatientDashboard = () => {
     setChatLoading(true);
     try {
       console.log("🔄 Chargement des messages pour le rendez-vous:", appointmentId);
-      const res = await axios.get(`${API_BASE_URL}/api/messages/${appointmentId}?userId=${userId}`);
-      console.log("✅ Messages reçus:", res.data);
-      setChatMessages(res.data);
+      const appointment = appointments.find(apt => apt._id === appointmentId) || 
+                        labAppointments.find(apt => apt._id === appointmentId);
+
+      if (!appointment) {
+        console.error("Rendez-vous non trouvé");
+        return;
+      }
+
+      console.log("Appointment trouvé:", appointment);
+
+      let messages = [];
+      if (appointment.lab) {
+        // Messages de laboratoire
+        const labId = appointment.lab._id;
+        console.log("Chargement des messages de laboratoire pour:", labId);
+        try {
+          const response = await axios.get(`${API_BASE_URL}/api/lab-patient-messages/${labId}/${userId}`);
+          console.log("✅ Messages de laboratoire reçus:", response.data);
+          messages = response.data;
+          
+          // Marquer les messages comme lus
+          const unreadMessages = messages
+            .filter(msg => msg.receiverId === userId && !msg.isRead)
+            .map(msg => msg._id);
+          
+          if (unreadMessages.length > 0) {
+            await axios.put(`${API_BASE_URL}/api/lab-patient-messages/read`, {
+              messageIds: unreadMessages
+            });
+          }
+        } catch (error) {
+          console.error("❌ Erreur lors du chargement des messages de laboratoire:", error);
+          setError("Erreur lors du chargement des messages de laboratoire");
+        }
+      } else {
+        // Messages de médecin
+        const doctorId = appointment.doctorId?._id || appointment.doctorId;
+        if (!doctorId) {
+          console.error("ID du médecin non trouvé dans le rendez-vous:", appointment);
+          setError("Erreur: Impossible de charger les messages - ID du médecin manquant");
+          return;
+        }
+        console.log("Chargement des messages du médecin pour:", doctorId);
+        try {
+          const response = await axios.get(`${API_BASE_URL}/api/messages/${appointmentId}?userId=${userId}`);
+          console.log("✅ Messages du médecin reçus:", response.data);
+          messages = response.data;
+          
+          // Marquer les messages comme lus
+          const unreadMessages = messages
+            .filter(msg => msg.receiverId === userId && !msg.isRead)
+            .map(msg => msg._id);
+          
+          if (unreadMessages.length > 0) {
+            await axios.put(`${API_BASE_URL}/api/messages/read`, {
+              messageIds: unreadMessages
+            });
+          }
+        } catch (error) {
+          console.error("❌ Erreur lors du chargement des messages du médecin:", error);
+          setError("Erreur lors du chargement des messages du médecin");
+        }
+      }
+
+      setChatMessages(messages);
       checkUnreadMessages();
     } catch (error) {
-      console.error("❌ Erreur lors du chargement des messages:", error);
-      setChatMessages([]);
+      console.error("❌ Erreur générale lors du chargement des messages:", error);
+      setError("Une erreur est survenue lors du chargement des messages");
     } finally {
       setChatLoading(false);
     }
@@ -269,25 +502,71 @@ const PatientDashboard = () => {
   const handleSendMessage = async () => {
     if (!newChatMessage.trim() || !selectedAppointment) return;
     try {
-      await axios.post(`${API_BASE_URL}/api/messages`, {
-        senderId: userId,
-        receiverId: selectedAppointment.doctorId,
-        appointmentId: selectedAppointment._id,
-        content: newChatMessage
+      let endpoint;
+      let messageData;
+
+      if (selectedAppointment.lab) {
+        // Message pour laboratoire
+        endpoint = '/api/lab-patient-messages';
+        messageData = {
+          senderId: userId,
+          receiverId: selectedAppointment.lab._id,
+          content: newChatMessage,
+          appointmentId: selectedAppointment._id,
+          isLabMessage: true
+        };
+      } else {
+        // Message pour médecin
+        endpoint = '/api/messages';
+        messageData = {
+          senderId: userId,
+          receiverId: selectedAppointment.doctorId?._id || selectedAppointment.doctorId,
+          content: newChatMessage,
+          appointmentId: selectedAppointment._id
+        };
+      }
+
+      console.log('📤 Envoi du message:', {
+        endpoint,
+        messageData
       });
+
+      const response = await axios.post(`${API_BASE_URL}${endpoint}`, messageData);
+      console.log('✅ Message envoyé avec succès:', response.data);
+      
       setNewChatMessage('');
       fetchChatMessages(selectedAppointment._id);
     } catch (error) {
-      // Optionnel : afficher une erreur
+      console.error('❌ Erreur lors de l\'envoi du message:', error);
+      setMessage("Erreur lors de l'envoi du message: " + (error.response?.data?.message || error.message));
     }
   };
 
-  const handleFileUpload = async (event) => {
+  const handleFileSelect = (event) => {
     const file = event.target.files[0];
-    if (!file) return;
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
+
+  const handleUploadClick = () => {
+    setIsUploadModalOpen(true);
+    setSelectedFile(null);
+    setUploadDescription('');
+  };
+
+  const handleCloseModal = () => {
+    setIsUploadModalOpen(false);
+    setSelectedFile(null);
+    setUploadDescription('');
+  };
+
+  const handleUploadSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedFile || !uploadDescription) return;
 
     const formData = new FormData();
-    formData.append('document', file);
+    formData.append('document', selectedFile);
     formData.append('description', uploadDescription);
 
     try {
@@ -302,8 +581,8 @@ const PatientDashboard = () => {
         }
       );
       setMessage("✅ Document téléchargé avec succès !");
-      setUploadDescription('');
       fetchMedicalDocuments(userId);
+      handleCloseModal();
     } catch (error) {
       setMessage("❌ Erreur lors du téléchargement du document.");
       console.error(error);
@@ -521,19 +800,48 @@ const PatientDashboard = () => {
   };
 
   const checkUnreadMessages = async () => {
-    try {
-      // Vérifier si userId existe avant de faire la requête
-      if (!userId) {
-        console.log("⚠️ Pas d'userId disponible pour vérifier les messages non lus");
-        return;
-      }
-      console.log("🔍 Vérification des messages non lus pour userId:", userId);
-      const response = await axios.get(`${API_BASE_URL}/api/messages/unread/${userId}`);
-      console.log("✅ Messages non lus reçus:", response.data);
-      setUnreadMessages(response.data.length);
-    } catch (error) {
-      console.error('❌ Erreur vérification messages non lus:', error);
+    if (!userId) {
+      console.log("⚠️ Pas d'userId disponible pour vérifier les messages non lus");
+      return;
     }
+
+    let totalUnread = 0;
+
+    try {
+      // Récupérer les messages non lus des médecins
+      console.log("🔍 Vérification des messages non lus des médecins");
+      const doctorMessagesResponse = await axios.get(`${API_BASE_URL}/api/messages/unread/${userId}`);
+      if (doctorMessagesResponse.data && Array.isArray(doctorMessagesResponse.data)) {
+        totalUnread += doctorMessagesResponse.data.length;
+        console.log("✅ Messages non lus des médecins:", doctorMessagesResponse.data.length);
+      }
+    } catch (error) {
+      console.error("❌ Erreur lors de la récupération des messages non lus des médecins:", error);
+    }
+
+    // Pour les laboratoires, nous devons vérifier chaque laboratoire avec lequel le patient a un rendez-vous
+    try {
+      console.log("🔍 Vérification des messages non lus des laboratoires");
+      const labAppointmentsWithMessages = labAppointments.filter(apt => apt.lab && apt.lab._id);
+      
+      for (const apt of labAppointmentsWithMessages) {
+        try {
+          const labMessagesResponse = await axios.get(`${API_BASE_URL}/api/lab-patient-messages/${apt.lab._id}/${userId}`);
+          if (labMessagesResponse.data && Array.isArray(labMessagesResponse.data)) {
+            const unreadCount = labMessagesResponse.data.filter(msg => !msg.isRead && msg.receiverId === userId).length;
+            totalUnread += unreadCount;
+            console.log(`✅ Messages non lus du laboratoire ${apt.lab.nom}:`, unreadCount);
+          }
+        } catch (labError) {
+          console.error(`❌ Erreur pour le laboratoire ${apt.lab._id}:`, labError);
+        }
+      }
+    } catch (error) {
+      console.error("❌ Erreur lors de la récupération des messages non lus des laboratoires:", error);
+    }
+
+    console.log("📊 Total des messages non lus:", totalUnread);
+    setUnreadMessages(totalUnread);
   };
 
   // Modifier l'useEffect pour vérifier les messages non lus uniquement quand userId est disponible
@@ -544,6 +852,60 @@ const PatientDashboard = () => {
       return () => clearInterval(interval);
     }
   }, [userId]);
+
+  const handleEditProfile = () => {
+    setEditedProfile(profile);
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditedProfile({});
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditedProfile(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleUpdateProfile = async () => {
+    try {
+      const response = await axios.put(`${API_BASE_URL}/api/users/${userId}`, editedProfile);
+      setProfile(response.data);
+      setIsEditing(false);
+      setMessage("✅ Profil mis à jour avec succès !");
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour du profil:", error);
+      setMessage("❌ Erreur lors de la mise à jour du profil.");
+    }
+  };
+
+  // Move the useEffect for styles here
+  useEffect(() => {
+    const styleSheet = document.createElement("style");
+    styleSheet.innerText = additionalStyles;
+    document.head.appendChild(styleSheet);
+    return () => {
+      document.head.removeChild(styleSheet);
+    };
+  }, []);
+
+  const toggleContact = (contactId) => {
+    setExpandedContacts(prev => ({
+        ...prev,
+        [contactId]: !prev[contactId]
+    }));
+  };
+
+  const toggleCategory = (category) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [category]: !prev[category]
+    }));
+  };
 
   return (
     <div className="dashboard-wrapper">
@@ -565,13 +927,13 @@ const PatientDashboard = () => {
               <span className="icon">👤</span>
               Mon Profil
             </button>
-            <button 
+            {/* <button 
               className={activeSection === 'documents' ? 'active' : ''} 
               onClick={() => setActiveSection('documents')}
             >
               <span className="icon">📄</span>
               Documents Médicaux
-            </button>
+            </button> */}
           </div>
 
           <div className="menu-group">
@@ -584,25 +946,11 @@ const PatientDashboard = () => {
               Tous mes rendez-vous
             </button>
             <button 
-              className={activeSection === 'appointment' ? 'active' : ''} 
-              onClick={() => setActiveSection('appointment')}
+              className={activeSection === 'new-appointment' ? 'active' : ''} 
+              onClick={() => setActiveSection('new-appointment')}
             >
-              <span className="icon">👨‍⚕️</span>
-              Nouveau RDV Médecin
-            </button>
-            <button 
-              className={activeSection === 'lab-appointment' ? 'active' : ''} 
-              onClick={() => setActiveSection('lab-appointment')}
-            >
-              <span className="icon">🔬</span>
-              Nouveau RDV Laboratoire
-            </button>
-            <button 
-              className={activeSection === 'hospital-appointment' ? 'active' : ''} 
-              onClick={() => setActiveSection('hospital-appointment')}
-            >
-              <span className="icon">🏥</span>
-              Nouveau RDV Hôpital
+              <span className="icon">📅</span>
+              Nouveau Rendez-vous
             </button>
           </div>
 
@@ -660,6 +1008,7 @@ const PatientDashboard = () => {
               <>
                 <h2>👤 Mon profil</h2>
                 <div className="profile-card">
+                  <div className="profile-header">
                   {profile.photo && (
                     <img 
                       src={`${API_BASE_URL}${profile.photo}`} 
@@ -667,27 +1016,271 @@ const PatientDashboard = () => {
                       className="profile-photo" 
                     />
                   )}
+                  </div>
                   <div className="profile-grid">
-                    <p><strong>Nom :</strong> {profile.nom}</p>
-                    <p><strong>Prénom :</strong> {profile.prenom}</p>
-                    <p><strong>Email :</strong> {profile.email}</p>
-                    <p><strong>Téléphone :</strong> {profile.telephone}</p>
-                    <p><strong>Adresse :</strong> {profile.adresse}</p>
-                    <p><strong>CIN :</strong> {profile.cin}</p>
-                    <p><strong>Urgence :</strong> {profile.emergencyPhone}</p>
-                    <p><strong>Groupe sanguin :</strong> {profile.bloodType}</p>
-                    <p><strong>Maladies :</strong> {profile.chronicDiseases}</p>
+                    {isEditing ? (
+                      <>
+                        <div className="form-group" style={styles.formGroup}>
+                          <label>Nom :</label>
+                          <input
+                            type="text"
+                            name="nom"
+                            value={editedProfile.nom || ''}
+                            onChange={handleInputChange}
+                          />
+                  </div>
+                        <div className="form-group" style={styles.formGroup}>
+                          <label>Prénom :</label>
+                          <input
+                            type="text"
+                            name="prenom"
+                            value={editedProfile.prenom || ''}
+                            onChange={handleInputChange}
+                          />
+                        </div>
+                        <div className="form-group" style={styles.formGroup}>
+                          <label>Email :</label>
+                          <input
+                            type="email"
+                            name="email"
+                            value={editedProfile.email || ''}
+                            onChange={handleInputChange}
+                          />
+                        </div>
+                        <div className="form-group" style={styles.formGroup}>
+                          <label>Téléphone :</label>
+                          <input
+                            type="tel"
+                            name="telephone"
+                            value={editedProfile.telephone || ''}
+                            onChange={handleInputChange}
+                          />
+                        </div>
+                        <div className="form-group" style={styles.formGroup}>
+                          <label>Adresse :</label>
+                          <input
+                            type="text"
+                            name="adresse"
+                            value={editedProfile.adresse || ''}
+                            onChange={handleInputChange}
+                          />
+                        </div>
+                        <div className="form-group" style={styles.formGroup}>
+                          <label>Contact d'urgence :</label>
+                          <input
+                            type="tel"
+                            name="emergencyPhone"
+                            value={editedProfile.emergencyPhone || ''}
+                            onChange={handleInputChange}
+                          />
+                        </div>
+                        <div className="form-group" style={styles.formGroup}>
+                          <label>Groupe sanguin :</label>
+                          <select
+                            name="bloodType"
+                            value={editedProfile.bloodType || ''}
+                            onChange={handleInputChange}
+                          >
+                            <option value="">Sélectionnez</option>
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
+                          </select>
+                        </div>
+                        <div className="form-group" style={styles.formGroup}>
+                          <label>Maladies chroniques :</label>
+                          <textarea
+                            name="chronicDiseases"
+                            value={editedProfile.chronicDiseases || ''}
+                            onChange={handleInputChange}
+                          />
+                        </div>
+                        <div className="profile-actions">
+                          <button onClick={handleUpdateProfile} className="save-btn">
+                            Enregistrer
+                          </button>
+                          <button onClick={handleCancelEdit} className="cancel-btn">
+                            Annuler
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <p><strong>Nom :</strong> {profile.nom || '-'}</p>
+                        <p><strong>Prénom :</strong> {profile.prenom || '-'}</p>
+                        <p><strong>Email :</strong> {profile.email || '-'}</p>
+                        <p><strong>Téléphone :</strong> {profile.telephone || '-'}</p>
+                        <p><strong>Adresse :</strong> {profile.adresse || '-'}</p>
+                        <p><strong>CIN :</strong> {profile.cin || '-'}</p>
+                        <p><strong>Contact d'urgence :</strong> {profile.emergencyPhone || '-'}</p>
+                        <p><strong>Groupe sanguin :</strong> {profile.bloodType || '-'}</p>
+                        <p><strong>Maladies chroniques :</strong> {profile.chronicDiseases || '-'}</p>
+                        <div className="profile-actions">
+                          <button onClick={handleEditProfile} className="edit-btn">
+                            ✏️ Modifier le profil
+                          </button>
+                </div>
+              </>
+            )}
+                  </div>
+
+                  <div className="profile-documents-section">
+                    <div className="documents-header">
+                      <h3>📄 Documents Médicaux</h3>
+                      <button onClick={handleUploadClick} className="import-btn">
+                        <span>📎</span> Importer un document
+                      </button>
+                    </div>
+
+                    <div className="documents-grid">
+                      {medicalDocuments.length === 0 ? (
+                        <p className="no-documents">Aucun document médical téléchargé.</p>
+                      ) : (
+                        medicalDocuments.map((doc) => (
+                          <div key={doc._id} className="document-card">
+                            <div className="document-preview">
+                              <div className="image-container">
+                                <img 
+                                  src={doc.filePath.startsWith('http') 
+                                    ? doc.filePath 
+                                    : `${API_BASE_URL}/${doc.filePath.replace(/\\/g, '/')}`}
+                                  alt={doc.fileName}
+                                  className="image-preview"
+                                  onError={(e) => {
+                                    if (!e.target.dataset.hasError) {
+                                      e.target.dataset.hasError = true;
+                                      e.target.src = DEFAULT_IMAGE_BASE64;
+                                    }
+                                  }}
+                                />
+                              </div>
+                            </div>
+                            <div className="document-info">
+                              <h4>{doc.fileName}</h4>
+                              <p>{doc.description}</p>
+                              <p className="upload-date">
+                                Téléchargé le : {new Date(doc.uploadDate).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <div className="document-actions">
+                              <a
+                                href={doc.filePath.startsWith('http') 
+                                  ? doc.filePath 
+                                  : `${API_BASE_URL}/${doc.filePath.replace(/\\/g, '/')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                download={doc.fileName}
+                                className="view-btn"
+                              >
+                                👁️ Voir
+                              </a>
+                              <button
+                                onClick={() => handleDeleteDocument(doc._id)}
+                                className="delete-btn"
+                              >
+                                🗑️ Supprimer
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Modal d'upload */}
+                    {isUploadModalOpen && (
+                      <div className="upload-modal-overlay">
+                        <div className="upload-modal">
+                          <div className="modal-header">
+                            <h3>Importer un document</h3>
+                            <button onClick={handleCloseModal} className="close-btn">×</button>
+                          </div>
+                          <form onSubmit={handleUploadSubmit} className="upload-form">
+                            <div className="form-group">
+                              <label>Description du document :</label>
+                              <input
+                                type="text"
+                                value={uploadDescription}
+                                onChange={(e) => setUploadDescription(e.target.value)}
+                                placeholder="Entrez une description"
+                                required
+                              />
+                            </div>
+                            <div className="form-group">
+                              <label>Fichier :</label>
+                              <div className="file-drop-zone" onClick={() => fileInputRef.current?.click()}>
+                                <input
+                                  type="file"
+                                  ref={fileInputRef}
+                                  onChange={handleFileSelect}
+                                  accept=".pdf,.jpg,.jpeg,.png"
+                                  style={{ display: 'none' }}
+                                />
+                                {selectedFile ? (
+                                  <div className="selected-file">
+                                    <span>📎 {selectedFile.name}</span>
+                                  </div>
+                                ) : (
+                                  <div className="drop-zone-text">
+                                    <span>📎 Cliquez pour sélectionner un fichier</span>
+                                    <small>PDF, JPEG, PNG (max 5MB)</small>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <div className="modal-actions">
+                              <button type="button" onClick={handleCloseModal} className="cancel-btn">
+                                Annuler
+                              </button>
+                              <button type="submit" className="submit-btn" disabled={!selectedFile || !uploadDescription}>
+                                Importer
+                              </button>
+                            </div>
+                          </form>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </>
             )}
 
-            {activeSection === 'appointment' && (
+            {activeSection === 'new-appointment' && (
               <>
-                <h2>🏥 Nouveau rendez-vous médecin</h2>
+                <h2 className="form-container">📅 Nouveau Rendez-vous</h2>
                 <div className="appointment-form">
+                  <div className="form-group" style={{...styles.formGroup, '--animation-order': '0'}}>
+                    <label style={styles.label}>Type de rendez-vous :</label>
+                    <select 
+                      value={appointmentType} 
+                      onChange={(e) => {
+                        setAppointmentType(e.target.value);
+                        // Réinitialiser les champs
+                        setSelectedRegion('');
+                        setSelectedSpecialty('');
+                        setSelectedDoctor('');
+                        setSelectedLab('');
+                        setSelectedHospital('');
+                        setAppointmentReason('');
+                        setLabAppointmentReason('');
+                      }}
+                      style={styles.select}
+                      className="appointment-type-select"
+                    >
+                      <option value="medical">👨‍⚕️ Rendez-vous Médecin</option>
+                      <option value="laboratory">🔬 Rendez-vous Laboratoire</option>
+                      <option value="hospital">🏥 Rendez-vous Hôpital</option>
+                    </select>
+                  </div>
+
+                  <div className="form-container">
+                    {appointmentType === 'medical' && (
                   <form onSubmit={handleAppointmentSubmit}>
-                    <div className="form-group" style={styles.formGroup}>
+                        <div className="form-group" style={{...styles.formGroup, '--animation-order': '1'}}>
                       <label style={styles.label}>Région :</label>
                       <select 
                         value={selectedRegion} 
@@ -704,7 +1297,7 @@ const PatientDashboard = () => {
                       </select>
                     </div>
 
-                    <div className="form-group" style={styles.formGroup}>
+                        <div className="form-group" style={{...styles.formGroup, '--animation-order': '2'}}>
                       <label style={styles.label}>Spécialité :</label>
                       <select 
                         value={selectedSpecialty} 
@@ -721,7 +1314,7 @@ const PatientDashboard = () => {
                       </select>
                     </div>
 
-                    <div className="form-group" style={styles.formGroup}>
+                        <div className="form-group" style={{...styles.formGroup, '--animation-order': '3'}}>
                       <label style={styles.label}>Médecin :</label>
                       <select 
                         value={selectedDoctor} 
@@ -743,7 +1336,7 @@ const PatientDashboard = () => {
                       </select>
                     </div>
 
-                    <div className="form-group" style={styles.formGroup}>
+                        <div className="form-group" style={{...styles.formGroup, '--animation-order': '4'}}>
                       <label style={styles.label}>Motif de la consultation :</label>
                       <textarea
                         value={appointmentReason}
@@ -758,68 +1351,141 @@ const PatientDashboard = () => {
                       Demander un rendez-vous
                     </button>
                   </form>
-                </div>
-              </>
             )}
 
-            {activeSection === 'documents' && (
-              <>
-                <h4>📄 Mes documents médicaux</h4>
-                <div className="medical-docs-section">
-                  <div className="upload-section">
-                    <h3>Ajouter un document</h3>
-                    <div className="upload-form">
-                      <input
-                        type="text"
-                        placeholder="Description du document"
-                        value={uploadDescription}
-                        onChange={(e) => setUploadDescription(e.target.value)}
-                        className="description-input"
-                      />
-                      <input
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        onChange={handleFileUpload}
-                        className="file-input"
-                      />
-                      <p className="file-info">Formats acceptés : PDF, JPEG, PNG (max 5MB)</p>
+                    {appointmentType === 'laboratory' && (
+                      <form onSubmit={handleLabAppointmentSubmit}>
+                        <div className="form-group" style={{...styles.formGroup, '--animation-order': '1'}}>
+                          <label style={styles.label}>Région :</label>
+                          <select 
+                            value={selectedRegion} 
+                            onChange={(e) => setSelectedRegion(e.target.value)}
+                            required
+                            style={styles.select}
+                          >
+                            <option value="">Sélectionnez une région</option>
+                            {regions.map(region => (
+                              <option key={region} value={region}>
+                                {region}
+                              </option>
+                            ))}
+                          </select>
                     </div>
+
+                        <div className="form-group" style={{...styles.formGroup, '--animation-order': '2'}}>
+                          <label style={styles.label}>Spécialité d'analyse :</label>
+                          <select 
+                            value={selectedSpecialty} 
+                            onChange={(e) => setSelectedSpecialty(e.target.value)}
+                            required
+                            style={styles.select}
+                          >
+                            <option value="">Sélectionnez une spécialité</option>
+                            <option value="Analyses sanguines">Analyses sanguines</option>
+                            <option value="Analyses d'urine">Analyses d'urine</option>
+                            <option value="Microbiologie">Microbiologie</option>
+                            <option value="Immunologie">Immunologie</option>
+                            <option value="Hormonologie">Hormonologie</option>
+                          </select>
                   </div>
 
-                  <div className="documents-list">
-                    <h3>Documents téléchargés</h3>
-                    {medicalDocuments.length === 0 ? (
-                      <p>Aucun document médical téléchargé.</p>
-                    ) : (
-                      <div className="documents-grid">
-                        {medicalDocuments.map((doc) => (
-                          <div key={doc._id} className="document-card">
-                            <div className="document-info">
-                              <h4>{doc.fileName}</h4>
-                              <p>{doc.description}</p>
-                              <p className="upload-date">
-                                Téléchargé le : {new Date(doc.uploadDate).toLocaleDateString()}
-                              </p>
+                        <div className="form-group" style={{...styles.formGroup, '--animation-order': '3'}}>
+                          <label style={styles.label}>Laboratoire :</label>
+                          <select 
+                            value={selectedLab} 
+                            onChange={(e) => setSelectedLab(e.target.value)}
+                            required
+                            style={styles.select}
+                          >
+                            <option value="">Sélectionnez un laboratoire</option>
+                            {labs
+                              .filter(lab => !selectedRegion || lab.region === selectedRegion)
+                              .map(lab => (
+                                <option key={lab._id} value={lab._id}>
+                                  {lab.nom} - {lab.adresse}
+                                </option>
+                              ))}
+                          </select>
                             </div>
-                            <div className="document-actions">
-                              <a
-                                href={`${API_BASE_URL}/${doc.filePath}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="view-btn"
-                              >
-                                Voir
-                              </a>
-                              <button
-                                onClick={() => handleDeleteDocument(doc._id)}
-                                className="delete-btn"
-                              >
-                                Supprimer
-                              </button>
+
+                        <div className="form-group" style={{...styles.formGroup, '--animation-order': '4'}}>
+                          <label style={styles.label}>Motif / Type d'analyse :</label>
+                          <textarea
+                            value={labAppointmentReason}
+                            onChange={(e) => setLabAppointmentReason(e.target.value)}
+                            placeholder="Décrivez le type d'analyse ou la raison de votre visite"
+                            required
+                            style={styles.textarea}
+                          />
+                        </div>
+
+                        <button type="submit" className="submit-btn">
+                          Prendre rendez-vous
+                        </button>
+                      </form>
+                    )}
+
+                    {appointmentType === 'hospital' && (
+                      <form onSubmit={handleHospitalAppointmentSubmit}>
+                        <div className="form-group" style={{...styles.formGroup, '--animation-order': '1'}}>
+                          <label style={styles.label}>Région :</label>
+                          <select 
+                            value={selectedRegion} 
+                            onChange={(e) => setSelectedRegion(e.target.value)}
+                            required
+                            style={styles.select}
+                          >
+                            <option value="">Sélectionnez une région</option>
+                            {regions.map(region => (
+                              <option key={region} value={region}>
+                                {region}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="form-group" style={{...styles.formGroup, '--animation-order': '2'}}>
+                          <label style={styles.label}>Spécialité :</label>
+                          <select 
+                            value={selectedSpecialty} 
+                            onChange={(e) => setSelectedSpecialty(e.target.value)}
+                            required
+                            style={styles.select}
+                          >
+                            <option value="">Sélectionnez une spécialité</option>
+                            {specialties.map(specialty => (
+                              <option key={specialty} value={specialty}>
+                                {specialty}
+                              </option>
+                            ))}
+                          </select>
                             </div>
-                          </div>
-                        ))}
+
+                        <div className="form-group" style={{...styles.formGroup, '--animation-order': '3'}}>
+                          <label style={styles.label}>Hôpital :</label>
+                          <select 
+                            value={selectedHospital} 
+                            onChange={(e) => setSelectedHospital(e.target.value)}
+                            required
+                            style={styles.select}
+                          >
+                            <option value="">Sélectionnez un hôpital</option>
+                            {hospitals
+                              .filter(hospital => 
+                                (!selectedRegion || hospital.region === selectedRegion)
+                              )
+                              .map(hospital => (
+                                <option key={hospital._id} value={hospital._id}>
+                                  {hospital.nom} - {hospital.adresse}
+                                </option>
+                              ))}
+                          </select>
                       </div>
+
+                        <button type="submit" className="submit-btn">
+                          Demander un rendez-vous
+                        </button>
+                      </form>
                     )}
                   </div>
                 </div>
@@ -857,83 +1523,134 @@ const PatientDashboard = () => {
             )}
 
             {activeSection === 'messages' && (
-              <div className="messagerie-section">
-                <h2>💬 Messagerie avec mes médecins</h2>
-                <div className="messagerie-layout">
-                  <div className="doctors-list">
-                    <h3>Mes médecins</h3>
-                    {appointments.length === 0 ? (
-                      <p>Aucun médecin trouvé.</p>
-                    ) : (
-                      <ul>
-                        {Object.values(
-                          appointments.reduce((acc, apt) => {
-                            if (!acc[apt.doctorId]) {
-                              acc[apt.doctorId] = {
-                                id: apt.doctorId,
-                                name: apt.doctorName || apt.doctorEmail || 'Médecin',
-                                lastAppointment: apt.date,
-                                appointments: [apt]
-                              };
-                            } else {
-                              acc[apt.doctorId].appointments.push(apt);
-                              if (new Date(apt.date) > new Date(acc[apt.doctorId].lastAppointment)) {
-                                acc[apt.doctorId].lastAppointment = apt.date;
-                              }
-                            }
-                            return acc;
-                          }, {})
-                        )
-                        .sort((a, b) => new Date(b.lastAppointment) - new Date(a.lastAppointment))
-                        .map((doctor) => (
-                          <li
-                            key={doctor.id}
-                            className={`doctor-chat-item ${selectedAppointment && selectedAppointment.doctorId === doctor.id ? 'selected' : ''} ${unreadMessages[doctor.id] ? 'has-unread' : ''}`}
+              <div className="messagerie-container">
+                <div className="contacts-list">
+                  <div className="contact-category">
+                    <div 
+                      className="category-header" 
+                      onClick={() => toggleCategory('doctors')}
+                    >
+                      <div className="category-title">
+                        <span>👨‍⚕️</span>
+                        <h3>Médecins</h3>
+                      </div>
+                      <span className="toggle-icon">{expandedCategories.doctors ? '▼' : '▶'}</span>
+                    </div>
+                    {expandedCategories.doctors && (
+                      <div className="contacts-group">
+                        {appointments
+                          .filter(apt => apt.doctorId && apt.doctorName)
+                          .map(apt => (
+                            <div key={apt._id} className="contact-wrapper">
+                              <div 
+                                className={`contact-item ${selectedAppointment?._id === apt._id ? 'active' : ''}`}
+                                onClick={() => toggleContact(apt._id)}
+                              >
+                                <div className="contact-info">
+                                  <div className="contact-name">{apt.doctorName}</div>
+                                  <div className="contact-details">
+                                    Dernier RDV: {new Date(apt.date).toLocaleDateString('fr-FR')}
+                                  </div>
+                                </div>
+                                <div className="contact-indicators">
+                                  {unreadMessages[apt.doctorId] && (
+                                    <span className="unread-badge">{unreadMessages[apt.doctorId]}</span>
+                                  )}
+                                  <span className="expand-icon">
+                                    {expandedContacts[apt._id] ? '▼' : '▶'}
+                                  </span>
+                                </div>
+                              </div>
+                              {expandedContacts[apt._id] && (
+                                <div className="contact-messages">
+                                  <div 
+                                    className="view-conversation-btn"
                             onClick={() => {
-                              const lastAppointment = doctor.appointments
-                                .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
-                              setSelectedAppointment(lastAppointment);
-                              fetchChatMessages(lastAppointment._id);
-                            }}
-                          >
-                            <div className="doctor-info">
-                              <strong>{doctor.name}</strong>
-                              {unreadMessages[doctor.id] && (
-                                <span className="unread-count">
-                                  {unreadMessages[doctor.id]} nouveau{unreadMessages[doctor.id] > 1 ? 'x' : ''}
-                                </span>
+                                      setSelectedAppointment(apt);
+                                      fetchChatMessages(apt._id);
+                                    }}
+                                  >
+                                    Voir la conversation complète →
+                                  </div>
+                                </div>
                               )}
-                              <span className="appointment-count">
-                                {doctor.appointments.length} rendez-vous
-                              </span>
                             </div>
-                            <small className="last-appointment">
-                              Dernier RDV: {new Date(doctor.lastAppointment).toLocaleDateString('fr-FR')}
-                            </small>
-                          </li>
-                        ))}
-                      </ul>
+                          ))}
+                      </div>
                     )}
                   </div>
+
+                  <div className="contact-category">
+                    <div 
+                      className="category-header" 
+                      onClick={() => toggleCategory('labs')}
+                    >
+                      <div className="category-title">
+                        <span>🔬</span>
+                        <h3>Laboratoires</h3>
+                      </div>
+                      <span className="toggle-icon">{expandedCategories.labs ? '▼' : '▶'}</span>
+                    </div>
+                    {expandedCategories.labs && (
+                      <div className="contacts-group">
+                        {labAppointments.map(apt => (
+                          <div key={apt._id} className="contact-wrapper">
+                            <div 
+                              className={`contact-item ${selectedAppointment?._id === apt._id ? 'active' : ''}`}
+                              onClick={() => toggleContact(apt._id)}
+                          >
+                              <div className="contact-info">
+                                <div className="contact-name">{apt.lab?.nom || 'Laboratoire'}</div>
+                                <div className="contact-details">
+                                  {new Date(apt.date).toLocaleDateString('fr-FR')}
+                                </div>
+                              </div>
+                              <div className="contact-indicators">
+                                {unreadMessages[apt.labId] && (
+                                  <span className="unread-badge">{unreadMessages[apt.labId]}</span>
+                              )}
+                                <span className="expand-icon">
+                                  {expandedContacts[apt._id] ? '▼' : '▶'}
+                              </span>
+                            </div>
+                            </div>
+                            {expandedContacts[apt._id] && (
+                              <div className="contact-messages">
+                                <div 
+                                  className="view-conversation-btn"
+                                  onClick={() => {
+                                    setSelectedAppointment(apt);
+                                    fetchChatMessages(apt._id);
+                                  }}
+                                >
+                                  Voir la conversation complète →
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  </div>
                   
-                  <div className="chat-box">
+                <div className="chat-container">
                     {selectedAppointment ? (
                       <>
                         <div className="chat-header">
-                          <h3>{selectedAppointment.doctorName || selectedAppointment.doctorEmail || 'Médecin'}</h3>
-                          <p>Rendez-vous du: {new Date(selectedAppointment.date).toLocaleString('fr-FR')}</p>
+                        <div className="contact-name">
+                          {selectedAppointment.doctorName || selectedAppointment.lab?.nom}
                         </div>
+                        <div className="contact-details">
+                          RDV du {new Date(selectedAppointment.date).toLocaleString('fr-FR')}
+                        </div>
+                      </div>
+
                         <div className="chat-messages">
-                          {chatLoading ? (
-                            <div className="loading-messages">Chargement...</div>
-                          ) : chatMessages.length === 0 ? (
-                            <div className="no-messages">Aucun message. Commencez la conversation !</div>
-                          ) : (
-                            <div className="messages-container">
                               {chatMessages.map((msg) => (
                               <div 
                                 key={msg._id} 
-                                  className={`message ${msg.senderId === userId ? 'message-sent' : 'message-received'}`}
+                            className={`message ${msg.senderId === userId ? 'sent' : 'received'}`}
                               >
                                 <div className="message-content">{msg.content}</div>
                                   <div className="message-time">
@@ -942,30 +1659,33 @@ const PatientDashboard = () => {
                               </div>
                               ))}
                             </div>
-                          )}
-                        </div>
+
                         <div className="chat-input">
                           <input
                             type="text"
                             value={newChatMessage}
                             onChange={(e) => setNewChatMessage(e.target.value)}
                             placeholder="Écrivez votre message..."
-                            onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
+                          onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                           />
-                          <button onClick={handleSendMessage}>
-                            <span>Envoyer</span>
+                        <button
+                          onClick={handleSendMessage}
+                          disabled={!newChatMessage.trim()}
+                          className="send-button"
+                        >
+                          Envoyer
                           </button>
                         </div>
                       </>
                     ) : (
                       <div className="no-chat-selected">
                         <div className="empty-state">
-                          <span className="icon">💬</span>
-                          <p>Sélectionnez un médecin pour voir vos messages</p>
+                        <span>💬</span>
+                        <h3>Sélectionnez une conversation</h3>
+                        <p>Choisissez un contact dans la liste pour voir vos messages</p>
                         </div>
                       </div>
                     )}
-                  </div>
                 </div>
               </div>
             )}
@@ -1132,139 +1852,46 @@ const PatientDashboard = () => {
               </>
             )}
 
-            {activeSection === 'lab-appointment' && (
-              <>
-                <h2>🔬 Rendez-vous Laboratoire</h2>
-                <div className="appointment-form">
-                  <form onSubmit={handleLabAppointmentSubmit}>
-                    <div className="form-group" style={styles.formGroup}>
-                      <label style={styles.label}>Région :</label>
-                      <select 
-                        value={selectedRegion} 
-                        onChange={(e) => setSelectedRegion(e.target.value)}
-                        required
-                        style={styles.select}
-                      >
-                        <option value="">Sélectionnez une région</option>
-                        {regions.map(region => (
-                          <option key={region} value={region}>
-                            {region}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="form-group" style={styles.formGroup}>
-                      <label style={styles.label}>Spécialité d'analyse :</label>
-                      <select 
-                        value={selectedSpecialty} 
-                        onChange={(e) => setSelectedSpecialty(e.target.value)}
-                        required
-                        style={styles.select}
-                      >
-                        <option value="">Sélectionnez une spécialité</option>
-                        <option value="Analyses sanguines">Analyses sanguines</option>
-                        <option value="Analyses d'urine">Analyses d'urine</option>
-                        <option value="Microbiologie">Microbiologie</option>
-                        <option value="Immunologie">Immunologie</option>
-                        <option value="Hormonologie">Hormonologie</option>
-                      </select>
-                    </div>
-
-                    <div className="form-group" style={styles.formGroup}>
-                      <label style={styles.label}>Laboratoire :</label>
-                      <select 
-                        value={selectedLab} 
-                        onChange={(e) => setSelectedLab(e.target.value)}
-                        required
-                        style={styles.select}
-                      >
-                        <option value="">Sélectionnez un laboratoire</option>
-                        {labs
-                          .filter(lab => !selectedRegion || lab.region === selectedRegion)
-                          .map(lab => (
-                          <option key={lab._id} value={lab._id}>
-                            {lab.nom} - {lab.adresse}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="form-group" style={styles.formGroup}>
-                      <label style={styles.label}>Motif / Type d'analyse :</label>
-                      <textarea
-                        value={labAppointmentReason}
-                        onChange={(e) => setLabAppointmentReason(e.target.value)}
-                        placeholder="Décrivez le type d'analyse ou la raison de votre visite"
-                        required
-                        style={styles.textarea}
-                      />
-                    </div>
-
-                    <button type="submit" className="submit-btn">
-                      Prendre rendez-vous
-                    </button>
-                  </form>
-                </div>
-
-                <div className="appointments-list">
-                  <h3>Mes rendez-vous laboratoire</h3>
-                  {labAppointments.length === 0 ? (
-                    <p>Aucun rendez-vous laboratoire trouvé.</p>
-                  ) : (
-                    <div className="appointments-grid">
-                      {labAppointments.map((apt) => (
-                        <div key={apt._id} className="appointment-card">
-                          <h4>{apt.lab?.nom}</h4>
-                          <p>📍 {apt.lab?.adresse}</p>
-                          <p>🗓️ {new Date(apt.date).toLocaleString('fr-FR')}</p>
-                          <p>📝 {apt.reason}</p>
-                          <p className={`status ${apt.status}`}>
-                            {apt.status === 'confirmed' ? 'Confirmé' : 
-                             apt.status === 'pending' ? 'En attente' : 'Annulé'}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-
             {activeSection === 'lab-results' && (
-              <>
+              <div className="lab-results-container">
                 <h2>📋 Mes résultats d'analyses</h2>
-                <div className="lab-results-section">
                   {labResults.length === 0 ? (
                     <p>Aucun résultat d'analyse disponible.</p>
                   ) : (
-                    <div className="results-grid">
-                      {labResults.map((result) => (
-                        <div key={result._id} className="result-card">
-                          <div className="result-info">
-                            <h4>Laboratoire: {result.labId?.nom || 'Non spécifié'}</h4>
-                            <p>📅 Date: {new Date(result.appointmentId?.date || result.createdAt).toLocaleString('fr-FR')}</p>
-                            <p>🔬 Type de test: {result.testType}</p>
-                            <p>📝 Résultats: {result.results}</p>
+                  labResults.map((result) => (
+                    <div key={result._id} className="lab-result-item">
+                      <div className="lab-header">
+                        <div className="lab-name">
+                          Laboratoire: {result.labId?.nom || 'Non spécifié'}
+                        </div>
+                        <div className="lab-date">
+                          {new Date(result.appointmentId?.date || result.createdAt).toLocaleString('fr-FR')}
+                        </div>
+                      </div>
+                      <div className="test-details">
+                        <div className="test-type">
+                          <div className="test-label">Type de test</div>
+                          <div>{result.testType}</div>
+                        </div>
+                        <div className="test-result">
+                          <div className="test-label">Résultats</div>
+                          <div>{result.results}</div>
+                        </div>
                           </div>
                           {result.fileUrl && (
-                            <div className="result-actions">
                               <a
                                 href={`${API_BASE_URL}/${result.fileUrl}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="view-btn"
+                          className="view-file-btn"
                               >
-                                Voir le fichier
+                          📄 Voir le fichier
                               </a>
-                            </div>
                           )}
                         </div>
-                      ))}
-                    </div>
+                  ))
                   )}
                 </div>
-              </>
             )}
 
             {activeSection === 'medical-reports' && (
@@ -1320,98 +1947,6 @@ const PatientDashboard = () => {
                       ))}
                     </div>
                   )}
-                </div>
-              </>
-            )}
-
-            {activeSection === 'hospital-appointment' && (
-              <>
-                <h2>🏥 Rendez-vous Hôpital</h2>
-                <div className="hospital-appointment-section">
-                  <form onSubmit={handleHospitalAppointmentSubmit} className="hospital-form">
-                    <div className="form-group" style={styles.formGroup}>
-                      <label style={styles.label}>Région :</label>
-                      <select 
-                        value={selectedRegion} 
-                        onChange={(e) => setSelectedRegion(e.target.value)}
-                        required
-                        style={styles.select}
-                      >
-                        <option value="">Sélectionnez une région</option>
-                        {regions.map(region => (
-                          <option key={region} value={region}>
-                            {region}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="form-group" style={styles.formGroup}>
-                      <label style={styles.label}>Spécialité :</label>
-                      <select 
-                        value={selectedSpecialty} 
-                        onChange={(e) => setSelectedSpecialty(e.target.value)}
-                        required
-                        style={styles.select}
-                      >
-                        <option value="">Sélectionnez une spécialité</option>
-                        {specialties.map(specialty => (
-                          <option key={specialty} value={specialty}>
-                            {specialty}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="form-group" style={styles.formGroup}>
-                      <label style={styles.label}>Hôpital :</label>
-                      <select 
-                        value={selectedHospital} 
-                        onChange={(e) => setSelectedHospital(e.target.value)}
-                        required
-                        style={styles.select}
-                      >
-                        <option value="">Sélectionnez un hôpital</option>
-                        {hospitals
-                          .filter(hospital => 
-                            (!selectedRegion || hospital.region === selectedRegion)
-                          )
-                          .map(hospital => (
-                            <option key={hospital._id} value={hospital._id}>
-                              {hospital.nom} - {hospital.adresse}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <button type="submit" className="submit-btn">
-                      Demander un rendez-vous
-                    </button>
-                  </form>
-
-                  <div className="hospital-appointments-list">
-                    <h3>Mes demandes de rendez-vous</h3>
-                    {hospitalAppointments.length === 0 ? (
-                      <p>Aucune demande de rendez-vous en cours.</p>
-                    ) : (
-                      <div className="appointments-grid">
-                        {hospitalAppointments.map((apt) => (
-                          <div key={apt._id} className="appointment-card">
-                            <h4>{apt.hospitalId?.nom || "Hôpital"}</h4>
-                            <p>📍 {apt.hospitalId?.adresse || "Adresse non spécifiée"}</p>
-                            <p>👨‍⚕️ Spécialité : {apt.specialty}</p>
-                            <p className={`status ${apt.status}`}>
-                              {apt.status === 'confirmed' ? 'Confirmé' : 
-                               apt.status === 'pending' ? 'En attente' : 'Annulé'}
-                            </p>
-                            <p className="created-date">
-                              Demande effectuée le : {new Date(apt.createdAt).toLocaleDateString('fr-FR')}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
                 </div>
               </>
             )}
