@@ -3361,19 +3361,28 @@ const DoctorDashboard = () => {
         <nav>
           <ul>
             <li>
-              <Link to="/doctor/profile">👤 Mon Profil</Link>
+              <Link to="/doctor-dashboard">👤 Mon Profil</Link>
             </li>
             <li>
-              <Link to="/doctor/appointments">📅 Rendez-vous</Link>
+              <Link to="/doctor-dashboard/calendar">📅 Calendrier</Link>
             </li>
             <li>
-              <Link to="/doctor/patients">👥 Mes Patients</Link>
+              <Link to="/doctor-dashboard/pending-appointments">⏳ Demandes en attente</Link>
             </li>
             <li>
-              <Link to="/doctor/messages">💬 Messagerie</Link>
+              <Link to="/doctor-dashboard/upcoming-appointments">📋 Rendez-vous à venir</Link>
             </li>
             <li>
-              <Link to="/doctor/articles">📚 Articles</Link>
+              <Link to="/doctor-dashboard/past-appointments">📚 Historique</Link>
+            </li>
+            <li>
+              <Link to="/doctor-dashboard/messages">💬 Messagerie</Link>
+            </li>
+            <li>
+              <Link to="/doctor-dashboard/medical-reports">📄 Rapports Médicaux</Link>
+            </li>
+            <li>
+              <Link to="/doctor-dashboard/articles">📝 Articles</Link>
             </li>
             <li>
               <button 
