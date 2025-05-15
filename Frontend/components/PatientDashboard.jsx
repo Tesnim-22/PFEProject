@@ -256,6 +256,12 @@ const PatientDashboard = () => {
     hospitals: true
   });
 
+  const [expandedAppointmentSections, setExpandedAppointmentSections] = useState({
+    medical: false,
+    laboratory: false,
+    hospital: false
+  });
+
   const [expandedContacts, setExpandedContacts] = useState({});
 
   // Liste des régions de la Tunisie
@@ -960,94 +966,103 @@ const PatientDashboard = () => {
     }));
   };
 
+  // Ajouter cette nouvelle fonction
+  const toggleAppointmentSection = (section) => {
+    setExpandedAppointmentSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
   return (
     <div className="dashboard-wrapper">
       <aside className="sidebar">
         <div className="sidebar-header">
           <div className="user-info">
-            <span className="user-icon">👤</span>
-            <span className="user-role">Patient</span>
+            <div className="user-icon">👤</div>
+            <div>
+              <div className="user-role">Espace Patient</div>
+              <div className="user-name">
+                {profile.nom} {profile.prenom}
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="sidebar-menu">
+        <nav className="sidebar-menu">
           <div className="menu-group">
-            <div className="menu-group-title">Profil</div>
+            <div className="menu-group-title">Principal</div>
             <button 
               className={activeSection === 'profile' ? 'active' : ''} 
               onClick={() => setActiveSection('profile')}
             >
-              <span className="icon">👤</span>
-              Mon Profil
+              <div className="icon">👤</div>
+              Profil
             </button>
-            {/* <button 
-              className={activeSection === 'documents' ? 'active' : ''} 
-              onClick={() => setActiveSection('documents')}
+            <button 
+              className={activeSection === 'all-appointments' ? 'active' : ''} 
+              onClick={() => setActiveSection('all-appointments')}
             >
-              <span className="icon">📄</span>
-              Documents Médicaux
-            </button> */}
+              <div className="icon">📋</div>
+              Rendez-vous
+            </button>
           </div>
 
           <div className="menu-group">
             <div className="menu-group-title">Rendez-vous</div>
             <button 
-              className={activeSection === 'all-appointments' ? 'active' : ''} 
-              onClick={() => setActiveSection('all-appointments')}
-            >
-              <span className="icon">📋</span>
-              Tous mes rendez-vous
-            </button>
-            <button 
               className={activeSection === 'new-appointment' ? 'active' : ''} 
               onClick={() => setActiveSection('new-appointment')}
             >
-              <span className="icon">📅</span>
-              Nouveau Rendez-vous
+              <div className="icon">➕</div>
+              Nouveau RDV
             </button>
           </div>
 
           <div className="menu-group">
-            <div className="menu-group-title">Résultats & Communication</div>
+            <div className="menu-group-title">Suivi médical</div>
             <button 
               className={activeSection === 'medical-reports' ? 'active' : ''} 
               onClick={() => setActiveSection('medical-reports')}
             >
-              <span className="icon">📋</span>
-              Rapports Médicaux
+              <div className="icon">📋</div>
+              Rapports
             </button>
             <button 
               className={activeSection === 'lab-results' ? 'active' : ''} 
               onClick={() => setActiveSection('lab-results')}
             >
-              <span className="icon">🔬</span>
-              Résultats Laboratoire
+              <div className="icon">🔬</div>
+              Analyses
             </button>
+          </div>
+
+          <div className="menu-group">
+            <div className="menu-group-title">Communication</div>
             <button 
-              className={`nav-button ${activeSection === 'messages' ? 'active' : ''}`}
+              className={`${activeSection === 'messages' ? 'active' : ''}`}
               onClick={() => setActiveSection('messages')}
             >
-              <span>💬 Messagerie</span>
+              <div className="icon">💬</div>
+              Messages
               {unreadMessages > 0 && (
-                <span className="unread-badge">
-                  {unreadMessages}
-                </span>
+                <span className="unread-badge">{unreadMessages}</span>
               )}
             </button>
             <button 
               className={activeSection === 'notifications' ? 'active' : ''} 
               onClick={() => setActiveSection('notifications')}
             >
-              <span className="icon">🔔</span>
+              <div className="icon">🔔</div>
               Notifications
             </button>
           </div>
+        </nav>
 
-          <button className="logout-button" onClick={handleLogout}>
-            <span className="icon">🚪</span>
-            Déconnexion
-          </button>
-        </div>
+        <button className="logout-button" onClick={handleLogout}>
+          <div className="icon">🚪</div>
+          Déconnexion
+        </button>
       </aside>
 
       <main className="dashboard">
@@ -1748,158 +1763,179 @@ const PatientDashboard = () => {
                 <h2>📋 Tous mes rendez-vous</h2>
                 <div className="all-appointments-section">
                   <div className="appointments-category">
-                    <h3>🏥 Rendez-vous Médecins</h3>
-                    {appointments.length === 0 ? (
-                      <p className="no-appointments-message">Aucun rendez-vous médical trouvé.</p>
-                    ) : (
-                      <div className="appointments-list">
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>Médecin</th>
-                              <th>Date</th>
-                              <th>Motif</th>
-                              <th>Statut</th>
-                              <th>Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {appointments.map(apt => (
-                              <tr key={apt._id} className={`appointment-row ${apt.status}`}>
-                                <td>{apt.doctorName}</td>
-                                <td>{new Date(apt.date).toLocaleString('fr-FR')}</td>
-                                <td>{apt.reason}</td>
-                                <td>
-                                  <span className={`status-badge ${apt.status}`}>
-                                    {apt.status === 'pending' && 'En attente'}
-                                    {apt.status === 'confirmed' && 'Confirmé'}
-                                    {apt.status === 'cancelled' && 'Annulé'}
-                                  </span>
-                                </td>
-                                <td>
-                                  <div className="appointment-actions">
-                                  {apt.status !== 'cancelled' && (
-                                      <>
-                                    <button
-                                      onClick={() => {
-                                        setSelectedAppointment(apt);
-                                        fetchChatMessages(apt._id);
-                                        setActiveSection('messages');
-                                      }}
-                                      className="chat-button"
-                                    >
-                                      💬 Chat
-                                    </button>
-                                        <button
-                                          onClick={() => handleCancelAppointment(apt._id, 'medical')}
-                                          className="cancel-button"
-                                        >
-                                          ❌ Annuler
-                                        </button>
-                                      </>
+                    <h3 
+                      onClick={() => toggleAppointmentSection('medical')}
+                      className={!expandedAppointmentSections.medical ? 'collapsed' : ''}
+                    >
+                      🏥 Rendez-vous Médecins
+                    </h3>
+                    <div className={`appointments-content ${expandedAppointmentSections.medical ? 'expanded' : ''}`}>
+                      {appointments.length === 0 ? (
+                        <p className="no-appointments-message">Aucun rendez-vous médical trouvé.</p>
+                      ) : (
+                        <div className="appointments-list">
+                          <table>
+                            <thead>
+                              <tr>
+                                <th>Médecin</th>
+                                <th>Date</th>
+                                <th>Motif</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {appointments.map(apt => (
+                                <tr key={apt._id} className={`appointment-row ${apt.status}`}>
+                                  <td>{apt.doctorName}</td>
+                                  <td>{new Date(apt.date).toLocaleString('fr-FR')}</td>
+                                  <td>{apt.reason}</td>
+                                  <td>
+                                    <span className={`status-badge ${apt.status}`}>
+                                      {apt.status === 'pending' && 'En attente'}
+                                      {apt.status === 'confirmed' && 'Confirmé'}
+                                      {apt.status === 'cancelled' && 'Annulé'}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <div className="appointment-actions">
+                                    {apt.status !== 'cancelled' && (
+                                        <>
+                                      <button
+                                        onClick={() => {
+                                          setSelectedAppointment(apt);
+                                          fetchChatMessages(apt._id);
+                                          setActiveSection('messages');
+                                        }}
+                                        className="chat-button"
+                                      >
+                                        💬 Chat
+                                      </button>
+                                          <button
+                                            onClick={() => handleCancelAppointment(apt._id, 'medical')}
+                                            className="cancel-button"
+                                          >
+                                            ❌ Annuler
+                                          </button>
+                                        </>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="appointments-category">
+                    <h3 
+                      onClick={() => toggleAppointmentSection('laboratory')}
+                      className={!expandedAppointmentSections.laboratory ? 'collapsed' : ''}
+                    >
+                      🔬 Rendez-vous Laboratoire
+                    </h3>
+                    <div className={`appointments-content ${expandedAppointmentSections.laboratory ? 'expanded' : ''}`}>
+                      {labAppointments.length === 0 ? (
+                        <p className="no-appointments-message">Aucun rendez-vous laboratoire trouvé.</p>
+                      ) : (
+                        <div className="appointments-list">
+                          <table>
+                            <thead>
+                              <tr>
+                                <th>Laboratoire</th>
+                                <th>Date</th>
+                                <th>Motif</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {labAppointments.map(apt => (
+                                <tr key={apt._id} className={`appointment-row ${apt.status}`}>
+                                  <td>{apt.lab?.nom || 'Laboratoire'}</td>
+                                  <td>{new Date(apt.date).toLocaleString('fr-FR')}</td>
+                                  <td>{apt.reason}</td>
+                                  <td>
+                                    <span className={`status-badge ${apt.status}`}>
+                                      {apt.status === 'pending' && 'En attente'}
+                                      {apt.status === 'confirmed' && 'Confirmé'}
+                                      {apt.status === 'cancelled' && 'Annulé'}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    {apt.status !== 'cancelled' && (
+                                      <button
+                                        onClick={() => handleCancelAppointment(apt._id, 'laboratory')}
+                                        className="cancel-button"
+                                      >
+                                        ❌ Annuler
+                                      </button>
                                     )}
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="appointments-category">
-                    <h3>🔬 Rendez-vous Laboratoire</h3>
-                    {labAppointments.length === 0 ? (
-                      <p className="no-appointments-message">Aucun rendez-vous laboratoire trouvé.</p>
-                    ) : (
-                      <div className="appointments-list">
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>Laboratoire</th>
-                              <th>Date</th>
-                              <th>Motif</th>
-                              <th>Statut</th>
-                              <th>Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {labAppointments.map(apt => (
-                              <tr key={apt._id} className={`appointment-row ${apt.status}`}>
-                                <td>{apt.lab?.nom || 'Laboratoire'}</td>
-                                <td>{new Date(apt.date).toLocaleString('fr-FR')}</td>
-                                <td>{apt.reason}</td>
-                                <td>
-                                  <span className={`status-badge ${apt.status}`}>
-                                    {apt.status === 'pending' && 'En attente'}
-                                    {apt.status === 'confirmed' && 'Confirmé'}
-                                    {apt.status === 'cancelled' && 'Annulé'}
-                                  </span>
-                                </td>
-                                <td>
-                                  {apt.status !== 'cancelled' && (
-                                    <button
-                                      onClick={() => handleCancelAppointment(apt._id, 'laboratory')}
-                                      className="cancel-button"
-                                    >
-                                      ❌ Annuler
-                                    </button>
-                                  )}
-                                </td>
+                    <h3 
+                      onClick={() => toggleAppointmentSection('hospital')}
+                      className={!expandedAppointmentSections.hospital ? 'collapsed' : ''}
+                    >
+                      🏥 Rendez-vous Hôpital
+                    </h3>
+                    <div className={`appointments-content ${expandedAppointmentSections.hospital ? 'expanded' : ''}`}>
+                      {hospitalAppointments.length === 0 ? (
+                        <p className="no-appointments-message">Aucun rendez-vous hospitalier trouvé.</p>
+                      ) : (
+                        <div className="appointments-list">
+                          <table>
+                            <thead>
+                              <tr>
+                                <th>Hôpital</th>
+                                <th>Date</th>
+                                <th>Service</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="appointments-category">
-                    <h3>🏥 Rendez-vous Hôpital</h3>
-                    {hospitalAppointments.length === 0 ? (
-                      <p className="no-appointments-message">Aucun rendez-vous hospitalier trouvé.</p>
-                    ) : (
-                      <div className="appointments-list">
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>Hôpital</th>
-                              <th>Date</th>
-                              <th>Service</th>
-                              <th>Statut</th>
-                              <th>Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {hospitalAppointments.map(apt => (
-                              <tr key={apt._id} className={`appointment-row ${apt.status}`}>
-                                <td>{apt.hospitalId?.nom || 'Hôpital'}</td>
-                                <td>{apt.appointmentDate ? new Date(apt.appointmentDate).toLocaleString('fr-FR') : 'Non planifié'}</td>
-                                <td>{apt.specialty}</td>
-                                <td>
-                                  <span className={`status-badge ${apt.status}`}>
-                                    {apt.status === 'pending' && 'En attente'}
-                                    {apt.status === 'confirmed' && 'Confirmé'}
-                                    {apt.status === 'cancelled' && 'Annulé'}
-                                  </span>
-                                </td>
-                                <td>
-                                  {apt.status !== 'cancelled' && (
-                                    <button
-                                      onClick={() => handleCancelAppointment(apt._id, 'hospital')}
-                                      className="cancel-button"
-                                    >
-                                      ❌ Annuler
-                                    </button>
-                                  )}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
+                            </thead>
+                            <tbody>
+                              {hospitalAppointments.map(apt => (
+                                <tr key={apt._id} className={`appointment-row ${apt.status}`}>
+                                  <td>{apt.hospitalId?.nom || 'Hôpital'}</td>
+                                  <td>{apt.appointmentDate ? new Date(apt.appointmentDate).toLocaleString('fr-FR') : 'Non planifié'}</td>
+                                  <td>{apt.specialty}</td>
+                                  <td>
+                                    <span className={`status-badge ${apt.status}`}>
+                                      {apt.status === 'pending' && 'En attente'}
+                                      {apt.status === 'confirmed' && 'Confirmé'}
+                                      {apt.status === 'cancelled' && 'Annulé'}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    {apt.status !== 'cancelled' && (
+                                      <button
+                                        onClick={() => handleCancelAppointment(apt._id, 'hospital')}
+                                        className="cancel-button"
+                                      >
+                                        ❌ Annuler
+                                      </button>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </>
