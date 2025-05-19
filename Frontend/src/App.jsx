@@ -81,7 +81,7 @@ const AppWrapper = () => {
         <Route path="/doctor-dashboard/*" element={<ProtectedRoute><DoctorDashboard /></ProtectedRoute>} />
         <Route path="/labs-dashboard" element={<ProtectedRoute><LabsDashboard /></ProtectedRoute>} />
         <Route path="/hospital-dashboard" element={<ProtectedRoute><HospitalDashboard /></ProtectedRoute>} />
-        <Route path="/cabinet-dashboard" element={<ProtectedRoute><CabinetDashboard /></ProtectedRoute>} />
+        <Route path="/cabinet-dashboard/*" element={<ProtectedRoute><CabinetDashboard /></ProtectedRoute>} />
         <Route path="/ambulancier-dashboard" element={<ProtectedRoute><AmbulancierDashboard /></ProtectedRoute>} />
         <Route path="/ambulancier/location" element={<ProtectedRoute><AmbulancierLocation /></ProtectedRoute>} />
         <Route path="/dashboard-admin" element={<ProtectedRoute><DashboardAdmin /></ProtectedRoute>} />

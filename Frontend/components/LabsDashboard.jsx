@@ -189,7 +189,12 @@ const LabsDashboard = () => {
     setChatLoading(true);
     try {
       const response = await axios.get(`${API_BASE_URL}/api/lab-doctor-messages/${currentLabId}/${doctorId}`);
-      setMessages(response.data);
+      // S'assurer que chaque message a un _id unique
+      const messagesWithIds = response.data.map(msg => ({
+        ...msg,
+        _id: msg._id || `${msg.senderId}-${Date.now()}-${Math.random()}`
+      }));
+      setMessages(messagesWithIds);
       
       // Marquer les messages comme lus
       await axios.put(`${API_BASE_URL}/api/lab-doctor-messages/read`, {
@@ -216,8 +221,21 @@ const LabsDashboard = () => {
         content: newMessage
       });
 
-      setMessages(prev => [...prev, response.data]);
+      // S'assurer que le nouveau message a toutes les propriétés nécessaires
+      const newMessageWithDetails = {
+        _id: response.data._id || Date.now().toString(), // Assure une clé unique
+        senderId: labId,
+        receiverId: selectedDoctor._id,
+        content: newMessage,
+        createdAt: response.data.createdAt || new Date().toISOString()
+      };
+
+      // Mettre à jour les messages de manière immédiate
+      setMessages(prevMessages => [...prevMessages, newMessageWithDetails]);
       setNewMessage('');
+      
+      // Rafraîchir les messages après l'envoi
+      fetchMessages(selectedDoctor._id);
     } catch (error) {
       console.error('❌ Erreur envoi message:', error);
       setError('Impossible d\'envoyer le message.');
@@ -366,6 +384,24 @@ const LabsDashboard = () => {
     } catch (error) {
       console.error('❌ Erreur envoi message:', error);
       setError('Impossible d\'envoyer le message.');
+    }
+  };
+
+  // Ajoutez ces fonctions de filtrage et de tri
+  const sortAppointments = (appointments) => {
+    return appointments.sort((a, b) => new Date(b.date) - new Date(a.date));
+  };
+
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'confirmed':
+        return { icon: '✅', text: 'Confirmé', class: 'status-confirmed' };
+      case 'pending':
+        return { icon: '⏳', text: 'En attente', class: 'status-pending' };
+      case 'cancelled':
+        return { icon: '❌', text: 'Annulé', class: 'status-cancelled' };
+      default:
+        return { icon: '❔', text: 'Inconnu', class: '' };
     }
   };
 
@@ -525,80 +561,115 @@ const LabsDashboard = () => {
 
         {activeSection === 'appointments' && (
           <div className="appointments-container">
-            <h2>📅 Rendez-vous</h2>
+            <div className="appointments-header">
+              <h2>📅 Rendez-vous</h2>
+              <div className="appointments-filters">
+                <button 
+                  className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
+                  onClick={() => setFilter('all')}
+                >
+                  🗂️ Tous
+                </button>
+                <button 
+                  className={`filter-btn ${filter === 'pending' ? 'active' : ''}`}
+                  onClick={() => setFilter('pending')}
+                >
+                  ⏳ En attente
+                </button>
+                <button 
+                  className={`filter-btn ${filter === 'confirmed' ? 'active' : ''}`}
+                  onClick={() => setFilter('confirmed')}
+                >
+                  ✅ Confirmés
+                </button>
+                <button 
+                  className={`filter-btn ${filter === 'cancelled' ? 'active' : ''}`}
+                  onClick={() => setFilter('cancelled')}
+                >
+                  ❌ Annulés
+                </button>
+              </div>
+            </div>
+
             {getFilteredAppointments().length === 0 ? (
-              <p className="no-appointments">Aucun rendez-vous trouvé.</p>
+              <div className="no-appointments">
+                <p>🔍 Aucun rendez-vous {filter !== 'all' ? `${filter}` : ''} trouvé.</p>
+              </div>
             ) : (
               <div className="appointments-grid">
-                {getFilteredAppointments().map((appointment) => (
-                  <div 
-                    key={appointment._id} 
-                    className={`appointment-card status-${appointment.status}`}
-                    onClick={() => setSelectedAppointment(
-                      selectedAppointment?._id === appointment._id ? null : appointment
-                    )}
-                  >
-                    <div className="appointment-header">
-                      <span className="appointment-date">
-                        🗓️ {formatDate(appointment.date)}
-                      </span>
-                      <span className={`status-badge ${appointment.status}`}>
-                        {appointment.status === 'confirmed' ? '✅ Confirmé' :
-                         appointment.status === 'pending' ? '⏳ En attente' : '❌ Annulé'}
-                      </span>
-                    </div>
-
-                    <div className="patient-info">
-                      <h3>👤 Patient</h3>
-                      <p>Nom: {appointment.patient?.nom} {appointment.patient?.prenom}</p>
-                      <p>📧 {appointment.patient?.email}</p>
-                      <p>📞 {appointment.patient?.telephone}</p>
-                    </div>
-
-                    <div className="appointment-details">
-                      <h4>📝 Détails de l'analyse</h4>
-                      <p>{appointment.reason}</p>
-                    </div>
-
-                    {selectedAppointment?._id === appointment._id && (
-                      <div className="appointment-actions">
-                        {appointment.status === 'pending' && (
-                          <>
-                            <button 
-                              className="confirm-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleStatusChange(appointment._id, 'confirmed');
-                              }}
-                            >
-                              ✅ Confirmer
-                            </button>
-                            <button 
-                              className="cancel-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleStatusChange(appointment._id, 'cancelled');
-                              }}
-                            >
-                              ❌ Annuler
-                            </button>
-                          </>
-                        )}
-                        {appointment.status === 'confirmed' && (
-                          <button 
-                            className="send-results-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSendResults(appointment);
-                            }}
-                          >
-                            📄 Envoyer les résultats
-                          </button>
-                        )}
+                {sortAppointments(getFilteredAppointments()).map((appointment) => {
+                  const status = getStatusLabel(appointment.status);
+                  return (
+                    <div 
+                      key={appointment._id} 
+                      className={`appointment-card ${status.class}`}
+                    >
+                      <div className="appointment-header">
+                        <div className="appointment-date">
+                          <div className="date-primary">
+                            {new Date(appointment.date).toLocaleDateString('fr-FR', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric'
+                            })}
+                          </div>
+                          <div className="date-secondary">
+                            {new Date(appointment.date).toLocaleTimeString('fr-FR', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
+                        </div>
+                        <span className={`status-badge ${appointment.status}`}>
+                          {status.icon} {status.text}
+                        </span>
                       </div>
-                    )}
-                  </div>
-                ))}
+
+                      <div className="appointment-body">
+                        <div className="patient-info">
+                          <h4>👤 Patient</h4>
+                          <p className="patient-name">{appointment.patient?.nom} {appointment.patient?.prenom}</p>
+                          <p className="patient-contact">
+                            <span>📧 {appointment.patient?.email}</span>
+                            <span>📞 {appointment.patient?.telephone}</span>
+                          </p>
+                        </div>
+
+                        <div className="appointment-details">
+                          <h4>📝 Motif</h4>
+                          <p>{appointment.reason}</p>
+                        </div>
+
+                        <div className="appointment-actions">
+                          {appointment.status === 'pending' && (
+                            <>
+                              <button 
+                                className="action-btn confirm"
+                                onClick={() => handleStatusChange(appointment._id, 'confirmed')}
+                              >
+                                ✅ Confirmer
+                              </button>
+                              <button 
+                                className="action-btn cancel"
+                                onClick={() => handleStatusChange(appointment._id, 'cancelled')}
+                              >
+                                ❌ Annuler
+                              </button>
+                            </>
+                          )}
+                          {appointment.status === 'confirmed' && (
+                            <button 
+                              className="action-btn results"
+                              onClick={() => handleSendResults(appointment)}
+                            >
+                              📄 Envoyer les résultats
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -635,12 +706,15 @@ const LabsDashboard = () => {
                     ) : (
                       messages.map(message => (
                         <div
-                          key={message._id}
+                          key={message._id || `${message.senderId}-${Date.now()}`}
                           className={`message ${message.senderId === currentLabId ? 'sent' : 'received'}`}
                         >
                           <div className="message-content">{message.content}</div>
                           <div className="message-time">
-                            {new Date(message.createdAt).toLocaleTimeString()}
+                            {message.createdAt ? new Date(message.createdAt).toLocaleTimeString('fr-FR', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            }) : ''}
                           </div>
                         </div>
                       ))
@@ -706,7 +780,7 @@ const LabsDashboard = () => {
                         >
                           <div className="message-content">{message.content}</div>
                           <div className="message-time">
-                            {new Date(message.createdAt).toLocaleTimeString()}
+                            {message.createdAt ? new Date(message.createdAt).toLocaleTimeString('fr-FR') : ''}
                           </div>
                         </div>
                       ))

@@ -45,11 +45,12 @@ const Login = () => {
         }
 
         // ➡️ Connexion acceptée
+        localStorage.setItem('token', data.token);
         localStorage.setItem('userRole', data.role);
         localStorage.setItem('userId', data.userId);
         localStorage.setItem('email', data.email);
         localStorage.setItem('loggedIn', 'true');
-        localStorage.setItem('profileCompleted', data.profileCompleted); // 👈 ajoute cette ligne
+        localStorage.setItem('profileCompleted', data.profileCompleted);
         
 
         if (!data.profileCompleted) {

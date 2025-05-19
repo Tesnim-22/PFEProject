@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Link, Routes, Route, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Calendar from 'react-calendar';
@@ -25,10 +25,10 @@ const UnifiedMessagesView = () => {
 
   useEffect(() => {
     if (selectedConversation) {
-      if (selectedConversation.type === 'patient') {
+      if (selectedConversation.type === 'Patient') {
         fetchPatientMessages(selectedConversation.id);
-      } else {
-        fetchLabMessages(selectedConversation.labId);
+      } else if (selectedConversation.type === 'Labs') {
+        fetchLabMessages(selectedConversation.id);
       }
     }
   }, [selectedConversation]);
@@ -42,21 +42,30 @@ const UnifiedMessagesView = () => {
   const fetchAllConversations = async () => {
     try {
       setLoading(true);
+      
       // Récupérer les rendez-vous pour les conversations patients
       const appointmentsRes = await axios.get(`http://localhost:5001/api/doctor/appointments/${doctorId}`);
       
       // Grouper les rendez-vous par patient
       const patientGroups = appointmentsRes.data.reduce((acc, apt) => {
+        // Vérifier si l'objet patient existe et a un _id
+        if (!apt.patient || !apt.patient._id) {
+          console.warn('Rendez-vous sans données patient valides:', apt);
+          return acc;
+        }
+
         const patientId = apt.patient._id;
         if (!acc[patientId]) {
           acc[patientId] = {
             id: patientId,
-            type: 'patient',
-            contact: apt.patient,
+            type: 'Patient',
+            contact: {
+              ...apt.patient,
+              roles: ['Patient']
+            },
             appointments: [],
             lastMessage: null,
-            date: null,
-            unreadCount: 0
+            date: null
           };
         }
         acc[patientId].appointments.push(apt);
@@ -71,18 +80,21 @@ const UnifiedMessagesView = () => {
 
       // Récupérer les laboratoires pour les conversations labo
       const labsRes = await axios.get('http://localhost:5001/api/labs-valides');
-      const labConversations = labsRes.data.map(lab => ({
-        id: lab._id,
-        type: 'lab',
-        labId: lab._id,
-        contact: {
-          nom: lab.nom,
-          email: lab.email,
-          telephone: lab.telephone,
-          adresse: lab.adresse
-        },
-        unreadCount: 0
-      }));
+      const labConversations = labsRes.data
+        .filter(lab => lab && lab._id && lab.roles && lab.roles.includes('Labs'))
+        .map(lab => ({
+          id: lab._id,
+          type: 'Labs',
+          contact: {
+            _id: lab._id,
+            nom: lab.nom || '',
+            prenom: lab.prenom || '',
+            email: lab.email || '',
+            telephone: lab.telephone || '',
+            adresse: lab.adresse || '',
+            roles: ['Labs']
+          }
+        }));
 
       // Combiner et trier les conversations
       const allConversations = [...patientConversations, ...labConversations]
@@ -122,17 +134,6 @@ const UnifiedMessagesView = () => {
       allMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
       setMessages(allMessages);
-      
-      // Marquer les messages comme lus
-      const unreadMessages = allMessages
-        .filter(msg => msg.receiverId === doctorId && !msg.isRead)
-        .map(msg => msg._id);
-      
-      if (unreadMessages.length > 0) {
-        await axios.put('http://localhost:5001/api/messages/read', {
-          messageIds: unreadMessages
-        });
-      }
     } catch (error) {
       console.error('Erreur récupération messages patient:', error);
       setError('Erreur lors du chargement des messages');
@@ -146,12 +147,6 @@ const UnifiedMessagesView = () => {
       setLoading(true);
       const response = await axios.get(`http://localhost:5001/api/lab-doctor-messages/${labId}/${doctorId}`);
       setMessages(response.data);
-      
-      // Marquer les messages comme lus
-      await axios.put(`http://localhost:5001/api/lab-doctor-messages/read`, {
-        receiverId: doctorId,
-        senderId: labId
-      });
     } catch (error) {
       console.error('Erreur récupération messages laboratoire:', error);
       setError('Erreur lors du chargement des messages');
@@ -168,10 +163,19 @@ const UnifiedMessagesView = () => {
       setLoading(true);
       let response;
 
-      if (selectedConversation.type === 'patient') {
+      if (selectedConversation.type === 'Patient') {
         // Pour les patients, utiliser le rendez-vous le plus récent
         const latestAppointment = selectedConversation.appointments
           .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+
+        if (!latestAppointment) {
+          setError('Aucun rendez-vous trouvé pour ce patient');
+          setLoading(false);
+          return;
+        }
+
+        console.log('Latest appointment:', latestAppointment);
+        console.log('Sending message with appointmentId:', latestAppointment._id);
 
         const messageData = {
           senderId: doctorId,
@@ -179,11 +183,13 @@ const UnifiedMessagesView = () => {
           appointmentId: latestAppointment._id,
           content: newMessage
         };
+
+        console.log('Sending message data:', messageData);
         response = await axios.post('http://localhost:5001/api/messages', messageData);
-      } else {
+      } else if (selectedConversation.type === 'Labs') {
         response = await axios.post('http://localhost:5001/api/lab-doctor-messages', {
           senderId: doctorId,
-          receiverId: selectedConversation.labId,
+          receiverId: selectedConversation.id,
           content: newMessage
         });
       }
@@ -213,8 +219,8 @@ const UnifiedMessagesView = () => {
 
   const filteredConversations = conversations.filter(conv => {
     if (activeTab === 'all') return true;
-    if (activeTab === 'patients') return conv.type === 'patient';
-    if (activeTab === 'labs') return conv.type === 'lab';
+    if (activeTab === 'patients') return conv.type === 'Patient';
+    if (activeTab === 'labs') return conv.type === 'Labs';
     return true;
   });
 
@@ -255,7 +261,7 @@ const UnifiedMessagesView = () => {
                 backgroundColor: activeTab === 'all' ? 'white' : 'transparent',
                 cursor: 'pointer',
                 boxShadow: activeTab === 'all' ? '0 2px 4px rgba(0, 0, 0, 0.1)' : 'none',
-                color: '#000000'  // Ajout de la couleur noire pour le texte
+                color: '#000000'
               }}
             >
               Tous
@@ -270,8 +276,7 @@ const UnifiedMessagesView = () => {
                 backgroundColor: activeTab === 'patients' ? 'white' : 'transparent',
                 cursor: 'pointer',
                 boxShadow: activeTab === 'patients' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
-                color: '#000000'  // Ajout de la couleur noire pour le texte
-
+                color: '#000000'
               }}
             >
               Patients
@@ -286,7 +291,7 @@ const UnifiedMessagesView = () => {
                 backgroundColor: activeTab === 'labs' ? 'white' : 'transparent',
                 cursor: 'pointer',
                 boxShadow: activeTab === 'labs' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
-                color: '#000000'  // Ajout de la couleur noire pour le texte
+                color: '#000000'
               }}
             >
               Labos
@@ -320,54 +325,36 @@ const UnifiedMessagesView = () => {
                   cursor: 'pointer',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                   transition: 'all 0.2s ease',
-                  color: '#000000'  // Ajout de la couleur noire pour le texte
+                  color: '#000000'
                 }}
               >
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '10px',
-                  color: '#000000'  // Ajout de la couleur noire pour le texte
+                  color: '#000000'
                 }}>
                   <div style={{
                     width: '40px',
                     height: '40px',
                     borderRadius: '50%',
-                    backgroundColor: conv.type === 'patient' ? '#bbdefb' : '#c8e6c9',
+                    backgroundColor: conv.type === 'Patient' ? '#bbdefb' : '#c8e6c9',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontSize: '1.2rem',
-                    color: '#000000'  // Ajout de la couleur noire pour le texte
+                    color: '#000000'
                   }}>
-                    {conv.type === 'patient' ? '👤' : '🔬'}
+                    {conv.type === 'Patient' ? '👤' : '🔬'}
                   </div>
                   <div style={{ flex: 1 }}>
                     <h4 style={{ margin: '0', fontSize: '1rem' }}>
-                      {conv.type === 'patient' 
-                        ? `${conv.contact?.prenom} ${conv.contact?.nom}`
-                        : conv.contact?.nom}
+                      {`${conv.contact?.prenom || ''} ${conv.contact?.nom || ''}`}
                     </h4>
                     <small style={{ color: '#666' }}>
-                      {conv.type === 'patient' ? '👤 Patient' : '🔬 Laboratoire'}
+                      {conv.type === 'Patient' ? '👤 Patient' : '🔬 Laboratoire'}
                     </small>
                   </div>
-                  {conv.unreadCount > 0 && (
-                    <div style={{
-                      backgroundColor: '#f44336',
-                      color: 'white',
-                      borderRadius: '50%',
-                      width: '20px',
-                      height: '20px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.8rem',
-                      color: '#000000'  // Ajout de la couleur noire pour le texte
-                    }}>
-                      {conv.unreadCount}
-                    </div>
-                  )}
                 </div>
               </div>
             ))
@@ -397,22 +384,20 @@ const UnifiedMessagesView = () => {
                   width: '40px',
                   height: '40px',
                   borderRadius: '50%',
-                  backgroundColor: selectedConversation.type === 'patient' ? '#bbdefb' : '#c8e6c9',
+                  backgroundColor: selectedConversation.type === 'Patient' ? '#bbdefb' : '#c8e6c9',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontSize: '1.2rem'
                 }}>
-                  {selectedConversation.type === 'patient' ? '👤' : '🔬'}
+                  {selectedConversation.type === 'Patient' ? '👤' : '🔬'}
                 </div>
                 <div>
                   <h3 style={{ margin: '0' }}>
-                    {selectedConversation.type === 'patient'
-                      ? `${selectedConversation.contact?.prenom} ${selectedConversation.contact?.nom}`
-                      : selectedConversation.contact?.nom}
+                    {`${selectedConversation.contact?.prenom || ''} ${selectedConversation.contact?.nom || ''}`}
                   </h3>
                   <p style={{ margin: '5px 0 0 0', color: '#666' }}>
-                    {selectedConversation.type === 'patient'
+                    {selectedConversation.type === 'Patient'
                       ? `📞 ${selectedConversation.contact?.telephone}`
                       : `📍 ${selectedConversation.contact?.adresse}`}
                   </p>
@@ -447,7 +432,7 @@ const UnifiedMessagesView = () => {
                         display: 'flex',
                         justifyContent: msg.senderId === doctorId ? 'flex-end' : 'flex-start',
                         marginBottom: '16px',
-                        color: '#000000'  // Ajout de la couleur noire pour le texte
+                        color: '#000000'
                       }}
                     >
                       <div style={{
@@ -474,7 +459,7 @@ const UnifiedMessagesView = () => {
                           justifyContent: msg.senderId === doctorId ? 'flex-end' : 'flex-start',
                           gap: '6px',
                           marginTop: '4px',
-                          color: '#000000'  // Ajout de la couleur noire pour le texte
+                          color: '#000000'
                         }}>
                           <small style={{
                             opacity: 0.85,
@@ -483,14 +468,6 @@ const UnifiedMessagesView = () => {
                           }}>
                             {formatDate(msg.createdAt)}
                           </small>
-                          {msg.senderId === doctorId && (
-                            <span style={{
-                              fontSize: '12px',
-                              opacity: msg.isRead ? 1 : 0.7
-                            }}>
-                              {msg.isRead ? '✓✓' : '✓'}
-                            </span>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -524,7 +501,7 @@ const UnifiedMessagesView = () => {
                   fontSize: '15px',
                   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
                   transition: 'border-color 0.2s ease',
-                  color: '#000000'  // Ajout de la couleur noire pour le texte de l'input
+                  color: '#000000'
                 }}
               />
               <button
@@ -2239,6 +2216,7 @@ const ArticlesView = () => {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
   const [newArticle, setNewArticle] = useState({
     title: '',
     content: '',
@@ -2251,6 +2229,16 @@ const ArticlesView = () => {
   useEffect(() => {
     fetchArticles();
   }, []);
+
+  // Effet pour effacer les messages de succès après 3 secondes
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => {
+        setSuccess(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
 
   const fetchArticles = async () => {
     try {
@@ -2288,17 +2276,35 @@ const ArticlesView = () => {
       formData.append('title', newArticle.title);
       formData.append('content', newArticle.content);
       formData.append('category', newArticle.category);
-      formData.append('tags', JSON.stringify(newArticle.tags.split(',').map(tag => tag.trim())));
       formData.append('authorId', doctorId);
+      
+      // Vérifier si les tags existent et ne sont pas vides
+      if (newArticle.tags && newArticle.tags.trim() !== '') {
+        const tagsArray = newArticle.tags.split(',').map(tag => tag.trim());
+        formData.append('tags', JSON.stringify(tagsArray));
+      }
+
+      // Vérifier si une image a été sélectionnée
       if (newArticle.image) {
         formData.append('image', newArticle.image);
       }
 
-      await axios.post('http://localhost:5001/api/articles', formData, {
+      console.log('Sending article data:', {
+        title: newArticle.title,
+        content: newArticle.content,
+        category: newArticle.category,
+        authorId: doctorId,
+        tags: newArticle.tags,
+        hasImage: !!newArticle.image
+      });
+
+      const response = await axios.post('http://localhost:5001/api/articles', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
+
+      console.log('Article created successfully:', response.data);
 
       setNewArticle({
         title: '',
@@ -2309,9 +2315,10 @@ const ArticlesView = () => {
       });
       setShowArticleForm(false);
       fetchArticles();
+      setSuccess('✅ Article publié avec succès !');
     } catch (error) {
       console.error('❌ Erreur création article:', error);
-      setError("Erreur lors de la création de l'article.");
+      setError(error.response?.data?.message || "Erreur lors de la création de l'article");
     } finally {
       setLoading(false);
     }
@@ -2348,7 +2355,33 @@ const ArticlesView = () => {
         </button>
       </div>
 
-      {error && <div className="error-message">{error}</div>}
+      {error && (
+        <div style={{
+          padding: '1rem',
+          backgroundColor: '#ffebee',
+          color: '#c62828',
+          borderRadius: '8px',
+          marginBottom: '1rem'
+        }}>
+          {error}
+        </div>
+      )}
+
+      {success && (
+        <div style={{
+          padding: '1rem',
+          backgroundColor: '#e8f5e9',
+          color: '#2e7d32',
+          borderRadius: '8px',
+          marginBottom: '1rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }}>
+          <span role="img" aria-label="success">✅</span>
+          {success}
+        </div>
+      )}
 
       {showArticleForm && (
         <div className="article-form">
@@ -2471,16 +2504,115 @@ const MedicalReportsView = () => {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [file, setFile] = useState(null);
   const [description, setDescription] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState('');
   const [reports, setReports] = useState([]);
   const doctorId = localStorage.getItem('userId');
 
+  // Utiliser useCallback pour mémoriser les fonctions
+  const fetchReports = useCallback(async () => {
+    console.log('🔄 Début fetchReports, doctorId:', doctorId);
+    
+    if (!doctorId) {
+      console.error("❌ ID du docteur non disponible");
+      setError("ID du docteur non disponible");
+      return;
+    }
+  
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('📡 Envoi requête GET pour les rapports...');
+      
+      const res = await axios.get(`http://localhost:5001/api/medical-reports/doctor/${doctorId}`);
+      console.log('📥 Données reçues du serveur:', res.data);
+      
+      if (Array.isArray(res.data)) {
+        // Filtrer les rapports invalides avant de les stocker
+        const validReports = res.data.filter(report => {
+          const isValid = report && report._id && report.patientId && report.appointmentId;
+          if (!isValid) {
+            console.log('⚠️ Rapport invalide détecté:', report);
+          }
+          return isValid;
+        });
+        
+        console.log('✅ Rapports valides à stocker:', validReports);
+        setReports(validReports);
+      } else {
+        console.error("❌ Les données reçues ne sont pas un tableau:", res.data);
+        setReports([]);
+      }
+    } catch (err) {
+      console.error("❌ Erreur lors du chargement des rapports:", err);
+      setError("Erreur lors du chargement des rapports");
+      setReports([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [doctorId]);
+
+  const fetchPatients = useCallback(async () => {
+    if (!doctorId) {
+      console.error("ID du docteur non disponible");
+      setError("ID du docteur non disponible");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await axios.get(`http://localhost:5001/api/doctor/${doctorId}/patients`);
+      setPatients(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error("Erreur lors du chargement des patients:", err);
+      setError("Erreur lors du chargement des patients");
+      setPatients([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [doctorId]);
+
+  // Utiliser useEffect avec les dépendances appropriées
   useEffect(() => {
-    fetchPatients();
-    fetchReports();
-  }, []);
+    let mounted = true;
+
+    const loadInitialData = async () => {
+      if (!doctorId) {
+        console.error("ID du docteur non disponible");
+        if (mounted) {
+          setError("ID du docteur non disponible");
+          setLoading(false);
+        }
+        return;
+      }
+
+      try {
+        if (mounted) {
+          setLoading(true);
+          setError(null);
+        }
+        await Promise.all([fetchPatients(), fetchReports()]);
+      } catch (err) {
+        console.error("Erreur lors du chargement initial:", err);
+        if (mounted) {
+          setError("Erreur lors du chargement initial des données");
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadInitialData();
+
+    // Cleanup function
+    return () => {
+      mounted = false;
+    };
+  }, [fetchPatients, fetchReports, doctorId]);
 
   useEffect(() => {
     if (selectedPatient) {
@@ -2491,56 +2623,28 @@ const MedicalReportsView = () => {
     }
   }, [selectedPatient]);
 
-  const fetchPatients = async () => {
-    try {
-      setLoading(true);
-      const res = await axios.get(`http://localhost:5001/api/doctor/${doctorId}/patients`);
-      setPatients(res.data);
-    } catch (err) {
-      setError("Erreur lors du chargement des patients");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const fetchPatientAppointments = async () => {
+    if (!selectedPatient?._id) return;
+
     try {
       setLoading(true);
       const res = await axios.get(`http://localhost:5001/api/doctor/appointments/${doctorId}`);
       const patientAppointments = res.data.filter(
-        apt => apt.patient._id === selectedPatient._id && apt.status === 'confirmed'
+        apt => apt.patient?._id === selectedPatient._id && apt.status === 'confirmed'
       );
       setAppointments(patientAppointments);
     } catch (err) {
+      console.error("Erreur lors du chargement des rendez-vous:", err);
       setError("Erreur lors du chargement des rendez-vous");
+      setAppointments([]);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchReports = async () => {
-    try {
-      const res = await axios.get(`http://localhost:5001/api/medical-reports/doctor/${doctorId}`);
-      setReports(res.data);
-    } catch (err) {
-      console.error("Erreur lors du chargement des rapports:", err);
-    }
-  };
-
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (selectedFile && (selectedFile.type === 'application/pdf' || selectedFile.type.startsWith('image/'))) {
-      setFile(selectedFile);
-      setError(null);
-    } else {
-      setError("Veuillez sélectionner un fichier PDF ou une image");
-      setFile(null);
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedAppointment || !file || !description) {
+    if (!selectedAppointment || !file || !description || !selectedPatient?._id) {
       setError("Veuillez remplir tous les champs");
       return;
     }
@@ -2563,8 +2667,10 @@ const MedicalReportsView = () => {
       setFile(null);
       setDescription('');
       setSelectedAppointment(null);
-      fetchReports(); // Rafraîchir la liste des rapports
+      // Recharger les rapports après l'ajout
+      await fetchReports();
     } catch (err) {
+      console.error("Erreur lors de l'envoi du rapport:", err);
       setError("Erreur lors de l'envoi du rapport médical");
     } finally {
       setLoading(false);
@@ -2572,7 +2678,7 @@ const MedicalReportsView = () => {
   };
 
   const handleDelete = async (reportId) => {
-    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce rapport ?')) {
+    if (!reportId || !window.confirm('Êtes-vous sûr de vouloir supprimer ce rapport ?')) {
       return;
     }
 
@@ -2580,10 +2686,11 @@ const MedicalReportsView = () => {
       setLoading(true);
       await axios.delete(`http://localhost:5001/api/medical-reports/${reportId}`);
       setSuccess('Rapport supprimé avec succès');
-      fetchReports(); // Rafraîchir la liste des rapports
+      // Recharger les rapports après la suppression
+      await fetchReports();
     } catch (err) {
+      console.error('Erreur lors de la suppression du rapport:', err);
       setError('Erreur lors de la suppression du rapport');
-      console.error('Erreur:', err);
     } finally {
       setLoading(false);
     }
@@ -2606,6 +2713,8 @@ const MedicalReportsView = () => {
       margin: '0 auto',
       color: '#000000'
     }}>
+      {console.log('🎯 État actuel - patients:', patients, 'selectedPatient:', selectedPatient)}
+      
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -2624,19 +2733,16 @@ const MedicalReportsView = () => {
         </h2>
       </div>
 
+     
       {error && (
         <div style={{
           padding: '1rem',
           backgroundColor: '#ffebee',
           color: '#c62828',
           borderRadius: '8px',
-          marginBottom: '1rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem'
+          marginBottom: '1rem'
         }}>
-          <span role="img" aria-label="error">⚠️</span>
-          {error}
+          <span role="img" aria-label="error">⚠️</span> {error}
         </div>
       )}
 
@@ -2646,13 +2752,9 @@ const MedicalReportsView = () => {
           backgroundColor: '#e8f5e9',
           color: '#2e7d32',
           borderRadius: '8px',
-          marginBottom: '1rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem'
+          marginBottom: '1rem'
         }}>
-          <span role="img" aria-label="success">✅</span>
-          {success}
+          <span role="img" aria-label="success">✅</span> {success}
         </div>
       )}
 
@@ -2690,31 +2792,28 @@ const MedicalReportsView = () => {
               }}>
                 Patient
               </label>
-              <select 
-                value={selectedPatient ? selectedPatient._id : ''} 
-                onChange={(e) => {
-                  const patient = patients.find(p => p._id === e.target.value);
-                  setSelectedPatient(patient);
-                  setSelectedAppointment(null);
-                }}
-                required
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  borderRadius: '8px',
-                  border: '1px solid #e0e0e0',
-                  backgroundColor: 'white',
-                  fontSize: '1rem'
-                }}
-              >
-                <option value="">Sélectionnez un patient</option>
-                {patients.map(patient => (
-                  <option key={patient._id} value={patient._id}>
-                    {patient.prenom} {patient.nom}
-                  </option>
-                ))}
-              </select>
-            </div>
+              <select
+            value={selectedPatient ? selectedPatient._id : ''}
+            onChange={(e) => {
+              const patient = patients.find(p => p._id === e.target.value);
+              setSelectedPatient(patient || null);
+              setSelectedAppointment(null);
+            }}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              borderRadius: '4px',
+              border: '1px solid #ccc'
+            }}
+          >
+            <option value="">Sélectionnez un patient</option>
+            {patients.map(patient => (
+              <option key={patient._id} value={patient._id}>
+                {patient.nom} {patient.prenom}
+              </option>
+            ))}
+          </select>
+        </div>
 
             {selectedPatient && (
               <div className="form-group" style={{ marginBottom: '1.5rem' }}>
@@ -2770,7 +2869,7 @@ const MedicalReportsView = () => {
               <input 
                 type="file" 
                 accept=".pdf,image/*" 
-                onChange={handleFileChange}
+                onChange={(e) => setFile(e.target.files[0])}
                 required 
                   style={{
                     display: 'none'
@@ -2860,7 +2959,7 @@ const MedicalReportsView = () => {
             Rapports récents
           </h3>
 
-          {loading && reports.length === 0 ? (
+          {loading ? (
             <div style={{
               textAlign: 'center',
               padding: '2rem',
@@ -2883,83 +2982,92 @@ const MedicalReportsView = () => {
               display: 'grid',
               gap: '1rem'
             }}>
-              {reports.map(report => (
-                <div 
-                  key={report._id} 
-                  style={{
-                    backgroundColor: '#f8f9fa',
-                    borderRadius: '8px',
-                    padding: '1rem',
-                    border: '1px solid #e0e0e0'
-                  }}
-                >
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '0.5rem'
-                  }}>
-                    <h4 style={{ margin: 0, color: '#00796b' }}>
-                      Patient: {report.patientId?.prenom} {report.patientId?.nom}
-                    </h4>
-                    <span style={{ color: '#666', fontSize: '0.9rem' }}>
-                      {formatDate(report.createdAt)}
-                    </span>
-                </div>
+              {reports.map(report => {
+                if (!report || !report._id) return null; // Skip invalid reports
 
-                  <p style={{
-                    margin: '0.5rem 0',
-                    color: '#333'
-                  }}>
-                    {report.description}
-                  </p>
+                // Vérifier si patientId existe et a les propriétés nécessaires
+                const patientName = report.patientId 
+                  ? `${report.patientId.prenom || ''} ${report.patientId.nom || ''}`
+                  : 'Patient inconnu';
+                
+                return (
+                  <div 
+                    key={report._id} 
+                    style={{
+                      backgroundColor: '#f8f9fa',
+                      borderRadius: '8px',
+                      padding: '1rem',
+                      border: '1px solid #e0e0e0'
+                    }}
+                  >
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '0.5rem'
+                    }}>
+                      <h4 style={{ margin: 0, color: '#00796b' }}>
+                        Patient: {patientName}
+                      </h4>
+                      <span style={{ color: '#666', fontSize: '0.9rem' }}>
+                        {formatDate(report.createdAt)}
+                      </span>
+                    </div>
 
-                  <div style={{
-                    display: 'flex',
-                    gap: '0.5rem',
-                    marginTop: '1rem'
-                  }}>
-                  <a 
-                    href={`http://localhost:5001/${report.fileUrl}`} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                      style={{
-                        padding: '0.5rem 1rem',
-                        backgroundColor: '#00796b',
-                        color: 'white',
-                        textDecoration: 'none',
-                        borderRadius: '4px',
-                        fontSize: '0.9rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem'
-                      }}
-                    >
-                      <span role="img" aria-label="view">👁️</span>
-                      Voir le rapport
-                  </a>
-                  <button 
-                    onClick={() => handleDelete(report._id)}
-                    disabled={loading}
-                      style={{
-                        padding: '0.5rem 1rem',
-                        backgroundColor: '#ffebee',
-                        color: '#c62828',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '0.9rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem'
-                      }}
-                    >
-                      <span role="img" aria-label="delete">🗑️</span>
-                      Supprimer
-                  </button>
-                </div>
-              </div>
-              ))}
+                    <p style={{
+                      margin: '0.5rem 0',
+                      color: '#333'
+                    }}>
+                      {report.description}
+                    </p>
+
+                    <div style={{
+                      display: 'flex',
+                      gap: '0.5rem',
+                      marginTop: '1rem'
+                    }}>
+                      <a 
+                        href={`http://localhost:5001/${report.fileUrl}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        style={{
+                          padding: '0.5rem 1rem',
+                          backgroundColor: '#00796b',
+                          color: 'white',
+                          textDecoration: 'none',
+                          borderRadius: '4px',
+                          fontSize: '0.9rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem'
+                        }}
+                      >
+                        <span role="img" aria-label="view">👁️</span>
+                        Voir le rapport
+                      </a>
+                      <button 
+                        onClick={() => handleDelete(report._id)}
+                        disabled={loading}
+                        style={{
+                          padding: '0.5rem 1rem',
+                          backgroundColor: '#ffebee',
+                          color: '#c62828',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '0.9rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem'
+                        }}
+                      >
+                        <span role="img" aria-label="delete">🗑️</span>
+                        Supprimer
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -3013,7 +3121,7 @@ const ProfileView = () => {
       const previewUrl = URL.createObjectURL(file);
       setEditedInfo(prev => ({
         ...prev,
-        photoUrl: previewUrl
+        tempPhotoUrl: previewUrl // Utiliser une URL temporaire pour l'aperçu
       }));
     }
   };
@@ -3022,16 +3130,39 @@ const ProfileView = () => {
     e.preventDefault();
     try {
       setLoading(true);
+      setError(null);
       
       // Si un nouvel avatar a été sélectionné, l'uploader d'abord
       if (avatar) {
         const formData = new FormData();
         formData.append('avatar', avatar);
-        const uploadResponse = await axios.post(`http://localhost:5001/api/users/${doctorId}/avatar`, formData);
-        editedInfo.photoUrl = uploadResponse.data.photoUrl;
+        
+        try {
+          const uploadResponse = await axios.post(
+            `http://localhost:5001/api/users/${doctorId}/avatar`,
+            formData,
+            {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
+            }
+          );
+          
+          // Mettre à jour le champ photo avec le chemin retourné par le serveur
+          editedInfo.photo = uploadResponse.data.photo;
+        } catch (uploadError) {
+          console.error('Erreur upload avatar:', uploadError);
+          setError('Erreur lors de l\'upload de l\'avatar');
+          setLoading(false);
+          return;
+        }
       }
 
-      const response = await axios.put(`http://localhost:5001/api/users/${doctorId}`, editedInfo);
+      // Supprimer l'URL temporaire avant d'envoyer les données
+      const dataToSend = { ...editedInfo };
+      delete dataToSend.tempPhotoUrl;
+
+      const response = await axios.put(`http://localhost:5001/api/users/${doctorId}`, dataToSend);
       setDoctorInfo(response.data);
       setIsEditing(false);
       setSuccess('Profil mis à jour avec succès !');
@@ -3093,9 +3224,15 @@ const ProfileView = () => {
           {isEditing ? (
             <div className="avatar-upload">
               <img 
-                src={editedInfo.photoUrl || 'default-avatar.png'} 
+                src={editedInfo.tempPhotoUrl || (editedInfo.photo ? `http://localhost:5001${editedInfo.photo}` : '/default-avatar.png')}
                 alt="Avatar"
                 className="avatar-preview"
+                style={{
+                  width: '150px',
+                  height: '150px',
+                  borderRadius: '50%',
+                  objectFit: 'cover'
+                }}
               />
               <label className="avatar-upload-btn">
                 📸 Changer la photo
@@ -3109,9 +3246,15 @@ const ProfileView = () => {
             </div>
           ) : (
             <img 
-              src={doctorInfo.photoUrl || 'default-avatar.png'} 
+              src={doctorInfo.photo ? `http://localhost:5001${doctorInfo.photo}` : '/default-avatar.png'}
               alt="Avatar"
               className="avatar-image"
+              style={{
+                width: '150px',
+                height: '150px',
+                borderRadius: '50%',
+                objectFit: 'cover'
+              }}
             />
           )}
         </div>
@@ -3321,33 +3464,7 @@ const ProfileView = () => {
 };
 
 const DoctorDashboard = () => {
-  const [unreadMessages, setUnreadMessages] = useState(0);
   const navigate = useNavigate();
-
-  const checkUnreadMessages = async () => {
-    try {
-      const doctorId = localStorage.getItem('userId');
-      if (!doctorId) {
-        console.log("⚠️ Pas d'userId disponible pour vérifier les messages non lus");
-        return;
-      }
-      console.log("🔍 Vérification des messages non lus pour doctorId:", doctorId);
-      const response = await axios.get(`http://localhost:5001/api/messages/unread/${doctorId}`);
-      console.log("✅ Messages non lus reçus:", response.data);
-      setUnreadMessages(response.data.length);
-    } catch (error) {
-      console.error('❌ Erreur vérification messages non lus:', error);
-    }
-  };
-
-  useEffect(() => {
-    const doctorId = localStorage.getItem('userId');
-    if (doctorId) {
-      checkUnreadMessages();
-      const interval = setInterval(checkUnreadMessages, 900000); // Vérification toutes les 15 minutes
-      return () => clearInterval(interval);
-    }
-  }, []);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -3361,28 +3478,28 @@ const DoctorDashboard = () => {
         <nav>
           <ul>
             <li>
-              <Link to="/doctor-dashboard">👤 Mon Profil</Link>
+              <Link to="">👤 Mon Profil</Link>
             </li>
             <li>
-              <Link to="/doctor-dashboard/calendar">📅 Calendrier</Link>
+              <Link to="calendar">📅 Calendrier</Link>
             </li>
             <li>
-              <Link to="/doctor-dashboard/pending-appointments">⏳ Demandes en attente</Link>
+              <Link to="upcoming-appointments">📅 Rendez-vous à venir</Link>
+            </li>
+            {/* <li>
+              <Link to="pending-appointments">⏳ Demandes en attente</Link>
+            </li> */}
+            <li>
+              <Link to="past-appointments">📚 Historique</Link>
             </li>
             <li>
-              <Link to="/doctor-dashboard/upcoming-appointments">📋 Rendez-vous à venir</Link>
+              <Link to="messages">💬 Messagerie</Link>
             </li>
             <li>
-              <Link to="/doctor-dashboard/past-appointments">📚 Historique</Link>
+              <Link to="medical-reports">📋 Rapports Médicaux</Link>
             </li>
             <li>
-              <Link to="/doctor-dashboard/messages">💬 Messagerie</Link>
-            </li>
-            <li>
-              <Link to="/doctor-dashboard/medical-reports">📄 Rapports Médicaux</Link>
-            </li>
-            <li>
-              <Link to="/doctor-dashboard/articles">📝 Articles</Link>
+              <Link to="articles">📚 Articles</Link>
             </li>
             <li>
               <button 

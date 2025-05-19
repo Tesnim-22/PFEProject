@@ -10,6 +10,8 @@ const fs = require('fs');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const { generateToken } = require('./config/jwt');
+const auth = require('./middlewares/auth');
 
 // ❗ Correction ici
 const Appointment = require('./models/Appointment');
@@ -41,6 +43,10 @@ app.options('*', cors({
 
 // middlewares
 app.use(express.json());
+
+// Configurer les dossiers statiques
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads/lab-results', express.static(path.join(__dirname, 'uploads', 'lab-results')));
 
 // 🟰 Tu pourras ensuite continuer ici avec ta logique MongoDB, schemas, etc.
 
@@ -229,19 +235,11 @@ const notificationSchema = new mongoose.Schema({
 app.get('/api/patient/medical-documents/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
-        let patient = await Patient.findOne({ userId });
+        const patient = await Patient.findOne({ userId });
 
-        // Si le patient n'existe pas, on le crée
         if (!patient) {
-            const user = await User.findById(userId);
-            if (!user) {
-                return res.status(404).json({ message: "Utilisateur non trouvé." });
-            }
-            patient = new Patient({
-                userId: user._id,
-                medicalDocuments: []
-            });
-            await patient.save();
+            console.log('❌ Patient non trouvé pour userId:', userId);
+            return res.status(404).json({ message: "Patient non trouvé." });
         }
 
         console.log('✅ Documents médicaux trouvés:', patient.medicalDocuments);
@@ -265,25 +263,30 @@ app.post('/api/patient/medical-documents/:userId', uploadMedicalDoc.single('docu
         let patient = await Patient.findOne({ userId });
 
         if (!patient) {
+            // Si le patient n'existe pas, on le crée
+            const user = await User.findById(userId);
+            if (!user) {
+                return res.status(404).json({ message: "Utilisateur non trouvé." });
+            }
+
             patient = new Patient({
-                userId,
+                userId: user._id,
                 medicalDocuments: []
             });
         }
 
-        const newDocument = {            fileName: req.file.originalname,
+        patient.medicalDocuments.push({
+            fileName: req.file.originalname,
             fileType: req.file.mimetype,
             filePath: req.file.path,
-            description: description || ''
-
-        };
-        patient.medicalDocuments.push(newDocument);
+            description
+        });
 
         await patient.save();
 
         res.status(200).json({
             message: "Document médical téléchargé avec succès",
-            document: newDocument
+            document: patient.medicalDocuments[patient.medicalDocuments.length - 1]
         });
 
     } catch (error) {
@@ -321,9 +324,6 @@ app.post('/signup', async(req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Déterminer si l'utilisateur est un patient
-        const isPatient = role.toLowerCase() === 'patient';
-
         const newUser = new User({
             nom,
             prenom,
@@ -334,17 +334,11 @@ app.post('/signup', async(req, res) => {
             cin,
             password: hashedPassword,
             roles: [role],
-            region,
-            // Validation automatique pour les patients uniquement
-            isValidated: isPatient,
-            profileCompleted: isPatient
+            region
         });
 
         await newUser.save();
-        res.status(201).json({ 
-            message: 'Utilisateur inscrit avec succès !',
-            userId: newUser._id
-        });
+        res.status(201).json({ message: 'Utilisateur inscrit avec succès !' });
     } catch (error) {
         console.error('❌ Erreur d\'enregistrement :', error);
         res.status(500).json({ message: 'Erreur serveur.' });
@@ -376,9 +370,17 @@ app.post('/login', async(req, res) => {
             return res.status(403).json({ message: "Votre compte est en attente de validation par l'administrateur." });
         }
 
+        // Génération du token JWT
+        const token = generateToken({
+            userId: user._id,
+            email: user.email,
+            role: user.roles[0]
+        });
+
         // ✅ Connexion acceptée
         res.status(200).json({
             message: "Connexion réussie !",
+            token,
             userId: user._id,
             email: user.email,
             role: user.roles[0],
@@ -547,39 +549,14 @@ app.post('/reset-password/:token', async(req, res) => {
 // Patient Profile Update
 app.put('/patient/profile/:id', upload.single('photo'), async(req, res) => {
     const { id } = req.params;
-    
-    if (!id || id === 'null' || id === 'undefined') {
-        return res.status(400).json({ message: "ID patient invalide." });
-    }
-
     const { emergencyPhone, bloodType, chronicDiseases } = req.body;
     const photoPath = req.file ? `/uploads/${req.file.filename}` : undefined;
 
-    if (!emergencyPhone) {
-        return res.status(400).json({ message: "Le téléphone d'urgence est obligatoire." });
-    }
-
     try {
-        // Vérifier si l'utilisateur existe
-        const user = await User.findById(id);
-        if (!user) {
-            return res.status(404).json({ message: "Patient non trouvé." });
-        }
-
-        // Créer ou mettre à jour le profil patient
-        let patient = await Patient.findOne({ userId: id });
-        if (!patient) {
-            patient = new Patient({ userId: id });
-        }
-
-        // Mettre à jour les informations du patient
-        patient.emergencyContact = { phone: emergencyPhone };
-        patient.bloodType = bloodType;
-        patient.chronicDiseases = chronicDiseases;
-        await patient.save();
-
-        // Mettre à jour l'utilisateur
         const updateData = {
+            emergencyPhone,
+            bloodType,
+            chronicDiseases,
             profileCompleted: true
         };
 
@@ -587,23 +564,14 @@ app.put('/patient/profile/:id', upload.single('photo'), async(req, res) => {
             updateData.photo = photoPath;
         }
 
-        const updated = await User.findByIdAndUpdate(
-            id,
-            updateData,
-            { new: true }
-        );
+        const updated = await User.findByIdAndUpdate(id, updateData, { new: true });
 
-        res.status(200).json({
-            message: "Profil patient mis à jour avec succès ✅",
-            user: updated,
-            patient: patient
-        });
+        if (!updated) return res.status(404).json({ message: "Patient non trouvé." });
+
+        res.status(200).json({ message: "Profil patient mis à jour avec succès ✅", user: updated });
     } catch (error) {
         console.error("❌ Erreur mise à jour profil patient :", error);
-        res.status(500).json({
-            message: "Erreur serveur lors de la mise à jour.",
-            error: error.message
-        });
+        res.status(500).json({ message: "Erreur serveur lors de la mise à jour." });
     }
 });
 
@@ -917,9 +885,56 @@ app.get('/api/users/:id', async(req, res) => {
     const { id } = req.params;
 
     try {
-        const user = await User.findById(id).select('-password'); // ne renvoie pas le mot de passe pour sécurité
-        if (!user) return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+        console.log("🔍 Recherche de l'utilisateur avec l'ID:", id);
+        const user = await User.findById(id).select('-password');
+        
+        if (!user) {
+            console.log("❌ Utilisateur non trouvé pour l'ID:", id);
+            return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+        }
 
+        console.log("✅ Utilisateur trouvé:", user);
+
+        // Si l'utilisateur est un patient, récupérer les informations supplémentaires
+        if (user.roles.includes('Patient')) {
+            console.log("👤 L'utilisateur est un patient, recherche des informations supplémentaires...");
+            const patientInfo = await Patient.findOne({ userId: id });
+            console.log("📋 Informations patient trouvées:", patientInfo);
+            
+            const userResponse = user.toObject();
+            
+            // Vérifier si patientInfo existe et contient les données
+            if (patientInfo) {
+                userResponse.emergencyPhone = patientInfo.emergencyContact?.phone || '';
+                userResponse.bloodType = patientInfo.bloodType || '';
+                userResponse.chronicDiseases = patientInfo.medicalHistory || '';
+                console.log("✅ Informations patient ajoutées:", {
+                    emergencyPhone: userResponse.emergencyPhone,
+                    bloodType: userResponse.bloodType,
+                    chronicDiseases: userResponse.chronicDiseases
+                });
+            } else {
+                console.log("⚠️ Aucune information patient trouvée, création d'un nouveau document Patient");
+                // Créer un nouveau document Patient si n'existe pas
+                const newPatient = new Patient({
+                    userId: id,
+                    emergencyContact: { phone: '' },
+                    bloodType: '',
+                    medicalHistory: ''
+                });
+                await newPatient.save();
+                console.log("✅ Nouveau document Patient créé");
+                
+                userResponse.emergencyPhone = '';
+                userResponse.bloodType = '';
+                userResponse.chronicDiseases = '';
+            }
+            
+            console.log("📤 Réponse finale avec informations patient:", userResponse);
+            return res.status(200).json(userResponse);
+        }
+
+        console.log("📤 Réponse finale (non patient):", user);
         res.status(200).json(user);
     } catch (error) {
         console.error('❌ Erreur récupération utilisateur:', error);
@@ -927,31 +942,148 @@ app.get('/api/users/:id', async(req, res) => {
     }
 });
 
+// Route pour mettre à jour le profil utilisateur
+app.put('/api/users/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const updateData = req.body;
+        
+        console.log("🔄 Mise à jour du profil pour l'utilisateur:", userId);
+        console.log("📝 Données reçues:", updateData);
+        
+        // Supprimer les champs sensibles qui ne doivent pas être modifiés
+        delete updateData.password;
+        delete updateData.roles;
+        delete updateData.isValidated;
+        delete updateData.profileCompleted;
+
+        // Extraire les données spécifiques au patient
+        const patientData = {
+            emergencyContact: {
+                phone: updateData.emergencyPhone
+            },
+            bloodType: updateData.bloodType,
+            medicalHistory: updateData.chronicDiseases // Utiliser chronicDiseases comme medicalHistory
+        };
+
+        console.log("👤 Données patient à mettre à jour:", patientData);
+
+        // Supprimer les données patient de updateData
+        delete updateData.emergencyPhone;
+        delete updateData.bloodType;
+        delete updateData.chronicDiseases;
+
+        // Mettre à jour l'utilisateur
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { $set: updateData },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedUser) {
+            console.log("❌ Utilisateur non trouvé");
+            return res.status(404).json({ message: "Utilisateur non trouvé" });
+        }
+
+        console.log("✅ Utilisateur mis à jour:", updatedUser);
+
+        // Si c'est un patient, mettre à jour ou créer les informations patient
+        if (updatedUser.roles.includes('Patient')) {
+            console.log("👤 Mise à jour des informations patient");
+            let patient = await Patient.findOne({ userId });
+            
+            if (!patient) {
+                console.log("📝 Création d'un nouveau profil patient");
+                patient = new Patient({ userId });
+            }
+            
+            // Mise à jour des informations patient
+            patient.emergencyContact = patientData.emergencyContact;
+            patient.bloodType = patientData.bloodType;
+            patient.medicalHistory = patientData.medicalHistory;
+            
+            await patient.save();
+            console.log("✅ Informations patient mises à jour:", patient);
+
+            // Vérifier que les données ont bien été sauvegardées
+            const verifyPatient = await Patient.findOne({ userId });
+            console.log("🔍 Vérification des données patient après sauvegarde:", verifyPatient);
+        }
+
+        // Ne pas renvoyer le mot de passe dans la réponse
+        const userResponse = updatedUser.toObject();
+        delete userResponse.password;
+
+        // Ajouter les informations patient à la réponse
+        userResponse.emergencyPhone = patientData.emergencyContact.phone;
+        userResponse.bloodType = patientData.bloodType;
+        userResponse.chronicDiseases = patientData.medicalHistory;
+
+        console.log("📤 Réponse finale:", userResponse);
+        res.json(userResponse);
+    } catch (error) {
+        console.error('❌ Erreur lors de la mise à jour du profil:', error);
+        res.status(500).json({ 
+            message: "Erreur lors de la mise à jour du profil",
+            error: error.message 
+        });
+    }
+});
+
 // Créer un nouvel article
 app.post('/api/articles', uploadArticleImage.single('image'), async (req, res) => {
   try {
     const { title, content, category, tags, authorId } = req.body;
+    console.log('Received article data:', { title, content, category, tags, authorId });
     
     if (!title || !content || !category || !authorId) {
-      return res.status(400).json({ message: "Tous les champs requis doivent être remplis." });
+      return res.status(400).json({ 
+        message: "Tous les champs requis doivent être remplis.",
+        missing: {
+          title: !title,
+          content: !content,
+          category: !category,
+          authorId: !authorId
+        }
+      });
     }
+
+    let imageUrl = null;
+    if (req.file) {
+      imageUrl = req.file.path;
+      console.log('Image uploaded:', imageUrl);
+    }
+
+    const parsedTags = tags ? JSON.parse(tags) : [];
+    console.log('Parsed tags:', parsedTags);
 
     const article = new Article({
       title,
       content,
       authorId,
       category,
-      tags: tags ? JSON.parse(tags) : [],
-      imageUrl: req.file ? req.file.path : null // Cloudinary retourne directement l'URL
+      tags: parsedTags,
+      imageUrl: imageUrl
     });
 
+    console.log('Creating article:', article);
     const savedArticle = await article.save();
+    console.log('Article saved successfully:', savedArticle);
+
     res.status(201).json({
       message: "✅ Article publié avec succès !",
       article: savedArticle
     });
   } catch (error) {
     console.error("❌ Erreur création article:", error);
+    // Si une erreur se produit et qu'un fichier a été uploadé, on le supprime
+    if (req.file && req.file.path) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (unlinkError) {
+        console.error("Erreur lors de la suppression du fichier:", unlinkError);
+      }
+    }
     res.status(500).json({ 
       message: "Erreur lors de la création de l'article.",
       error: error.message 
@@ -1015,17 +1147,11 @@ app.delete('/api/articles/:id', async (req, res) => {
 app.get('/admin/overview', async(req, res) => {
     try {
         const totalUsers = await User.countDocuments();
-        const validatedUsers = await User.countDocuments({ 
-            profileCompleted: true,
-            roles: { $nin: ['Patient'] }
-        });
-        const docsToValidate = await User.countDocuments({ 
-            profileCompleted: false,
-            roles: { $nin: ['Patient'] }
-        });
+        const validatedUsers = await User.countDocuments({ profileCompleted: true });
+        const docsToValidate = await User.countDocuments({ profileCompleted: false });
 
         const recentUsers = await User.find()
-            .sort({ createdAt: -1 })
+            .sort({ createdAt: -1 }) // ou _id si pas de timestamp
             .limit(5)
             .select('nom prenom email roles');
 
@@ -1138,10 +1264,21 @@ app.get('/api/labs-valides', async(req, res) => {
 // 🩺 Médecins validés et complets (pour les rendez-vous)
 app.get('/api/medecins-valides', async(req, res) => {
     try {
+        // Trouver tous les cabinets qui ont un médecin lié
+        const cabinetsWithDoctors = await User.find({
+            roles: { $in: ['Cabinet'] },
+            linkedDoctorId: { $exists: true, $ne: null }
+        }).select('linkedDoctorId');
+
+        // Extraire les IDs des médecins déjà liés
+        const linkedDoctorIds = cabinetsWithDoctors.map(cabinet => cabinet.linkedDoctorId);
+
+        // Trouver les médecins qui ne sont pas liés à un cabinet
         const doctors = await User.find({
             roles: { $in: ['Doctor', 'doctor'] },
             isValidated: true,
-            profileCompleted: true
+            profileCompleted: true,
+            _id: { $nin: linkedDoctorIds } // Exclure les médecins déjà liés
         }).select('_id nom prenom email specialty region roles');
 
         console.log("✅ Médecins trouvés:", doctors);
@@ -1353,17 +1490,18 @@ app.delete('/api/patient/medical-documents/:userId/:documentId', async (req, res
 // Envoyer un message (patient -> médecin ou médecin -> patient)
 app.post('/api/messages', async (req, res) => {
   try {
-    const { senderId, receiverId, content } = req.body;
-    console.log('Received message request:', { senderId, receiverId, content });
+    const { senderId, receiverId, content, appointmentId } = req.body;
+    console.log('Received message request:', { senderId, receiverId, content, appointmentId });
     
-    if (!senderId || !receiverId || !content) {
-      console.log('Missing required fields:', { senderId, receiverId, content });
+    if (!senderId || !receiverId || !content || !appointmentId) {
+      console.log('Missing required fields:', { senderId, receiverId, content, appointmentId });
       return res.status(400).json({ 
         message: 'Tous les champs sont requis.',
         missing: {
           senderId: !senderId,
           receiverId: !receiverId,
-          content: !content
+          content: !content,
+          appointmentId: !appointmentId
         }
       });
     }
@@ -1372,6 +1510,7 @@ app.post('/api/messages', async (req, res) => {
       senderId,
       receiverId,
       content,
+      appointmentId,
       isRead: false
     });
 
@@ -1584,6 +1723,59 @@ app.get('/api/lab-appointments/patient/:patientId', async(req, res) => {
     }
 });
 
+// Dans server.js
+app.get('/api/hospitals', async (req, res) => {
+  try {
+    const hospitals = await User.find({
+      roles: 'Hospital',
+      isValidated: true
+    });
+    res.json(hospitals);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des hôpitaux:', error);
+    res.status(500).json({ message: "Erreur lors de la récupération des hôpitaux" });
+  }
+});
+
+// Route pour uploader l'avatar d'un utilisateur
+app.post('/api/users/:userId/avatar', upload.single('avatar'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "Aucun fichier n'a été téléchargé." });
+    }
+
+    const { userId } = req.params;
+    const photoPath = `/uploads/${req.file.filename}`;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { photo: photoPath },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      // Supprimer le fichier si l'utilisateur n'existe pas
+      fs.unlinkSync(path.join(__dirname, req.file.path));
+      return res.status(404).json({ message: "Utilisateur non trouvé" });
+    }
+
+    res.json({
+      message: "Avatar mis à jour avec succès",
+      photo: photoPath
+    });
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour de l\'avatar:', error);
+    // Supprimer le fichier en cas d'erreur
+    if (req.file) {
+      fs.unlinkSync(path.join(__dirname, req.file.path));
+    }
+    res.status(500).json({ 
+      message: "Erreur lors de la mise à jour de l'avatar",
+      error: error.message 
+    });
+  }
+});
+
 // Route pour récupérer les rendez-vous d'un laboratoire
 app.get('/api/lab-appointments/lab/:labId', async(req, res) => {
     try {
@@ -1681,7 +1873,7 @@ app.post('/api/lab-results', uploadLabResult.single('file'), async(req, res) => 
             testType,
             results,
             status: 'completed',
-            fileUrl: req.file ? req.file.path.replace('Backend/', '') : null
+            fileUrl: req.file ? req.file.path.replace(/^\.\/|Backend\//g, '') : null
         });
 
         const savedResult = await labResult.save();
@@ -2315,15 +2507,35 @@ app.get('/api/medical-reports/patient/:patientId', async (req, res) => {
 app.get('/api/medical-reports/doctor/:doctorId', async (req, res) => {
   try {
     const { doctorId } = req.params;
+    console.log('🔍 Recherche des rapports pour doctorId:', doctorId);
+
     const reports = await MedicalReport.find({ doctorId })
-      .populate('patientId', 'nom prenom')
+      .populate('patientId', 'nom prenom email')
       .populate('appointmentId', 'date')
+      .populate('doctorId', 'nom prenom')
       .sort({ createdAt: -1 });
 
-    res.status(200).json(reports);
+    console.log('📊 Rapports bruts trouvés:', JSON.stringify(reports, null, 2));
+
+    // Filtrer les rapports invalides
+    const validReports = reports.filter(report => {
+      const isValid = report && report.patientId && report.appointmentId && report.doctorId;
+      if (!isValid) {
+        console.log('⚠️ Rapport invalide détecté:', report);
+      }
+      return isValid;
+    });
+
+    console.log('✅ Nombre de rapports valides:', validReports.length);
+    console.log('📝 Rapports valides:', JSON.stringify(validReports, null, 2));
+
+    res.status(200).json(validReports);
   } catch (error) {
     console.error("❌ Erreur récupération rapports:", error);
-    res.status(500).json({ message: "Erreur lors de la récupération des rapports." });
+    res.status(500).json({ 
+      message: "Erreur lors de la récupération des rapports.",
+      error: error.message 
+    });
   }
 });
 
@@ -2331,28 +2543,52 @@ app.get('/api/medical-reports/doctor/:doctorId', async (req, res) => {
 app.get('/api/doctor/:doctorId/patients', async (req, res) => {
   try {
     const { doctorId } = req.params;
-    
-    // Trouver tous les rendez-vous du docteur
-    const appointments = await Appointment.find({ doctorId })
-      .populate('patientId', 'nom prenom email telephone')
-      .sort({ date: -1 });
+    console.log('🔍 Recherche des patients pour doctorId:', doctorId);
 
-    // Créer un Set pour éviter les doublons de patients
-    const uniquePatients = new Set();
-    const patients = appointments
-      .filter(apt => {
-        if (!uniquePatients.has(apt.patientId?._id.toString())) {
-          uniquePatients.add(apt.patientId?._id.toString());
-          return true;
-        }
-        return false;
-      })
-      .map(apt => apt.patientId);
+    // 1. Récupérer tous les rendez-vous confirmés du docteur
+    const appointments = await Appointment.find({ 
+      doctorId,
+      status: 'confirmed' // Ne prendre que les rendez-vous confirmés
+    })
+    .populate({
+      path: 'patientId',
+      select: 'nom prenom email telephone',
+      model: 'User'
+    })
+    .sort({ date: -1 });
+
+    console.log('📊 Nombre de rendez-vous trouvés:', appointments.length);
+
+    // 2. Filtrer les patients uniques et valides
+    const uniquePatientsMap = new Map();
+    appointments.forEach(apt => {
+      if (apt.patientId && apt.patientId._id && !uniquePatientsMap.has(apt.patientId._id.toString())) {
+        uniquePatientsMap.set(apt.patientId._id.toString(), apt.patientId);
+      }
+    });
+
+    const patients = Array.from(uniquePatientsMap.values());
+    console.log('✅ Nombre de patients uniques:', patients.length);
+
+    // 3. Vérifier si nous avons des patients
+    if (patients.length === 0) {
+      console.log('⚠️ Aucun patient trouvé pour ce docteur');
+      return res.status(200).json([]);
+    }
+
+    console.log('📝 Liste des patients:', patients.map(p => ({
+      id: p._id,
+      nom: p.nom,
+      prenom: p.prenom
+    })));
 
     res.status(200).json(patients);
   } catch (error) {
     console.error("❌ Erreur récupération patients:", error);
-    res.status(500).json({ message: "Erreur lors de la récupération des patients." });
+    res.status(500).json({ 
+      message: "Erreur lors de la récupération des patients.",
+      error: error.message 
+    });
   }
 });
 
@@ -2494,17 +2730,75 @@ app.put('/api/messages/read', async (req, res) => {
 
 // ... existing code ...
 
+// Route pour uploader l'avatar d'un utilisateur
+app.post('/api/users/:userId/avatar', upload.single('avatar'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "Aucun fichier n'a été téléchargé." });
+    }
+
+    const { userId } = req.params;
+    const photoPath = `/uploads/${req.file.filename}`;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { photo: photoPath },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      // Supprimer le fichier si l'utilisateur n'existe pas
+      fs.unlinkSync(path.join(__dirname, req.file.path));
+      return res.status(404).json({ message: "Utilisateur non trouvé" });
+    }
+
+    res.json({
+      message: "Avatar mis à jour avec succès",
+      photo: photoPath
+    });
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour de l\'avatar:', error);
+    // Supprimer le fichier en cas d'erreur
+    if (req.file) {
+      fs.unlinkSync(path.join(__dirname, req.file.path));
+    }
+    res.status(500).json({ 
+      message: "Erreur lors de la mise à jour de l'avatar",
+      error: error.message 
+    });
+  }
+});
+
 // Route pour mettre à jour le profil utilisateur
 app.put('/api/users/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
         const updateData = req.body;
         
+        console.log("🔄 Mise à jour du profil pour l'utilisateur:", userId);
+        console.log("📝 Données reçues:", updateData);
+        
         // Supprimer les champs sensibles qui ne doivent pas être modifiés
         delete updateData.password;
         delete updateData.roles;
         delete updateData.isValidated;
         delete updateData.profileCompleted;
+
+        // Extraire les données spécifiques au patient
+        const patientData = {
+            emergencyContact: {
+                phone: updateData.emergencyPhone
+            },
+            bloodType: updateData.bloodType,
+            medicalHistory: updateData.chronicDiseases
+        };
+
+        console.log("👤 Données patient à mettre à jour:", patientData);
+
+        // Supprimer les données patient de updateData
+        delete updateData.emergencyPhone;
+        delete updateData.bloodType;
+        delete updateData.chronicDiseases;
 
         // Mettre à jour l'utilisateur
         const updatedUser = await User.findByIdAndUpdate(
@@ -2514,16 +2808,48 @@ app.put('/api/users/:userId', async (req, res) => {
         );
 
         if (!updatedUser) {
+            console.log("❌ Utilisateur non trouvé");
             return res.status(404).json({ message: "Utilisateur non trouvé" });
+        }
+
+        console.log("✅ Utilisateur mis à jour:", updatedUser);
+
+        // Si c'est un patient, mettre à jour ou créer les informations patient
+        if (updatedUser.roles.includes('Patient')) {
+            console.log("👤 Mise à jour des informations patient");
+            let patient = await Patient.findOne({ userId });
+            
+            if (!patient) {
+                console.log("📝 Création d'un nouveau profil patient");
+                patient = new Patient({ userId });
+            }
+            
+            // Mise à jour des informations patient
+            patient.emergencyContact = patientData.emergencyContact;
+            patient.bloodType = patientData.bloodType;
+            patient.medicalHistory = patientData.medicalHistory;
+            
+            await patient.save();
+            console.log("✅ Informations patient mises à jour:", patient);
+
+            // Vérifier que les données ont bien été sauvegardées
+            const verifyPatient = await Patient.findOne({ userId });
+            console.log("🔍 Vérification des données patient après sauvegarde:", verifyPatient);
         }
 
         // Ne pas renvoyer le mot de passe dans la réponse
         const userResponse = updatedUser.toObject();
         delete userResponse.password;
 
+        // Ajouter les informations patient à la réponse
+        userResponse.emergencyPhone = patientData.emergencyContact.phone;
+        userResponse.bloodType = patientData.bloodType;
+        userResponse.chronicDiseases = patientData.medicalHistory;
+
+        console.log("📤 Réponse finale:", userResponse);
         res.json(userResponse);
     } catch (error) {
-        console.error('Erreur lors de la mise à jour du profil:', error);
+        console.error('❌ Erreur lors de la mise à jour du profil:', error);
         res.status(500).json({ 
             message: "Erreur lors de la mise à jour du profil",
             error: error.message 
@@ -2625,17 +2951,18 @@ app.put('/api/lab-patient-messages/read', async (req, res) => {
 // Route pour les messages entre patients et laboratoires
 app.post('/api/messages', async (req, res) => {
   try {
-    const { senderId, receiverId, content } = req.body;
-    console.log('Received message request:', { senderId, receiverId, content });
+    const { senderId, receiverId, content, appointmentId } = req.body;
+    console.log('Received message request:', { senderId, receiverId, content, appointmentId });
     
-    if (!senderId || !receiverId || !content) {
-      console.log('Missing required fields:', { senderId, receiverId, content });
+    if (!senderId || !receiverId || !content || !appointmentId) {
+      console.log('Missing required fields:', { senderId, receiverId, content, appointmentId });
       return res.status(400).json({ 
         message: 'Tous les champs sont requis.',
         missing: {
           senderId: !senderId,
           receiverId: !receiverId,
-          content: !content
+          content: !content,
+          appointmentId: !appointmentId
         }
       });
     }
@@ -2644,6 +2971,7 @@ app.post('/api/messages', async (req, res) => {
       senderId,
       receiverId,
       content,
+      appointmentId,
       isRead: false
     });
 
@@ -2687,58 +3015,193 @@ app.get('/api/messages/:senderId/:receiverId', async (req, res) => {
   }
 });
 
-// ... existing code ...
 
-// Route pour mettre à jour les informations du patient
-app.put('/api/patients/:userId', async (req, res) => {
+
+
+// ✅ Route pour récupérer les données d'un utilisateur spécifique par ID
+app.get('/api/users/:id', async(req, res) => {
+    const { id } = req.params;
+
+    try {
+        console.log("🔍 Recherche de l'utilisateur avec l'ID:", id);
+        const user = await User.findById(id).select('-password');
+        
+        if (!user) {
+            console.log("❌ Utilisateur non trouvé pour l'ID:", id);
+            return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+        }
+
+        console.log("✅ Utilisateur trouvé:", user);
+
+        // Si l'utilisateur est un patient, récupérer les informations supplémentaires
+        if (user.roles.includes('Patient')) {
+            console.log("👤 L'utilisateur est un patient, recherche des informations supplémentaires...");
+            const patientInfo = await Patient.findOne({ userId: id });
+            console.log("📋 Informations patient trouvées:", patientInfo);
+            
+            const userResponse = user.toObject();
+            
+            // Vérifier si patientInfo existe et contient les données
+            if (patientInfo) {
+                userResponse.emergencyPhone = patientInfo.emergencyContact?.phone || '';
+                userResponse.bloodType = patientInfo.bloodType || '';
+                userResponse.chronicDiseases = patientInfo.medicalHistory || '';
+                console.log("✅ Informations patient ajoutées:", {
+                    emergencyPhone: userResponse.emergencyPhone,
+                    bloodType: userResponse.bloodType,
+                    chronicDiseases: userResponse.chronicDiseases
+                });
+            } else {
+                console.log("⚠️ Aucune information patient trouvée, création d'un nouveau document Patient");
+                // Créer un nouveau document Patient si n'existe pas
+                const newPatient = new Patient({
+                    userId: id,
+                    emergencyContact: { phone: '' },
+                    bloodType: '',
+                    medicalHistory: ''
+                });
+                await newPatient.save();
+                console.log("✅ Nouveau document Patient créé");
+                
+                userResponse.emergencyPhone = '';
+                userResponse.bloodType = '';
+                userResponse.chronicDiseases = '';
+            }
+            
+            console.log("📤 Réponse finale avec informations patient:", userResponse);
+            return res.status(200).json(userResponse);
+        }
+
+        console.log("📤 Réponse finale (non patient):", user);
+        res.status(200).json(user);
+    } catch (error) {
+        console.error('❌ Erreur récupération utilisateur:', error);
+        res.status(500).json({ message: 'Erreur serveur.' });
+    }
+});
+
+
+app.put('/api/users/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
         const updateData = req.body;
+        
+        console.log("🔄 Mise à jour du profil pour l'utilisateur:", userId);
+        console.log("📝 Données reçues:", updateData);
+        
+        // Supprimer les champs sensibles qui ne doivent pas être modifiés
+        delete updateData.password;
+        delete updateData.roles;
+        delete updateData.isValidated;
+        delete updateData.profileCompleted;
 
-        // Trouver le patient par userId
-        const patient = await Patient.findOne({ userId });
-
-        if (!patient) {
-            return res.status(404).json({ message: "Patient non trouvé" });
-        }
-
-        // Mettre à jour les informations du patient
-        const updatedPatient = await Patient.findByIdAndUpdate(
-            patient._id,
-            { 
-                $set: {
-                    bloodType: updateData.bloodType,
-                    chronicDiseases: updateData.chronicDiseases,
-                    'emergencyContact.phone': updateData.emergencyContact.phone,
-                    'emergencyContact.name': updateData.emergencyContact.name,
-                    'emergencyContact.relationship': updateData.emergencyContact.relationship
-                }
+        // Extraire les données spécifiques au patient
+        const patientData = {
+            emergencyContact: {
+                phone: updateData.emergencyPhone
             },
-            { new: true }
+            bloodType: updateData.bloodType,
+            medicalHistory: updateData.chronicDiseases
+        };
+
+        console.log("👤 Données patient à mettre à jour:", patientData);
+
+        // Supprimer les données patient de updateData
+        delete updateData.emergencyPhone;
+        delete updateData.bloodType;
+        delete updateData.chronicDiseases;
+
+        // Mettre à jour l'utilisateur
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { $set: updateData },
+            { new: true, runValidators: true }
         );
 
-        res.json(updatedPatient);
+        if (!updatedUser) {
+            console.log("❌ Utilisateur non trouvé");
+            return res.status(404).json({ message: "Utilisateur non trouvé" });
+        }
+
+        console.log("✅ Utilisateur mis à jour:", updatedUser);
+
+        // Si c'est un patient, mettre à jour ou créer les informations patient
+        if (updatedUser.roles.includes('Patient')) {
+            console.log("👤 Mise à jour des informations patient");
+            let patient = await Patient.findOne({ userId });
+            
+            if (!patient) {
+                console.log("📝 Création d'un nouveau profil patient");
+                patient = new Patient({ userId });
+            }
+            
+            // Mise à jour des informations patient
+            patient.emergencyContact = patientData.emergencyContact;
+            patient.bloodType = patientData.bloodType;
+            patient.medicalHistory = patientData.medicalHistory;
+            
+            await patient.save();
+            console.log("✅ Informations patient mises à jour:", patient);
+
+            // Vérifier que les données ont bien été sauvegardées
+            const verifyPatient = await Patient.findOne({ userId });
+            console.log("🔍 Vérification des données patient après sauvegarde:", verifyPatient);
+        }
+
+        // Ne pas renvoyer le mot de passe dans la réponse
+        const userResponse = updatedUser.toObject();
+        delete userResponse.password;
+
+        // Ajouter les informations patient à la réponse
+        userResponse.emergencyPhone = patientData.emergencyContact.phone;
+        userResponse.bloodType = patientData.bloodType;
+        userResponse.chronicDiseases = patientData.medicalHistory;
+
+        console.log("📤 Réponse finale:", userResponse);
+        res.json(userResponse);
     } catch (error) {
-        console.error('Erreur lors de la mise à jour du patient:', error);
-        res.status(500).json({ message: "Erreur lors de la mise à jour du patient" });
+        console.error('❌ Erreur lors de la mise à jour du profil:', error);
+        res.status(500).json({ 
+            message: "Erreur lors de la mise à jour du profil",
+            error: error.message 
+        });
     }
+});
+// ... existing code ...
+
+// Endpoint pour récupérer les statistiques du cabinet
+app.get('/api/cabinet/stats/:cabinetId', async (req, res) => {
+  try {
+    const { cabinetId } = req.params;
+    
+    // Récupérer le cabinet et son médecin associé
+    const cabinet = await User.findById(cabinetId);
+    if (!cabinet) {
+      return res.status(404).json({ message: "Cabinet non trouvé" });
+    }
+
+    // Récupérer tous les rendez-vous du médecin associé
+    const appointments = await Appointment.find({ doctorId: cabinet.linkedDoctorId });
+
+    // Calculer les statistiques
+    const stats = {
+      totalAppointments: appointments.length,
+      pendingAppointments: appointments.filter(apt => apt.status === 'pending').length,
+      completedAppointments: appointments.filter(apt => apt.status === 'completed').length,
+      cancelledAppointments: appointments.filter(apt => apt.status === 'cancelled').length,
+      averageRating: 0 // À implémenter si vous avez un système de notation
+    };
+
+    res.json(stats);
+  } catch (error) {
+    console.error("❌ Erreur récupération statistiques cabinet:", error);
+    res.status(500).json({ message: "Erreur serveur lors de la récupération des statistiques" });
+  }
 });
 
 // ... existing code ...
 
-// Route pour récupérer les informations du patient par userId
-app.get('/api/patients/user/:userId', async (req, res) => {
-    try {
-        const { userId } = req.params;
-        const patient = await Patient.findOne({ userId });
-        
-        if (!patient) {
-            return res.status(404).json({ message: "Patient non trouvé" });
-        }
-        
-        res.json(patient);
-    } catch (error) {
-        console.error('Erreur lors de la récupération du patient:', error);
-        res.status(500).json({ message: "Erreur lors de la récupération du patient" });
-    }
+// Exemple d'utilisation sur une route protégée
+app.get('/protected-route', auth, (req, res) => {
+    // Votre logique de route ici
 });

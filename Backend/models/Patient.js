@@ -18,11 +18,10 @@ const patientSchema = new mongoose.Schema({
     medicalHistory: { type: String },
     allergies: [String],
     bloodType: { type: String },
-    chronicDiseases: { type: String },
     emergencyContact: {
-        phone: String,        // Contact d'urgence (numéro)
-        name: String,         // Nom du contact d'urgence
-        relationship: String  // Relation avec le patient
+        name: String,
+        phone: String,
+        relationship: String
     }
 });
 

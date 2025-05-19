@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { Link } from 'react-router-dom';
 import '../styles/Home.css';
+import { BrowserRouter } from 'react-router-dom';
 
 // Hero Section Component
 const Hero = memo(() => (
@@ -13,7 +14,7 @@ const Hero = memo(() => (
           et communications avec des professionnels certifiés.
         </p>
         <div className="hero-cta">
-          <Link to="/signup" className="cta-primary">Commencer maintenant</Link>
+          <Link to="/signin" className="cta-primary">Commencer maintenant</Link>
         </div>
       </div>
       <div className="hero-visual">
@@ -103,7 +104,7 @@ const Features = memo(() => (
     
     <div className="features-cta" data-aos="fade-up">
       <p>Découvrez comment PatientPath peut transformer votre expérience de santé</p>
-      <Link to="/services" className="cta-secondary">
+      <Link to="/about" className="cta-secondary">
         En savoir plus <i className="fa-solid fa-arrow-right"></i>
       </Link>
     </div>

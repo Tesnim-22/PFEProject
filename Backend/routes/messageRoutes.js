@@ -65,4 +65,46 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
+// Get unread messages for a specific appointment
+router.get('/:appointmentId/unread', auth, async (req, res) => {
+  try {
+    const { userId } = req.query;
+    
+    if (!userId) {
+      return res.status(400).json({ message: 'userId is required' });
+    }
+
+    const unreadMessages = await Message.find({ 
+      appointmentId: req.params.appointmentId,
+      receiverId: userId,
+      isRead: false
+    }).sort({ createdAt: -1 });
+
+    res.json(unreadMessages);
+  } catch (error) {
+    console.error('Error in GET /messages/:appointmentId/unread:', error);
+    res.status(500).json({ message: 'Error fetching unread messages', error: error.message });
+  }
+});
+
+// Mark message as read
+router.put('/:messageId/read', auth, async (req, res) => {
+  try {
+    const message = await Message.findByIdAndUpdate(
+      req.params.messageId,
+      { isRead: true },
+      { new: true }
+    );
+
+    if (!message) {
+      return res.status(404).json({ message: 'Message not found' });
+    }
+
+    res.json(message);
+  } catch (error) {
+    console.error('Error in PUT /messages/:messageId/read:', error);
+    res.status(500).json({ message: 'Error marking message as read', error: error.message });
+  }
+});
+
 module.exports = router; 

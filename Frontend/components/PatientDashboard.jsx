@@ -6,7 +6,7 @@ import axios from 'axios';
 const API_BASE_URL = 'http://localhost:5001';
 
 // Image par défaut en base64 (une petite image grise avec une icône de document)
-const DEFAULT_IMAGE_BASE64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAACXBIWXMAAAsTAAALEwEAmpwYAAAFHWlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNy4yLWMwMDAgNzkuMWI2NWE3OWI0LCAyMDIyLzA2LzEzLTIyOjAxOjAxICAgICAgICAiPiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPiA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOnhtcE1NPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvbW0vIiB4bWxuczpzdEV2dD0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL3NUeXBlL1Jlc291cmNlRXZlbnQjIiB4bWxuczpkYz0iaHR0cDovL3B1cmwub3JnL2RjL2VsZW1lbnRzLzEuMS8iIHhtbG5zOnBob3Rvc2hvcD0iaHR0cDovL25zLmFkb2JlLmNvbS9waG90b3Nob3AvMS4wLyIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgMjQuMCAoTWFjaW50b3NoKSIgeG1wOkNyZWF0ZURhdGU9IjIwMjQtMDMtMTlUMTU6NDc6MTgrMDE6MDAiIHhtcDpNZXRhZGF0YURhdGU9IjIwMjQtMDMtMTlUMTU6NDc6MTgrMDE6MDAiIHhtcDpNb2RpZnlEYXRlPSIyMDI0LTAzLTE5VDE1OjQ3OjE4KzAxOjAwIiB4bWBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjY2ZjI5ZjFiLTQ4ZDYtNDZhNi1hZTM0LTNkYjNhOTNmMWE2ZiIgZGM6Zm9ybWF0PSJpbWFnZS9wbmciIHBob3Rvc2hvcDpDb2xvck1vZGU9IjMiPiA8eG1wTU06SGlzdG9yeT4gPHJkZjpTZXE+IDxyZGY6bGkgc3RFdnQ6YWN0aW9uPSJjcmVhdGVkIiBzdEV2dDppbnN0YW5jZUlEPSJ4bXAuaWlkOjY2ZjI5ZjFiLTQ4ZDYtNDZhNi1hZTM0LTNkYjNhOTNmMWE2ZiIgc3RFdnQ6d2hlbj0iMjAyNC0wMy0xOVQxNTo0NzoxOCswMTowMCIgc3RFdnQ6c29mdHdhcmVBZ2VudD0iQWRvYmUgUGhvdG9zaG9wIDI0LjAgKE1hY2ludG9zaCkiLz4gPC9yZGY6U2VxPiA8L3htcE1NOkhpc3Rvcnk+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+YjqoRwAABGxJREFUaIHtmU9oHFUcxz/vzczO7G42m91kN0mbNKlpqkWqVkGkKFiwelBEevDiqQcv3qQXEVE8ehL04EFE8KAH/4AHwYNVKyoWqW1Tg7U1pmmTbLLZ3c3uzO7szrwedrOZnZ3ZzP5Jk0I/EJZ5v/d77/t93/vN7828UZRSPMxQH3TnQwCDxkMPYNAY9BK6I1RVxXGcO0LTNFRF6Rp3L3BXAVi2hWmauK6L4zgAhEIhwuEwmqbdKyj3DoBpmhiGgeu6GIaBpmkIIQiFQoRCIRRFQdf1ewVi8ADa7Ta2bSOlxHVdXNdFVVU0TUPTNKSUWJaFbduEw2E0TRsokIECsG0by7JQVRXP8/A8D1VViUQiRCIRVFVFCEGr1cKyLCKRCJFIZGAgBgbAcRxM00QIged5CCGIRCJEo1HC4TCKouA4DkIIDMNACEE0Gh0IiIEAkFLS6XSQUuJ5HoqiEI1GiUajhEKhzn3gOA62bSOEwHVdPM8jGo2i6/p9AyGklNi2jed5nQtZVVVisRixWKxrXpumSbvdxvM8FEUhHA4TiUTQdf2+LKl7PoVc18UwDKSUGIaBpmkMDQ0Ri8W6wgPE43GGhoY6S0kIQbvdxjTNe76k7vkMmKaJbduYpomiKMTjceLxOLquI4RA13U0TcNxHGzbxnVdPM8jFAoRiUTQNO2egbinAKSUtFotXNfFtm10XScejxOPxwmHw52LVwiBbduYponrugghCIfDRKPR+wLingGQUmIYBp7n0W63URSFoaEhEokEuq4jhMA0TaSUtNtthBB4noeu68RiMcLh8IABtNttLMvCcRwsy0LXdRKJBMlkknA4jBACwzBwXRfLsnAcB8/z0DSNeDxOKBQaHADXdWm1WkgpabfbqKpKMpkkmUyi6zqe59FqtZBSYpomtm13Zmd4eJhwODw4AJZlYRgGnufRbDYJhUIkk0mSySSRSATXdWk0GriuS6vVwnEcpJREo1Hi8TihUGhwAEzTxLIsXNel0WigaRrDw8OkUimGhoZwHIdGo4HjODQaDaSUeJ5HPB4nkUigquqDXUKGYeC6LrZt02g00DSNVCpFOp0mFoth2zb1ep12u02z2cTzPFRVJZFIkEgkBgfAsixarRau61Kv11FVlXQ6TTqdJhaL0W63qdVqtNtter0eQghisRipVGpwABzHodls4nkejUYDRVFIp9NkMhni8TiWZVGr1bAsi3q9jpSSUChEMpkkkUgMDoDneRiGgZQSwzBQFIVMJsPIyAjJZBLTNKnVajQaDer1Op7noWka6XSaZDI5OABSSprNJlJKms0mnueRyWQYHR0llUphGAa1Wo1arUaz2cTzPMLhMJlMhlQqNTgAUkpqtRpSSur1Oq7rks1mGR0dJZ1OY5omlUqFarVKq9XC8zwikQiZTIZ0Oj04AEIIqtUqnufRaDSwbZtsNsvY2BiZTIZWq0WlUqFSqdBut/E8j2g0SjabJZPJDA6AoijUajWklNTrdRzHYWRkhLGxMbLZLM1mk3K5TLlcpt1u43ke0WiUbDbL6Ojo4AAoikKlUsG2ber1Oq7rMjo6yvj4ONlslnq9TqlUolQq0el0OgDGx8cHCwDgP0H/v9H/AIrWUWwj8nFjAAAAAElFTkSuQmCC';
+const DEFAULT_IMAGE_BASE64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAACXBIWXMAAAsTAAALEwEAmpwYAAAFHWlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNy4yLWMwMDAgNzkuMWI2NWE3OWI0LCAyMDIyLzA2LzEzLTIyOjAxOjAxICAgICAgICAiPiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPiA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOnhtcE1NPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvbW0vIiB4bWxuczpzdEV2dD0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL3NUeXBlL1Jlc291cmNlRXZlbnQjIiB4bWxuczpkYz0iaHR0cDovL25zLmFkb2JlLmNvbS9kYy9lbGVtZW50cy8xLjEvIiB4bWxuczpwaG90b3Nob3A9Imh0dHA6Ly9ucy5hZG9iZS5jb20vcGhvdG9zaG9wLzEuMC8iIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIDI0LjAgKE1hY2ludG9zaCkiIHhtcDpDcmVhdGVEYXRlPSIyMDI0LTAzLTE5VDE1OjQ3OjE4KzAxOjAwIiB4bWxuczpNZXRhZGF0YURhdGU9IjIwMjQtMDMtMTlUMTU6NDc6MTgrMDE6MDAiIHhtcDpNb2RpZnlEYXRlPSIyMDI0LTAzLTE5VDE1OjQ3OjE4KzAxOjAwIiB4bWBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjY2ZjI5ZjFiLTQ4ZDYtNDZhNi1hZTM0LTNkYjNhOTNmMWE2ZiIgZGM6Zm9ybWF0PSJpbWFnZS9wbmciIHBob3Rvc2hvcDpDb2xvck1vZGU9IjMiPiA8eG1wTU06SGlzdG9yeT4gPC9yZGY6U2VxPiA8L3htcE1NOkhpc3Rvcnk+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+YjqoRwAABGxJREFUaIHtmU9oHFUcxz/vzczO7G42m91kN0mbNKlpqkWqVkGkKFiwelBEevDiqQcv3qQXEVE8ehL04EFE8KAH/4AHwYNVKyoWqW1Tg7U1pmmTbLLZ3c3uzO7szrwedrOZnZ3ZzP5Jk0I/EJZ5v/d77/t93/vN7828UZRSPMxQH3TnQwCDxkMPYNAY9BK6I1RVxXGcO0LTNFRF6Rp3L3BXAVi2hWmauK6L4zgAhEIhwuEwmqbdKyj3DoBpmhiGgeu6GIaBpmkIIQiFQoRCIRRFQdf1ewVi8ADa7Ta2bSOlxHVdXNdFVVU0TUPTNKSUWJaFbduEw2E0TRsokIECsG0by7JQVRXP8/A8D1VViUQiRCIRVFVFCEGr1cKyLCKRCJFIZGAgBgbAcRxM00QIged5CCGIRCJEo1HC4TCKouA4DkIIDMNACEE0Gh0IiIEAkFLS6XSQUuJ5HoqiEI1GiUajhEKhzn3gOA62bSOEwHVdPM8jGo2i6/p9AyGklNi2jed5nQtZVVVisRixWKxrXpumSbvdxvM8FEUhHA4TiUTQdf2+LKl7PoVc18UwDKSUGIaBpmkMDQ0Ri8W6wgPE43GGhoY6S0kIQbvdxjTNe76k7vkMmKaJbduYponrugghCIfDRKPR+wLingGQUmIYBp7n0W63URSFoaEhEokEuq4jhMA0TaSUtNtthBB4noeu68RiMcLh8IABtNttLMvCcRwsy0LXdRKJBMlkknA4jBACwzBwXRfLsnAcB8/z0DSNeDxOKBQaHADXdWm1WkgpabfbqKpKMpkkmUyi6zqe59FqtZBSYpomtm13Zmd4eJhwODw4AJZlYRgGnufRbDYJhUIkk0mSySSRSATXdWk0GriuS6vVwnEcpJREo1Hi8TihUGhwAEzTxLIsXNel0WigaRrDw8OkUimGhoZwHIdGo4HjODQaDaSUeJ5HPB4nkUigquqDXUKGYeC6LrZt02g00DSNVCpFOp0mFoth2zb1ep12u02z2cTzPFRVJZFIkEgkBgfAsixarRau61Kv11FVlXQ6TTqdJhaL0W63qdVqtNtter0eQghisRipVGpwABzHodls4nkejUYDRVFIp9NkMhni8TiWZVGr1bAsi3q9jpSSUChEMpkkkUgMDoDneRiGgZQSwzBQFIVMJsPIyAjJZBLTNKnVajQaDer1Op7noWka6XSaZDI5OABSSprNJlJKms0mnueRyWQYHR0llUphGAa1Wo1arUaz2cTzPMLhMJlMhlQqNTgAUkpqtRpSSur1Oq7rks1mGR0dJZ1OY5omlUqFarVKq9XC8zwikQiZTIZ0Oj04AEIIqtUqnufRaDSwbZtsNsvY2BiZTIZWq0WlUqFSqdBut/E8j2g0SjabJZPJDA6AoijUajWklNTrdRzHYWRkhLGxMbLZLM1mk3K5TLlcpt1u43ke0WiUbDbL6Ojo4AAoikKlUsG2ber1Oq7rMjo6yvj4ONlslnq9TqlUolQq0el0OgDGx8cHCwDgP0H/v9H/AIrWUWwj8nFjAAAAAElFTkSuQmCC';
 
 const styles = {
   formGroup: {
@@ -135,6 +135,38 @@ const styles = {
       display: 'flex',
       gap: '0.5rem'
     }
+  },
+  profilePhotoContainer: {
+    position: 'relative',
+    width: '150px',
+    height: '150px',
+    margin: '0 auto 20px',
+    borderRadius: '50%',
+    overflow: 'hidden',
+    boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+  },
+  profilePhoto: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    transition: 'transform 0.3s ease',
+  },
+  changePhotoBtn: {
+    position: 'absolute',
+    bottom: '0',
+    left: '0',
+    right: '0',
+    background: 'rgba(0,0,0,0.7)',
+    color: 'white',
+    padding: '8px',
+    textAlign: 'center',
+    cursor: 'pointer',
+    fontSize: '0.9rem',
+    transition: 'opacity 0.3s ease',
+    opacity: '0',
+    '&:hover': {
+      opacity: '1'
+    }
   }
 };
 
@@ -256,13 +288,15 @@ const PatientDashboard = () => {
     hospitals: true
   });
 
-  const [expandedAppointmentSections, setExpandedAppointmentSections] = useState({
-    medical: false,
-    laboratory: false,
-    hospital: false
+  const [expandedSections, setExpandedSections] = useState({
+    medical: true,
+    laboratory: true,
+    hospital: true
   });
 
   const [expandedContacts, setExpandedContacts] = useState({});
+  const [selectedProfileImage, setSelectedProfileImage] = useState(null);
+  const profileImageInputRef = useRef(null);
 
   // Liste des régions de la Tunisie
   const regions = [
@@ -367,33 +401,57 @@ const PatientDashboard = () => {
     }
   }, [selectedRegion, selectedSpecialty]);
 
+  useEffect(() => {
+    if (activeSection === 'new-appointment') {
+      // Charger les médecins si le type de rendez-vous est médical
+      if (appointmentType === 'medical') {
+        console.log("🏥 Section rendez-vous médecin active, chargement des médecins...");
+        fetchDoctors();
+      }
+      // Charger les laboratoires si le type de rendez-vous est laboratoire
+      else if (appointmentType === 'laboratory') {
+        console.log("🔬 Chargement des laboratoires...");
+        fetchLabs();
+      }
+      // Charger les hôpitaux si le type de rendez-vous est hôpital
+      else if (appointmentType === 'hospital') {
+        console.log("🏥 Chargement des hôpitaux...");
+        fetchHospitals();
+      }
+    }
+  }, [activeSection, appointmentType]);
+
+  // Ajoutez cet useEffect après les autres
+  useEffect(() => {
+    if (activeSection === 'new-appointment' && appointmentType === 'hospital') {
+      console.log("🔄 Filtrage des hôpitaux avec région:", selectedRegion);
+      console.log("Hôpitaux disponibles avant filtrage:", hospitals);
+      
+      const filteredHospitals = !selectedRegion 
+        ? hospitals // Retourner tous les hôpitaux si aucune région n'est sélectionnée
+        : hospitals.filter(hospital => {
+            const hospitalRegion = hospital.region ? hospital.region.toLowerCase() : '';
+            const selectedRegionLower = selectedRegion.toLowerCase();
+            const matchesRegion = hospitalRegion === selectedRegionLower;
+            console.log(`Filtrage - Hôpital ${hospital.nom}:`, {
+              hospitalRegion,
+              selectedRegion: selectedRegionLower,
+              matchesRegion
+            });
+            return matchesRegion;
+          });
+      
+      console.log("✅ Hôpitaux filtrés par région:", filteredHospitals);
+    }
+  }, [selectedRegion, hospitals, activeSection, appointmentType]);
+
   const fetchProfile = async (id) => {
     try {
       setIsLoading(true);
-      // Récupérer les informations de l'utilisateur
-      const userRes = await axios.get(`${API_BASE_URL}/api/users/${id}`);
-      
-      // Récupérer les informations du patient
-      const patientRes = await axios.get(`${API_BASE_URL}/api/patients/user/${id}`);
-      
-      // Combiner les informations
-      const combinedProfile = {
-        ...userRes.data,
-        bloodType: patientRes.data.bloodType || '',
-        chronicDiseases: patientRes.data.chronicDiseases || '',
-        emergencyPhone: patientRes.data.emergencyContact?.phone || '',
-        emergencyContactName: patientRes.data.emergencyContact?.name || '',
-        emergencyContactRelation: patientRes.data.emergencyContact?.relationship || ''
-      };
-      
-      setProfile(combinedProfile);
+      const res = await axios.get(`${API_BASE_URL}/api/users/${id}`);
+      setProfile(res.data);
     } catch (error) {
-      console.error('❌ Erreur récupération profil:', error);
-      if (error.response?.status === 404) {
-        setMessage("Profil non trouvé. Veuillez compléter votre profil.");
-      } else {
-        setMessage("❌ Erreur lors de la récupération du profil.");
-      }
+      setMessage("❌ Erreur récupération profil.");
     } finally {
       setIsLoading(false);
     }
@@ -411,14 +469,10 @@ const PatientDashboard = () => {
   const fetchMedicalDocuments = async (id) => {
     try {
       const res = await axios.get(`${API_BASE_URL}/api/patient/medical-documents/${id}`);
-      setMedicalDocuments(res.data || []);
+      setMedicalDocuments(res.data);
     } catch (error) {
       console.error("❌ Erreur récupération documents:", error);
-      if (error.response?.status === 404) {
-        setMedicalDocuments([]); // Set empty array for new patients
-      } else {
-        setMessage("Erreur lors de la récupération des documents médicaux.");
-      }
+      setMessage("Erreur lors de la récupération des documents médicaux.");
     }
   };
 
@@ -700,14 +754,31 @@ const PatientDashboard = () => {
   const fetchHospitals = async () => {
     try {
       console.log("🏥 Récupération des hôpitaux...");
-      const response = await axios.get(`${API_BASE_URL}/api/medecins-valides`);
-      console.log("✅ Données reçues:", response.data);
-      // Filtrer uniquement les hôpitaux
-      const validatedHospitals = response.data.filter(user => 
-        user.roles.includes('Hospital') || user.roles.includes('hopital')
-      );
-      console.log("🏥 Hôpitaux filtrés:", validatedHospitals);
-      setHospitals(validatedHospitals);
+      // Utiliser un endpoint spécifique pour les hôpitaux
+      const response = await axios.get(`${API_BASE_URL}/api/hospitals`);
+      console.log("✅ Données reçues brutes:", response.data);
+      
+      // Vérifier chaque hôpital reçu
+      const validatedHospitals = response.data.filter(hospital => {
+        console.log("Vérification de l'hôpital:", {
+          nom: hospital.nom,
+          roles: hospital.roles,
+          region: hospital.region
+        });
+        return hospital.isValidated !== false; // Garder tous les hôpitaux validés
+      });
+      
+      console.log("🏥 Hôpitaux validés:", validatedHospitals);
+
+      // Normaliser les régions des hôpitaux
+      const normalizedHospitals = validatedHospitals.map(hospital => ({
+        ...hospital,
+        region: hospital.region ? 
+          hospital.region.charAt(0).toUpperCase() + hospital.region.slice(1).toLowerCase() : ''
+      }));
+      
+      console.log("🏥 Hôpitaux normalisés:", normalizedHospitals);
+      setHospitals(normalizedHospitals);
     } catch (error) {
       console.error("❌ Erreur récupération hôpitaux:", error);
       setMessage("Erreur lors de la récupération des hôpitaux.");
@@ -903,37 +974,8 @@ const PatientDashboard = () => {
 
   const handleUpdateProfile = async () => {
     try {
-      // Séparer les données entre User et Patient
-      const userUpdateData = {
-        nom: editedProfile.nom,
-        prenom: editedProfile.prenom,
-        email: editedProfile.email,
-        telephone: editedProfile.telephone,
-        adresse: editedProfile.adresse,
-      };
-
-      const patientUpdateData = {
-        bloodType: editedProfile.bloodType,
-        chronicDiseases: editedProfile.chronicDiseases,
-        emergencyContact: {
-          phone: editedProfile.emergencyPhone,
-          name: editedProfile.emergencyContactName || '',
-          relationship: editedProfile.emergencyContactRelation || ''
-        }
-      };
-
-      // Mettre à jour les informations de l'utilisateur
-      const userResponse = await axios.put(`${API_BASE_URL}/api/users/${userId}`, userUpdateData);
-      
-      // Mettre à jour les informations du patient
-      const patientResponse = await axios.put(`${API_BASE_URL}/api/patients/${userId}`, patientUpdateData);
-
-      // Mettre à jour l'état local avec les données combinées
-      setProfile({
-        ...userResponse.data,
-        ...patientResponse.data
-      });
-      
+      const response = await axios.put(`${API_BASE_URL}/api/users/${userId}`, editedProfile);
+      setProfile(response.data);
       setIsEditing(false);
       setMessage("✅ Profil mis à jour avec succès !");
     } catch (error) {
@@ -966,9 +1008,54 @@ const PatientDashboard = () => {
     }));
   };
 
-  // Ajouter cette nouvelle fonction
-  const toggleAppointmentSection = (section) => {
-    setExpandedAppointmentSections(prev => ({
+  // Ajout du useEffect pour gérer la disparition des messages
+  useEffect(() => {
+    if (message) {
+      const timer = setTimeout(() => {
+        setMessage('');
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [message]);
+
+  const handleProfileImageSelect = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setSelectedProfileImage(file);
+      handleProfileImageUpload(file);
+    }
+  };
+
+  const handleProfileImageUpload = async (file) => {
+    try {
+      const formData = new FormData();
+      formData.append('avatar', file);
+
+      const response = await axios.post(
+        `${API_BASE_URL}/api/users/${userId}/avatar`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+
+      if (response.data.photo) {
+        setProfile(prev => ({
+          ...prev,
+          photo: response.data.photo
+        }));
+        setMessage("✅ Photo de profil mise à jour avec succès !");
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour de la photo:', error);
+      setMessage("❌ Erreur lors de la mise à jour de la photo de profil.");
+    }
+  };
+
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
       ...prev,
       [section]: !prev[section]
     }));
@@ -979,90 +1066,89 @@ const PatientDashboard = () => {
       <aside className="sidebar">
         <div className="sidebar-header">
           <div className="user-info">
-            <div className="user-icon">👤</div>
-            <div>
-              <div className="user-role">Espace Patient</div>
-              <div className="user-name">
-                {profile.nom} {profile.prenom}
-              </div>
-            </div>
+            <span className="user-icon">👤</span>
+            <span className="user-role">Patient</span>
           </div>
         </div>
 
-        <nav className="sidebar-menu">
+        <div className="sidebar-menu">
           <div className="menu-group">
-            <div className="menu-group-title">Principal</div>
+            <div className="menu-group-title">Profil</div>
             <button 
               className={activeSection === 'profile' ? 'active' : ''} 
               onClick={() => setActiveSection('profile')}
             >
-              <div className="icon">👤</div>
-              Profil
+              <span className="icon">👤</span>
+              Mon Profil
             </button>
-            <button 
-              className={activeSection === 'all-appointments' ? 'active' : ''} 
-              onClick={() => setActiveSection('all-appointments')}
+            {/* <button 
+              className={activeSection === 'documents' ? 'active' : ''} 
+              onClick={() => setActiveSection('documents')}
             >
-              <div className="icon">📋</div>
-              Rendez-vous
-            </button>
+              <span className="icon">📄</span>
+              Documents Médicaux
+            </button> */}
           </div>
 
           <div className="menu-group">
             <div className="menu-group-title">Rendez-vous</div>
             <button 
+              className={activeSection === 'all-appointments' ? 'active' : ''} 
+              onClick={() => setActiveSection('all-appointments')}
+            >
+              <span className="icon">📋</span>
+              Tous mes rendez-vous
+            </button>
+            <button 
               className={activeSection === 'new-appointment' ? 'active' : ''} 
               onClick={() => setActiveSection('new-appointment')}
             >
-              <div className="icon">➕</div>
-              Nouveau RDV
+              <span className="icon">📅</span>
+              Nouveau Rendez-vous
             </button>
           </div>
 
           <div className="menu-group">
-            <div className="menu-group-title">Suivi médical</div>
+            <div className="menu-group-title">Résultats & Communication</div>
             <button 
               className={activeSection === 'medical-reports' ? 'active' : ''} 
               onClick={() => setActiveSection('medical-reports')}
             >
-              <div className="icon">📋</div>
-              Rapports
+              <span className="icon">📋</span>
+              Rapports Médicaux
             </button>
             <button 
               className={activeSection === 'lab-results' ? 'active' : ''} 
               onClick={() => setActiveSection('lab-results')}
             >
-              <div className="icon">🔬</div>
-              Analyses
+              <span className="icon">🔬</span>
+              Résultats Laboratoire
             </button>
-          </div>
-
-          <div className="menu-group">
-            <div className="menu-group-title">Communication</div>
             <button 
-              className={`${activeSection === 'messages' ? 'active' : ''}`}
+              className={`nav-button ${activeSection === 'messages' ? 'active' : ''}`}
               onClick={() => setActiveSection('messages')}
             >
-              <div className="icon">💬</div>
-              Messages
+              <span>💬 Messagerie</span>
               {unreadMessages > 0 && (
-                <span className="unread-badge">{unreadMessages}</span>
+                <span className="unread-badge">
+                  {unreadMessages}
+                </span>
               )}
             </button>
             <button 
               className={activeSection === 'notifications' ? 'active' : ''} 
               onClick={() => setActiveSection('notifications')}
             >
-              <div className="icon">🔔</div>
+              <span className="icon">🔔</span>
               Notifications
             </button>
           </div>
-        </nav>
 
-        <button className="logout-button" onClick={handleLogout}>
-          <div className="icon">🚪</div>
-          Déconnexion
-        </button>
+          <button className="logout-button" onClick={handleLogout}>
+            <span className="icon">🚪</span>
+            Déconnexion
+          </button>
+        </div>
       </aside>
 
       <main className="dashboard">
@@ -1077,13 +1163,26 @@ const PatientDashboard = () => {
                 <h2>👤 Mon profil</h2>
                 <div className="profile-card">
                   <div className="profile-header">
-                  {profile.photo && (
-                    <img 
-                      src={`${API_BASE_URL}${profile.photo}`} 
-                      alt="Profil" 
-                      className="profile-photo" 
-                    />
-                  )}
+                    <div style={styles.profilePhotoContainer}>
+                      <img 
+                        src={profile.photo ? `${API_BASE_URL}${profile.photo}` : 'https://via.placeholder.com/150'} 
+                        alt="Profil" 
+                        style={styles.profilePhoto}
+                      />
+                      <input
+                        type="file"
+                        ref={profileImageInputRef}
+                        onChange={handleProfileImageSelect}
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                      />
+                      <button 
+                        style={styles.changePhotoBtn}
+                        onClick={() => profileImageInputRef.current?.click()}
+                      >
+                        📷 Changer la photo
+                      </button>
+                    </div>
                   </div>
                   <div className="profile-grid">
                     {isEditing ? (
@@ -1441,23 +1540,6 @@ const PatientDashboard = () => {
                     </div>
 
                         <div className="form-group" style={{...styles.formGroup, '--animation-order': '2'}}>
-                          <label style={styles.label}>Spécialité d'analyse :</label>
-                          <select 
-                            value={selectedSpecialty} 
-                            onChange={(e) => setSelectedSpecialty(e.target.value)}
-                            required
-                            style={styles.select}
-                          >
-                            <option value="">Sélectionnez une spécialité</option>
-                            <option value="Analyses sanguines">Analyses sanguines</option>
-                            <option value="Analyses d'urine">Analyses d'urine</option>
-                            <option value="Microbiologie">Microbiologie</option>
-                            <option value="Immunologie">Immunologie</option>
-                            <option value="Hormonologie">Hormonologie</option>
-                          </select>
-                  </div>
-
-                        <div className="form-group" style={{...styles.formGroup, '--animation-order': '3'}}>
                           <label style={styles.label}>Laboratoire :</label>
                           <select 
                             value={selectedLab} 
@@ -1474,9 +1556,9 @@ const PatientDashboard = () => {
                                 </option>
                               ))}
                           </select>
-                            </div>
+                        </div>
 
-                        <div className="form-group" style={{...styles.formGroup, '--animation-order': '4'}}>
+                        <div className="form-group" style={{...styles.formGroup, '--animation-order': '3'}}>
                           <label style={styles.label}>Motif / Type d'analyse :</label>
                           <textarea
                             value={labAppointmentReason}
@@ -1538,15 +1620,30 @@ const PatientDashboard = () => {
                             style={styles.select}
                           >
                             <option value="">Sélectionnez un hôpital</option>
-                            {hospitals
-                              .filter(hospital => 
-                                (!selectedRegion || hospital.region === selectedRegion)
-                              )
-                              .map(hospital => (
-                                <option key={hospital._id} value={hospital._id}>
-                                  {hospital.nom} - {hospital.adresse}
-                                </option>
-                              ))}
+                            {hospitals.length > 0 ? (
+                              hospitals
+                                .filter(hospital => {
+                                  if (!selectedRegion) {
+                                    console.log("Aucune région sélectionnée, affichage de l'hôpital:", hospital.nom);
+                                    return true;
+                                  }                                  const hospitalRegion = hospital.region ? hospital.region.toLowerCase() : '';
+                                  const selectedRegionLower = selectedRegion.toLowerCase();
+                                  const matchesRegion = hospitalRegion === selectedRegionLower;
+                                  console.log(`Filtrage - Hôpital ${hospital.nom}:`, {
+                                    hospitalRegion,
+                                    selectedRegion: selectedRegionLower,
+                                    matchesRegion
+                                  });
+                                  return matchesRegion;
+                                })
+                                .map(hospital => (
+                                  <option key={hospital._id} value={hospital._id}>
+                                    {hospital.nom} - {hospital.adresse || hospital.region || ''}
+                                    </option>
+                                ))
+                            ) : (
+                              <option value="" disabled>Aucun hôpital disponible</option>
+                            )}
                           </select>
                       </div>
 
@@ -1763,14 +1860,25 @@ const PatientDashboard = () => {
                 <h2>📋 Tous mes rendez-vous</h2>
                 <div className="all-appointments-section">
                   <div className="appointments-category">
-                    <h3 
-                      onClick={() => toggleAppointmentSection('medical')}
-                      className={!expandedAppointmentSections.medical ? 'collapsed' : ''}
+                    <div 
+                      className="category-header" 
+                      onClick={() => toggleSection('medical')}
+                      style={{ 
+                        cursor: 'pointer', 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        padding: '10px',
+                        backgroundColor: '#f5f5f5',
+                        borderRadius: '5px',
+                        marginBottom: expandedSections.medical ? '10px' : '0'
+                      }}
                     >
-                      🏥 Rendez-vous Médecins
-                    </h3>
-                    <div className={`appointments-content ${expandedAppointmentSections.medical ? 'expanded' : ''}`}>
-                      {appointments.length === 0 ? (
+                      <h3 style={{ margin: 0 }}>👨‍⚕️ Rendez-vous Médecins</h3>
+                      <span>{expandedSections.medical ? '▼' : '▶'}</span>
+                    </div>
+                    {expandedSections.medical && (
+                      appointments.length === 0 ? (
                         <p className="no-appointments-message">Aucun rendez-vous médical trouvé.</p>
                       ) : (
                         <div className="appointments-list">
@@ -1800,250 +1908,278 @@ const PatientDashboard = () => {
                                   <td>
                                     <div className="appointment-actions">
                                     {apt.status !== 'cancelled' && (
-                                        <>
-                                      <button
-                                        onClick={() => {
-                                          setSelectedAppointment(apt);
-                                          fetchChatMessages(apt._id);
-                                          setActiveSection('messages');
-                                        }}
-                                        className="chat-button"
-                                      >
-                                        💬 Chat
-                                      </button>
-                                          <button
-                                            onClick={() => handleCancelAppointment(apt._id, 'medical')}
-                                            className="cancel-button"
-                                          >
-                                            ❌ Annuler
-                                          </button>
-                                        </>
-                                      )}
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="appointments-category">
-                    <h3 
-                      onClick={() => toggleAppointmentSection('laboratory')}
-                      className={!expandedAppointmentSections.laboratory ? 'collapsed' : ''}
-                    >
-                      🔬 Rendez-vous Laboratoire
-                    </h3>
-                    <div className={`appointments-content ${expandedAppointmentSections.laboratory ? 'expanded' : ''}`}>
-                      {labAppointments.length === 0 ? (
-                        <p className="no-appointments-message">Aucun rendez-vous laboratoire trouvé.</p>
-                      ) : (
-                        <div className="appointments-list">
-                          <table>
-                            <thead>
-                              <tr>
-                                <th>Laboratoire</th>
-                                <th>Date</th>
-                                <th>Motif</th>
-                                <th>Statut</th>
-                                <th>Actions</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {labAppointments.map(apt => (
-                                <tr key={apt._id} className={`appointment-row ${apt.status}`}>
-                                  <td>{apt.lab?.nom || 'Laboratoire'}</td>
-                                  <td>{new Date(apt.date).toLocaleString('fr-FR')}</td>
-                                  <td>{apt.reason}</td>
-                                  <td>
-                                    <span className={`status-badge ${apt.status}`}>
-                                      {apt.status === 'pending' && 'En attente'}
-                                      {apt.status === 'confirmed' && 'Confirmé'}
-                                      {apt.status === 'cancelled' && 'Annulé'}
-                                    </span>
-                                  </td>
-                                  <td>
-                                    {apt.status !== 'cancelled' && (
-                                      <button
-                                        onClick={() => handleCancelAppointment(apt._id, 'laboratory')}
-                                        className="cancel-button"
-                                      >
-                                        ❌ Annuler
-                                      </button>
+                                      <>
+                                        <button
+                                          onClick={() => {
+                                            setSelectedAppointment(apt);
+                                            fetchChatMessages(apt._id);
+                                            setActiveSection('messages');
+                                          }}
+                                          className="chat-button"
+                                        >
+                                          💬 Chat
+                                        </button>
+                                        <button
+                                          onClick={() => handleCancelAppointment(apt._id, 'medical')}
+                                          className="cancel-button"
+                                        >
+                                          ❌ Annuler
+                                        </button>
+                                      </>
                                     )}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="appointments-category">
-                    <h3 
-                      onClick={() => toggleAppointmentSection('hospital')}
-                      className={!expandedAppointmentSections.hospital ? 'collapsed' : ''}
-                    >
-                      🏥 Rendez-vous Hôpital
-                    </h3>
-                    <div className={`appointments-content ${expandedAppointmentSections.hospital ? 'expanded' : ''}`}>
-                      {hospitalAppointments.length === 0 ? (
-                        <p className="no-appointments-message">Aucun rendez-vous hospitalier trouvé.</p>
-                      ) : (
-                        <div className="appointments-list">
-                          <table>
-                            <thead>
-                              <tr>
-                                <th>Hôpital</th>
-                                <th>Date</th>
-                                <th>Service</th>
-                                <th>Statut</th>
-                                <th>Actions</th>
+                                  </div>
+                                </td>
                               </tr>
-                            </thead>
-                            <tbody>
-                              {hospitalAppointments.map(apt => (
-                                <tr key={apt._id} className={`appointment-row ${apt.status}`}>
-                                  <td>{apt.hospitalId?.nom || 'Hôpital'}</td>
-                                  <td>{apt.appointmentDate ? new Date(apt.appointmentDate).toLocaleString('fr-FR') : 'Non planifié'}</td>
-                                  <td>{apt.specialty}</td>
-                                  <td>
-                                    <span className={`status-badge ${apt.status}`}>
-                                      {apt.status === 'pending' && 'En attente'}
-                                      {apt.status === 'confirmed' && 'Confirmé'}
-                                      {apt.status === 'cancelled' && 'Annulé'}
-                                    </span>
-                                  </td>
-                                  <td>
-                                    {apt.status !== 'cancelled' && (
-                                      <button
-                                        onClick={() => handleCancelAppointment(apt._id, 'hospital')}
-                                        className="cancel-button"
-                                      >
-                                        ❌ Annuler
-                                      </button>
-                                    )}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )
+                  )}
                 </div>
-              </>
-            )}
 
-            {activeSection === 'lab-results' && (
-              <div className="lab-results-container">
-                <h2>📋 Mes résultats d'analyses</h2>
-                  {labResults.length === 0 ? (
-                    <p>Aucun résultat d'analyse disponible.</p>
-                  ) : (
-                  labResults.map((result) => (
-                    <div key={result._id} className="lab-result-item">
-                      <div className="lab-header">
-                        <div className="lab-name">
-                          Laboratoire: {result.labId?.nom || 'Non spécifié'}
+                <div className="appointments-category">
+                  <div 
+                    className="category-header" 
+                    onClick={() => toggleSection('laboratory')}
+                    style={{ 
+                      cursor: 'pointer', 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      padding: '10px',
+                      backgroundColor: '#f5f5f5',
+                      borderRadius: '5px',
+                      marginBottom: expandedSections.laboratory ? '10px' : '0'
+                    }}
+                  >
+                    <h3 style={{ margin: 0 }}>🔬 Rendez-vous Laboratoire</h3>
+                    <span>{expandedSections.laboratory ? '▼' : '▶'}</span>
+                  </div>
+                  {expandedSections.laboratory && (
+                    labAppointments.length === 0 ? (
+                      <p className="no-appointments-message">Aucun rendez-vous laboratoire trouvé.</p>
+                    ) : (
+                      <div className="appointments-list">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Laboratoire</th>
+                              <th>Date</th>
+                              <th>Motif</th>
+                              <th>Statut</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {labAppointments.map(apt => (
+                              <tr key={apt._id} className={`appointment-row ${apt.status}`}>
+                                <td>{apt.lab?.nom || 'Laboratoire'}</td>
+                                <td>{new Date(apt.date).toLocaleString('fr-FR')}</td>
+                                <td>{apt.reason}</td>
+                                <td>
+                                  <span className={`status-badge ${apt.status}`}>
+                                    {apt.status === 'pending' && 'En attente'}
+                                    {apt.status === 'confirmed' && 'Confirmé'}
+                                    {apt.status === 'cancelled' && 'Annulé'}
+                                  </span>
+                                </td>
+                                <td>
+                                  {apt.status !== 'cancelled' && (
+                                    <button
+                                      onClick={() => handleCancelAppointment(apt._id, 'laboratory')}
+                                      className="cancel-button"
+                                    >
+                                      ❌ Annuler
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )
+                  )}
+                </div>
+
+                <div className="appointments-category">
+                  <div 
+                    className="category-header" 
+                    onClick={() => toggleSection('hospital')}
+                    style={{ 
+                      cursor: 'pointer', 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      padding: '10px',
+                      backgroundColor: '#f5f5f5',
+                      borderRadius: '5px',
+                      marginBottom: expandedSections.hospital ? '10px' : '0'
+                    }}
+                  >
+                    <h3 style={{ margin: 0 }}>🏥 Rendez-vous Hôpital</h3>
+                    <span>{expandedSections.hospital ? '▼' : '▶'}</span>
+                  </div>
+                  {expandedSections.hospital && (
+                    hospitalAppointments.length === 0 ? (
+                      <p className="no-appointments-message">Aucun rendez-vous hospitalier trouvé.</p>
+                    ) : (
+                      <div className="appointments-list">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Hôpital</th>
+                              <th>Date</th>
+                              <th>Service</th>
+                              <th>Statut</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {hospitalAppointments.map(apt => (
+                              <tr key={apt._id} className={`appointment-row ${apt.status}`}>
+                                <td>{apt.hospitalId?.nom || 'Hôpital'}</td>
+                                <td>{apt.appointmentDate ? new Date(apt.appointmentDate).toLocaleString('fr-FR') : 'Non planifié'}</td>
+                                <td>{apt.specialty}</td>
+                                <td>
+                                  <span className={`status-badge ${apt.status}`}>
+                                    {apt.status === 'pending' && 'En attente'}
+                                    {apt.status === 'confirmed' && 'Confirmé'}
+                                    {apt.status === 'cancelled' && 'Annulé'}
+                                  </span>
+                                </td>
+                                <td>
+                                  {apt.status !== 'cancelled' && (
+                                    <button
+                                      onClick={() => handleCancelAppointment(apt._id, 'hospital')}
+                                      className="cancel-button"
+                                    >
+                                      ❌ Annuler
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeSection === 'lab-results' && (
+            <div className="lab-results-container">
+              <h2>📋 Mes résultats d'analyses</h2>
+                {labResults.length === 0 ? (
+                  <p>Aucun résultat d'analyse disponible.</p>
+                ) : (
+                labResults.map((result) => (
+                  <div key={result._id} className="lab-result-item">
+                    <div className="lab-header">
+                      <div className="lab-name">
+                        Laboratoire: {result.labId?.nom || 'Non spécifié'}
+                      </div>
+                      <div className="lab-date">
+                        {new Date(result.appointmentId?.date || result.createdAt).toLocaleString('fr-FR')}
+                      </div>
+                    </div>
+                    <div className="test-details">
+                      <div className="test-type">
+                        <div className="test-label">Type de test</div>
+                        <div>{result.testType}</div>
+                      </div>
+                      <div className="test-result">
+                        <div className="test-label">Résultats</div>
+                        <div>{result.results}</div>
+                      </div>
                         </div>
-                        <div className="lab-date">
-                          {new Date(result.appointmentId?.date || result.createdAt).toLocaleString('fr-FR')}
+                        {result.fileUrl && (
+                            <a
+                              href={`${API_BASE_URL}/${result.fileUrl}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="view-file-btn"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                const url = `${API_BASE_URL}/${result.fileUrl}`;
+                                console.log("🔗 Tentative d'accès au fichier:", url);
+                                window.open(url, '_blank');
+                              }}
+                            >
+                              📄 Voir le fichier
+                            </a>
+                        )}
+                      </div>
+                ))
+                )}
+              </div>
+          )}
+
+          {activeSection === 'medical-reports' && (
+            <>
+              <h2>📋 Rapports Médicaux</h2>
+              <div className="medical-reports-section">
+                {medicalReports.length === 0 ? (
+                  <p>Aucun rapport médical disponible.</p>
+                ) : (
+                  <div className="reports-by-doctor">
+                    {Object.entries(
+                      medicalReports.reduce((acc, report) => {
+                        const doctorId = report.doctorId?._id;
+                        const doctorName = `Dr. ${report.doctorId?.nom} ${report.doctorId?.prenom}`;
+                        if (!acc[doctorId]) {
+                          acc[doctorId] = {
+                            doctorName,
+                            reports: []
+                          };
+                        }
+                        acc[doctorId].reports.push(report);
+                        return acc;
+                      }, {})
+                    ).map(([doctorId, { doctorName, reports }]) => (
+                      <div key={doctorId} className="doctor-reports-section">
+                        <h3 className="doctor-name">{doctorName}</h3>
+                        <div className="reports-grid">
+                          {reports.map((report) => (
+                            <div key={report._id} className="report-card">
+                              <div className="report-header">
+                                <span className="report-date">
+                                  {new Date(report.createdAt).toLocaleString('fr-FR')}
+                                </span>
+                              </div>
+                              <div className="report-content">
+                                <p><strong>Rendez-vous du:</strong> {new Date(report.appointmentId?.date).toLocaleString('fr-FR')}</p>
+                                <p><strong>Description:</strong> {report.description}</p>
+                              </div>
+                              <div className="report-actions">
+                                <a
+                                  href={`${API_BASE_URL}/${report.fileUrl}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="view-btn"
+                                >
+                                  📄 Voir le rapport
+                                </a>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                      <div className="test-details">
-                        <div className="test-type">
-                          <div className="test-label">Type de test</div>
-                          <div>{result.testType}</div>
-                        </div>
-                        <div className="test-result">
-                          <div className="test-label">Résultats</div>
-                          <div>{result.results}</div>
-                        </div>
-                          </div>
-                          {result.fileUrl && (
-                              <a
-                                href={`${API_BASE_URL}/${result.fileUrl}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                          className="view-file-btn"
-                              >
-                          📄 Voir le fichier
-                              </a>
-                          )}
-                        </div>
-                  ))
-                  )}
-                </div>
-            )}
-
-            {activeSection === 'medical-reports' && (
-              <>
-                <h2>📋 Rapports Médicaux</h2>
-                <div className="medical-reports-section">
-                  {medicalReports.length === 0 ? (
-                    <p>Aucun rapport médical disponible.</p>
-                  ) : (
-                    <div className="reports-by-doctor">
-                      {Object.entries(
-                        medicalReports.reduce((acc, report) => {
-                          const doctorId = report.doctorId?._id;
-                          const doctorName = `Dr. ${report.doctorId?.nom} ${report.doctorId?.prenom}`;
-                          if (!acc[doctorId]) {
-                            acc[doctorId] = {
-                              doctorName,
-                              reports: []
-                            };
-                          }
-                          acc[doctorId].reports.push(report);
-                          return acc;
-                        }, {})
-                      ).map(([doctorId, { doctorName, reports }]) => (
-                        <div key={doctorId} className="doctor-reports-section">
-                          <h3 className="doctor-name">{doctorName}</h3>
-                          <div className="reports-grid">
-                            {reports.map((report) => (
-                              <div key={report._id} className="report-card">
-                                <div className="report-header">
-                                  <span className="report-date">
-                                    {new Date(report.createdAt).toLocaleString('fr-FR')}
-                                  </span>
-                                </div>
-                                <div className="report-content">
-                                  <p><strong>Rendez-vous du:</strong> {new Date(report.appointmentId?.date).toLocaleString('fr-FR')}</p>
-                                  <p><strong>Description:</strong> {report.description}</p>
-                                </div>
-                                <div className="report-actions">
-                                  <a
-                                    href={`${API_BASE_URL}/${report.fileUrl}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="view-btn"
-                                  >
-                                    📄 Voir le rapport
-                                  </a>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </>
-        )}
-      </main>
-    </div>
-  );
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </>
+      )}
+    </main>
+  </div>
+);
 };
 
 export default PatientDashboard;
