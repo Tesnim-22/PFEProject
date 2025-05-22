@@ -22,8 +22,8 @@ const AmbulanceReports = () => {
         missionDetails: {
             pickupLocation: '',
             dropoffLocation: '',
-            pickupTime: '',
-            dropoffTime: '',
+            pickupTime: new Date().toISOString().slice(0, 16),
+            dropoffTime: new Date().toISOString().slice(0, 16),
             distance: ''
         },
         medicalInfo: {
@@ -163,8 +163,32 @@ const AmbulanceReports = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // Validate required fields
+        const requiredFields = {
+            'Lieu de prise en charge': formData.missionDetails.pickupLocation,
+            'Destination': formData.missionDetails.dropoffLocation,
+            'Heure de prise en charge': formData.missionDetails.pickupTime,
+            'Heure d\'arrivée': formData.missionDetails.dropoffTime,
+            'Niveau d\'urgence': formData.urgencyLevel
+        };
+
+        const missingFields = Object.entries(requiredFields)
+            .filter(([_, value]) => !value)
+            .map(([field]) => field);
+
+        if (missingFields.length > 0) {
+            setMessage(`❌ Veuillez remplir les champs obligatoires: ${missingFields.join(', ')}`);
+            return;
+        }
+
         try {
             const ambulancierId = localStorage.getItem('userId');
+            if (!ambulancierId) {
+                setMessage('❌ Erreur: ID ambulancier non trouvé.');
+                return;
+            }
+
             const userResponse = await axios.get(`${API_BASE_URL}/api/users/${ambulancierId}`);
             const ambulancierDetails = {
                 nom: userResponse.data.nom,
@@ -190,7 +214,7 @@ const AmbulanceReports = () => {
             }
         } catch (error) {
             console.error('❌ Erreur:', error);
-            setMessage('Erreur lors de l\'enregistrement du rapport.');
+            setMessage(error.response?.data?.message || 'Erreur lors de l\'enregistrement du rapport.');
         }
     };
 

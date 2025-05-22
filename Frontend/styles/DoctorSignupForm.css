@@ -1,18 +1,52 @@
-body {
-    margin: 0;
-    padding: 0;
-    font-family: 'Segoe UI', sans-serif;
-    background-color: #f4f9fb;
+:root {
+    /* Colors - Matched to PatientSignupForm.css */
+    --primary-color: #286090; /* Submit button color */
+    --primary-hover: #1b4f72; /* Submit button hover */
+    --background-color: #f0f4f8; /* Page background */
+    --white: #ffffff; /* Card background */
+    --text-color: #222; /* Label color */
+    --border-color: #b0c6cf; /* Input border */
+    --input-bg: #fefefe; /* Input background */
+    --input-focus-border: #337ab7; /* Input focus border */
+    --input-focus-shadow: rgba(51, 122, 183, 0.2); /* Input focus shadow */
+    --success-bg: #e4f5eb; /* Success message background */
+    --success-border: #3e8e41; /* Success message border */
+    --success-text: #1a5e20; /* Success message text */
+    --error-bg: #fdecea; /* Error message background */
+    --error-border: #c62828; /* Error message border */
+    --error-text: #8b1c1c; /* Error message text */
+    --disabled-color: #b8c2c2; /* Disabled button color (kept from original) */
+    --heading-color: #1b3c47; /* Heading color */
+
+    /* Spacing - Matched to PatientSignupForm.css */
+    --spacing-xs: 6px;
+    --spacing-sm: 12px;
+    --spacing-md: 16px; /* Form gap */
+    --spacing-lg: 10px; /* Heading bottom margin */
+    --spacing-xl: 30px 35px; /* Card padding */
+
+    /* Border radius - Matched to PatientSignupForm.css */
+    --border-radius: 4px;
+    --border-radius-lg: 4px; /* Card border radius */
+
+    /* Shadows - Matched to PatientSignupForm.css */
+    --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); /* Card shadow */
 }
 
+ body {
+    margin: 0;
+    padding: 0;
+     background-color: #E8F5E9 !important; 
+    min-height: 100vh;
+}
+/* Container/Card Styles - Matched to PatientSignupForm.css */
 .doctor-form-container {
-    max-width: 520px;
+    max-width: 460px; /* Adjusted max-width */
     margin: 100px auto 40px;
-    /* ✅ espace sous navbar */
-    padding: 35px 30px;
-    border-radius: 14px;
-    background: #ffffff;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+    padding: var(--spacing-xl);
+    border-radius: var(--border-radius-lg);
+    background: var(--white);
+    box-shadow: var(--box-shadow);
     animation: fadeIn 0.6s ease-in;
 }
 
@@ -27,77 +61,123 @@ body {
     }
 }
 
+/* Heading Styles - Matched to PatientSignupForm.css */
 .doctor-form-container h2 {
-    color: #0e746b;
-    margin-bottom: 25px;
-    font-size: 1.8rem;
+    color: var(--heading-color);
+    margin-bottom: var(--spacing-lg);
+    font-size: 1.6rem; /* Adjusted font-size */
     text-align: center;
-    letter-spacing: 0.5px;
+    letter-spacing: initial; /* Removed letter-spacing */
 }
 
+/* Form Styles - Matched to PatientSignupForm.css */
 .doctor-form {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: var(--spacing-md);
 }
 
+/* Label Styles - Matched to PatientSignupForm.css */
 .doctor-form label {
     display: flex;
     flex-direction: column;
     font-size: 0.95rem;
-    font-weight: 500;
-    color: #2f2f2f;
+    font-weight: 600; /* Adjusted font-weight */
+    color: var(--text-color);
+    gap: var(--spacing-xs); /* Added gap */
 }
 
-.doctor-form input[type="text"],
-.doctor-form input[type="file"] {
-    margin-top: 6px;
-    padding: 11px 12px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
+/* Input Styles - Matched to PatientSignupForm.css */
+.doctor-form input[type="text"]
+/* Adjusted selector for input[type="file"] and added select, textarea */
+.doctor-form input[type="file"],
+.doctor-form select,
+.doctor-form textarea {
+    padding: 10px var(--spacing-sm); /* Adjusted padding */
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
     font-size: 0.95rem;
-    transition: border-color 0.3s ease;
-    background-color: #fdfdfd;
+    background-color: var(--input-bg);
+    transition: border 0.3s ease, box-shadow 0.3s ease; /* Adjusted transition */
 }
 
-.doctor-form input:focus {
-    border-color: #0e746b;
+.doctor-form input:focus,
+.doctor-form select:focus,
+.doctor-form textarea:focus {
+    border-color: var(--input-focus-border);
     outline: none;
-    background-color: #f9ffff;
+    background-color: var(--input-bg); /* Ensure background stays the same on focus */
+    box-shadow: 0 0 4px var(--input-focus-shadow);
 }
 
+/* Button Styles - Matched to PatientSignupForm.css (Submit button) */
 button {
-    padding: 13px;
-    background-color: #0e746b;
-    color: #fff;
+    margin-top: 10px; /* Added top margin */
+    padding: 12px; /* Adjusted padding */
+    background-color: var(--primary-color);
+    color: var(--white);
     border: none;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 500;
+    border-radius: var(--border-radius);
+    font-size: 0.95rem; /* Adjusted font-size */
+    font-weight: 600; /* Adjusted font-weight */
     cursor: pointer;
     transition: background-color 0.3s ease, transform 0.2s ease;
 }
 
 button:hover {
-    background-color: #09514a;
-    transform: scale(1.02);
+    background-color: var(--primary-hover);
+    transform: translateY(-1px); /* Adjusted transform on hover */
 }
 
 button:disabled {
-    background-color: #b8c2c2;
+    background-color: var(--disabled-color);
     cursor: not-allowed;
+    transform: none; /* Ensure no transform when disabled */
 }
 
+/* Message Styles - Matched to PatientSignupForm.css */
 .message {
     text-align: center;
     font-weight: 500;
     margin-top: 15px;
+    /* Added common message styles */
+    margin-bottom: 12px;
+    padding: 10px 16px;
+    border-radius: var(--border-radius);
+    font-size: 0.9rem;
 }
 
-.success {
-    color: #28a745;
+.message.success {
+    color: var(--success-text);
+    background-color: var(--success-bg);
+    border-left: 4px solid var(--success-border);
+    text-align: left; /* Align message text to left */
 }
 
-.error {
-    color: #dc3545;
+.message.error {
+    color: var(--error-text);
+    background-color: var(--error-bg);
+    border-left: 4px solid var(--error-border);
+    text-align: left; /* Align message text to left */
+}
+
+/* Added preview container styles from PatientSignupForm.css */
+.preview-container {
+    margin-top: 10px;
+}
+
+.preview-container img {
+    max-width: 90px;
+    border-radius: var(--border-radius);
+}
+
+/* Added Media Query from PatientSignupForm.css */
+@media (max-width: 768px) {
+    .doctor-form-container {
+        padding: 25px 20px; /* Adjusted padding */
+    }
+    button {
+        width: 100%;
+        text-align: center;
+    }
 }

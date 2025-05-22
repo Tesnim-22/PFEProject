@@ -308,12 +308,16 @@ body {
 }
 
 .section-header h2 {
-    font-size: 2.5rem;
-    color: var(--secondary-color);
-    font-weight: 700;
-    margin-bottom: var(--spacing-md);
-    text-align: center;
-    position: relative;
+  font-size: 1.8rem;
+  color: #2c3e50 !important;
+  margin: 0;
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: rgb(112, 177, 154) !important;
+  ont-family: 'Poppins', sans-serif !important;
+  font-weight: 600 !important;
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.1) !important;
+  
 }
 
 .section-decoration {
@@ -423,20 +427,21 @@ body {
 }
 
 .cta-secondary {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-    color: var(--primary-color);
-    text-decoration: none;
-    font-weight: 600;
-    padding: var(--spacing-sm) var(--spacing-md);
-    border: 2px solid var(--primary-color);
-    border-radius: var(--border-radius-md);
-    transition: all 0.3s ease;
+  display: inline-flex
+;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: rgb(65, 133, 86) !important;
+  text-decoration: none;
+  font-weight: 600;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 2px solid rgb(70, 104, 70);
+  border-radius: var(--border-radius-md);
+  transition: all 0.3s ease;
 }
 
 .cta-secondary:hover {
-    background: var(--primary-color);
+    
     color: var(--white);
     transform: translateY(-2px);
 }
@@ -495,7 +500,7 @@ body {
 
 .how-it-works .section-header {
     text-align: center;
-    margin-bottom: var(--spacing-xl);
+    margin-bottom: 1.5rem !important;
 }
 
 .how-it-works .section-header h2 {
@@ -540,7 +545,7 @@ body {
 }
 
 .step-number {
-    background: var(--primary-color);
+    background: rgb(84, 175, 146) !important;
     color: var(--white);
     width: 40px;
     height: 40px;
@@ -613,7 +618,7 @@ body {
 
 .why-patientpath .section-header {
   text-align: center;
-  margin-bottom: var(--spacing-xl);
+  margin-bottom: 1.5rem !important;
 }
 
 .why-patientpath .section-header h2 {
@@ -645,7 +650,7 @@ body {
   box-shadow: var(--shadow-sm);
   transition: all 0.3s ease;
   position: relative;
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(117, 45, 45, 0.05) !important;
 }
 
 .benefit-item:hover {
@@ -656,7 +661,7 @@ body {
 .benefit-circle {
   width: 50px;
   height: 50px;
-  background: rgba(3, 138, 145, 0.1);
+  background: rgba(54, 128, 112, 0.1) !important;
   border-radius: 50%;
   display: flex;
   align-items: center;

@@ -890,9 +890,10 @@ const PatientDashboard = () => {
       console.log("🔍 Récupération des médecins...");
       const response = await axios.get(`${API_BASE_URL}/api/medecins-valides`);
       console.log("✅ Médecins reçus:", response.data);
+      // Modifier le filtre pour inclure tous les médecins validés
       setDoctors(response.data.filter(user => 
-        user.roles.includes('Doctor') || 
-        user.roles.includes('doctor')
+        (user.roles.includes('Doctor') || user.roles.includes('doctor')) && 
+        user.isValidated !== false
       ));
     } catch (error) {
       console.error("❌ Erreur lors de la récupération des médecins:", error);
@@ -1497,7 +1498,9 @@ const PatientDashboard = () => {
                           )
                           .map(doctor => (
                             <option key={doctor._id} value={doctor._id}>
-                              Dr. {doctor.nom} {doctor.prenom} {doctor.specialty ? `- ${doctor.specialty}` : ''}
+                              Dr. {doctor.nom} {doctor.prenom} 
+                              {doctor.specialty ? ` - ${doctor.specialty}` : ''}
+                              {doctor.cabinet ? ` (Cabinet: ${doctor.cabinet.nom})` : ''}
                             </option>
                           ))}
                       </select>

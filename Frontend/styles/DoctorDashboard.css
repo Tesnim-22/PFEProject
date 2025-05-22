@@ -113,9 +113,11 @@ body {
   border-bottom: 1px solid var(--border-color);
 }
 
-.section-header h2 {
-  font-size: 1.5rem;
-  color: var(--primary-color);
+.dashboard-container .section-header h2,
+.modal-header h2 {
+  font-size: 1.8rem;
+  color: var(--text-primary);
+  margin: 0;
 }
 
 /* Formulaires */

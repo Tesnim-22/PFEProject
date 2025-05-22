@@ -3224,9 +3224,10 @@ const ProfileView = () => {
           {isEditing ? (
             <div className="avatar-upload">
               <img 
-                src={editedInfo.tempPhotoUrl || (editedInfo.photo ? `http://localhost:5001${editedInfo.photo}` : '/default-avatar.png')}
+                src={editedInfo.tempPhotoUrl || (editedInfo.photo ? `http://localhost:5001${editedInfo.photo}` : '../assets/images/default-avatar.png')}
                 alt="Avatar"
                 className="avatar-preview"
+                onError={(e) => { e.target.src = '../assets/images/default-avatar.png'; console.error('Failed to load avatar:', e.target.src); }}
                 style={{
                   width: '150px',
                   height: '150px',
@@ -3246,9 +3247,10 @@ const ProfileView = () => {
             </div>
           ) : (
             <img 
-              src={doctorInfo.photo ? `http://localhost:5001${doctorInfo.photo}` : '/default-avatar.png'}
+              src={doctorInfo.photo ? `http://localhost:5001${doctorInfo.photo}` : '../assets/images/default-avatar.png'}
               alt="Avatar"
               className="avatar-image"
+              onError={(e) => { e.target.src = '../assets/images/default-avatar.png'; console.error('Failed to load avatar:', e.target.src); }}
               style={{
                 width: '150px',
                 height: '150px',

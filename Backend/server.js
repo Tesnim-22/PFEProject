@@ -1264,24 +1264,12 @@ app.get('/api/labs-valides', async(req, res) => {
 // 🩺 Médecins validés et complets (pour les rendez-vous)
 app.get('/api/medecins-valides', async(req, res) => {
     try {
-        // Trouver tous les cabinets qui ont un médecin lié
-        const cabinetsWithDoctors = await User.find({
-            roles: { $in: ['Cabinet'] },
-            linkedDoctorId: { $exists: true, $ne: null }
-        }).select('linkedDoctorId');
-
-        // Extraire les IDs des médecins déjà liés
-        const linkedDoctorIds = cabinetsWithDoctors.map(cabinet => cabinet.linkedDoctorId);
-
-        // Trouver les médecins qui ne sont pas liés à un cabinet
+        // Retourner TOUS les médecins validés, même ceux liés à un cabinet
         const doctors = await User.find({
             roles: { $in: ['Doctor', 'doctor'] },
             isValidated: true,
-            profileCompleted: true,
-            _id: { $nin: linkedDoctorIds } // Exclure les médecins déjà liés
-        }).select('_id nom prenom email specialty region roles');
-
-        console.log("✅ Médecins trouvés:", doctors);
+            profileCompleted: true
+        }).select('_id nom prenom email specialty region roles cabinet');
         res.status(200).json(doctors);
     } catch (error) {
         console.error("❌ Erreur récupération médecins :", error);
@@ -3205,3 +3193,5 @@ app.get('/api/cabinet/stats/:cabinetId', async (req, res) => {
 app.get('/protected-route', auth, (req, res) => {
     // Votre logique de route ici
 });
+
+
