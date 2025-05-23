@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import '../styles/AmbulancierDashboard.css';
 import AmbulanceReports from './AmbulanceReports';
 import VehicleInfo from './VehicleInfo';
+import { FaUserNurse, FaCheck, FaMapMarkerAlt, FaPhone, FaFileAlt, FaCar } from "react-icons/fa";
 
 const AmbulancierDashboard = () => {
   const [activeSection, setActiveSection] = useState('profile');
@@ -72,30 +73,32 @@ const AmbulancierDashboard = () => {
   return (
     <div className="dashboard-wrapper">
       <aside className="sidebar">
-        <h2 className="sidebar-title">Ambulancier</h2>
-        <ul className="sidebar-menu">
-          <li className={activeSection === 'profile' ? 'active' : ''} onClick={() => setActiveSection('profile')}>
-             ⌂   Profil
-          </li>
-          <li className={activeSection === 'status' ? 'active' : ''} onClick={() => setActiveSection('status')}>
-            ✓ Statut
-          </li>
-          <li className={activeSection === 'location' ? 'active' : ''} onClick={() => setActiveSection('location')}>
-           ⬍ Position
-          </li>
-          <li className={activeSection === 'calls' ? 'active' : ''} onClick={() => setActiveSection('calls')}>
-             ☎ Appels
-          </li>
-          <li className={activeSection === 'reports' ? 'active' : ''} onClick={() => setActiveSection('reports')}>
-           ✎ Rapports
-          </li>
-          <li className={activeSection === 'vehicle' ? 'active' : ''} onClick={() => setActiveSection('vehicle')}>
-            ▓ Véhicule
-          </li>
-        </ul>
-
+        <div className="user-info" style={{ justifyContent: "center", flexDirection: "column", alignItems: "center", marginBottom: "2rem" }}>
+          <FaUserNurse size={38} style={{ color: "#038A91", marginBottom: 4 }} />
+          <span className="user-role" style={{ fontSize: "1rem", fontWeight: 700, color: "#038A91" }}>Ambulancier</span>
+        </div>
+        <div className="sidebar-menu">
+          <button className={`sidebar-btn${activeSection === 'profile' ? ' active' : ''}`} onClick={() => setActiveSection('profile')}>
+            <FaUserNurse className="icon" /><span>Profil</span>
+          </button>
+          <button className={`sidebar-btn${activeSection === 'status' ? ' active' : ''}`} onClick={() => setActiveSection('status')}>
+            <FaCheck className="icon" /><span>Statut</span>
+          </button>
+          <button className={`sidebar-btn${activeSection === 'location' ? ' active' : ''}`} onClick={() => setActiveSection('location')}>
+            <FaMapMarkerAlt className="icon" /><span>Position</span>
+          </button>
+          <button className={`sidebar-btn${activeSection === 'calls' ? ' active' : ''}`} onClick={() => setActiveSection('calls')}>
+            <FaPhone className="icon" /><span>Appels</span>
+          </button>
+          <button className={`sidebar-btn${activeSection === 'reports' ? ' active' : ''}`} onClick={() => setActiveSection('reports')}>
+            <FaFileAlt className="icon" /><span>Rapports</span>
+          </button>
+          <button className={`sidebar-btn${activeSection === 'vehicle' ? ' active' : ''}`} onClick={() => setActiveSection('vehicle')}>
+            <FaCar className="icon" /><span>Véhicule</span>
+          </button>
+        </div>
         <button className="logout-btn" onClick={handleLogout}>
-           Déconnexion
+          Déconnexion
         </button>
       </aside>
 

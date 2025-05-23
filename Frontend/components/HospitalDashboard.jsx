@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import '../styles/HospitalDashboard.css';
+import { FaUserCircle, FaCalendarAlt, FaHospital, FaSignOutAlt } from 'react-icons/fa';
 
 const API_BASE_URL = 'http://localhost:5001';
 
@@ -166,39 +167,47 @@ const HospitalDashboard = () => {
 
   return (
     <div className="hospital-dashboard">
-      <aside className="hospital-sidebar">
+      <aside className="sidebar">
         <div className="sidebar-header">
-          <h2>🏥 Hôpital</h2>
+          <div className="user-info">
+            <FaUserCircle size={32} style={{ marginRight: 8, color: "#038A91" }} />
+            <span className="user-role" style={{ fontSize: "1rem", fontWeight: 500, color: "#038A91" }}>Interface Hôpital</span>
+          </div>
         </div>
-        <nav className="sidebar-nav">
+        <nav className="sidebar-menu">
           <button 
             className={activeFilter === 'all' ? 'active' : ''} 
             onClick={() => setActiveFilter('all')}
           >
-            📋 Tous les rendez-vous
+            <FaCalendarAlt className="icon" />
+            <span>Tous les rendez-vous</span>
           </button>
           <button 
             className={activeFilter === 'pending' ? 'active' : ''} 
             onClick={() => setActiveFilter('pending')}
           >
-            ⏳ En attente
+            <FaCalendarAlt className="icon" />
+            <span>En attente</span>
           </button>
           <button 
             className={activeFilter === 'confirmed' ? 'active' : ''} 
             onClick={() => setActiveFilter('confirmed')}
           >
-            ✅ Confirmés
+            <FaCalendarAlt className="icon" />
+            <span>Confirmés</span>
           </button>
           <button 
             className={activeFilter === 'cancelled' ? 'active' : ''} 
             onClick={() => setActiveFilter('cancelled')}
           >
-            ❌ Annulés
-          </button>
-          <button className="logout-btn" onClick={handleLogout}>
-            🚪 Déconnexion
+            <FaCalendarAlt className="icon" />
+            <span>Annulés</span>
           </button>
         </nav>
+        <button className="logout-button" onClick={handleLogout}>
+          <FaSignOutAlt className="icon" />
+          <span>Se déconnecter</span>
+        </button>
       </aside>
 
       <main className="hospital-main">

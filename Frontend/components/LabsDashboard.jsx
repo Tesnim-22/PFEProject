@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import '../styles/LabsDashboard.css';
 import LabResultModal from './LabResultModal';
+import { FaUserCircle, FaUser, FaFileMedical, FaCalendarAlt, FaFlask, FaComments, FaSignOutAlt } from "react-icons/fa";
 
 const API_BASE_URL = 'http://localhost:5001';
 
@@ -410,63 +411,48 @@ const LabsDashboard = () => {
   return (
     <div className="labs-dashboard">
       <aside className="sidebar">
-        <h2>🔬 Laboratoire</h2>
-        <nav>
-          <ul className="sidebar-nav">
-            <li>
-              <button
-                className={activeSection === 'profile' ? 'active' : ''}
-                onClick={() => setActiveSection('profile')}
-              >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" fill="currentColor"/>
-                </svg>
-                Mon Profil
-              </button>
-            </li>
-            <li>
-              <button
-                className={activeSection === 'appointments' ? 'active' : ''}
-                onClick={() => setActiveSection('appointments')}
-              >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M19 3H18V1H16V3H8V1H6V3H5C3.89 3 3.01 3.9 3.01 5L3 19C3 20.1 3.89 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3ZM19 19H5V8H19V19ZM7 10H12V15H7V10Z" fill="currentColor"/>
-                </svg>
-                Rendez-vous
-              </button>
-            </li>
-            <li>
-              <button
-                className={activeSection === 'chat' ? 'active' : ''}
-                onClick={() => setActiveSection('chat')}
-              >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2ZM20 16H6L4 18V4H20V16Z" fill="currentColor"/>
-                </svg>
-                Discussion Médecins
-              </button>
-            </li>
-            <li>
-              <button
-                className={activeSection === 'patient-chat' ? 'active' : ''}
-                onClick={() => {
-                  setActiveSection('patient-chat');
-                  fetchPatients(currentLabId);
-                }}
-              >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2ZM20 16H6L4 18V4H20V16Z" fill="currentColor"/>
-                </svg>
-                Discussion Patients
-              </button>
-            </li>
-          </ul>
+        <div className="sidebar-header">
+          <div className="user-info">
+            <FaUserCircle size={32} style={{ marginRight: 8, color: "#038A91" }} />
+            <span className="user-role" style={{ fontSize: "1rem", fontWeight: 500, color: "#038A91" }}>Interface Laboratoire</span>
+          </div>
+        </div>
+        <nav className="sidebar-menu">
+          <button
+            className={activeSection === 'profile' ? 'active' : ''}
+            onClick={() => setActiveSection('profile')}
+          >
+            <FaUser className="icon" />
+            <span>Mon Profil</span>
+          </button>
+          <button
+            className={activeSection === 'appointments' ? 'active' : ''}
+            onClick={() => setActiveSection('appointments')}
+          >
+            <FaFileMedical className="icon" />
+            <span>Rendez-vous</span>
+          </button>
+          <button
+            className={activeSection === 'chat' ? 'active' : ''}
+            onClick={() => setActiveSection('chat')}
+          >
+            <FaComments className="icon" />
+            <span>Discussion Médecins</span>
+          </button>
+          <button
+            className={activeSection === 'patient-chat' ? 'active' : ''}
+            onClick={() => {
+              setActiveSection('patient-chat');
+              fetchPatients(currentLabId);
+            }}
+          >
+            <FaComments className="icon" />
+            <span>Discussion Patients</span>
+          </button>
         </nav>
         <button className="logout-button" onClick={handleLogout}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M17 7L15.59 8.41L18.17 11H8V13H18.17L15.59 15.58L17 17L22 12L17 7ZM4 5H12V3H4C2.9 3 2 3.9 2 5V19C2 20.1 2.9 21 4 21H12V19H4V5Z" fill="currentColor"/>
-          </svg>
-          Se déconnecter
+          <FaSignOutAlt className="icon" />
+          <span>Se déconnecter</span>
         </button>
       </aside>
 

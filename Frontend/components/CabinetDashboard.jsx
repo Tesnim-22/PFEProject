@@ -3,6 +3,7 @@ import { Link, Routes, Route, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import '../styles/CabinetDashboard.css';
 import Calendar from 'react-calendar';
+import { FaUserMd, FaCalendarAlt, FaClock, FaBook, FaSignOutAlt } from 'react-icons/fa';
 
 const CabinetDashboard = () => {
   const navigate = useNavigate();
@@ -15,48 +16,23 @@ const CabinetDashboard = () => {
   return (
     <div className="dashboard-container">
       <aside className="sidebar">
-        <h2>Espace Cabinet</h2>
-        <nav>
-          <ul>
-            <li>
-              <Link to="">👤 Mon Profil</Link>
-            </li>
-            <li>
-              <Link to="calendar">📅 Calendrier</Link>
-            </li>
-            <li>
-              <Link to="upcoming-appointments">📅 Rendez-vous à venir</Link>
-            </li>
-            <li>
-              <Link to="pending-appointments">⏳ Demandes en attente</Link>
-            </li>
-            <li>
-              <Link to="past-appointments">📚 Historique</Link>
-            </li>
-            <li>
-              <button 
-                onClick={handleLogout}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  backgroundColor: '#fff0f0',
-                  color: '#1a1a1a',
-                  border: '1px solid #ffcdd2',
-                  borderRadius: '8px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  marginTop: 'auto'
-                }}
-              >
-                <span>🚪</span>
-                Déconnexion
-              </button>
-            </li>
-          </ul>
+        <div className="sidebar-header">
+          <div className="user-info">
+            <FaUserMd size={32} style={{ marginRight: 8, color: "#038A91" }} />
+            <span className="user-role" style={{ fontSize: "1rem", fontWeight: 500, color: "#038A91" }}>Interface Cabinet</span>
+          </div>
+        </div>
+        <nav className="sidebar-menu">
+          <button className="sidebar-btn" onClick={() => navigate("")}> <FaUserMd className="icon" /> <span>Mon Profil</span> </button>
+          <button className="sidebar-btn" onClick={() => navigate("calendar")}> <FaCalendarAlt className="icon" /> <span>Calendrier</span> </button>
+          <button className="sidebar-btn" onClick={() => navigate("upcoming-appointments")}> <FaClock className="icon" /> <span>Rendez-vous à venir</span> </button>
+          <button className="sidebar-btn" onClick={() => navigate("pending-appointments")}> <FaClock className="icon" /> <span>Demandes en attente</span> </button>
+          <button className="sidebar-btn" onClick={() => navigate("past-appointments")}> <FaBook className="icon" /> <span>Historique</span> </button>
         </nav>
+        <button className="logout-button" onClick={handleLogout}>
+          <FaSignOutAlt className="icon" />
+          <span>Se déconnecter</span>
+        </button>
       </aside>
       <main className="main-content">
         <Routes>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import AppointmentForm from './AppointmentForm';
 import '../styles/PatientDashboard.css';
 import axios from 'axios';
+import { FaUser, FaCalendarAlt, FaFileMedical, FaFlask, FaComments, FaBell, FaSignOutAlt, FaUserCircle } from "react-icons/fa";
 
 const API_BASE_URL = 'http://localhost:5001';
 
@@ -1067,91 +1068,52 @@ const PatientDashboard = () => {
       <aside className="sidebar">
         <div className="sidebar-header">
           <div className="user-info">
-            <span className="user-icon">👤</span>
-            <span className="user-role">Patient</span>
+            <FaUserCircle size={32} style={{ marginRight: 8, color: "#038A91" }} />
+            <span className="user-role" style={{ fontSize: "1rem", fontWeight: 500, color: "#038A91" }}>Interface Patient</span>
           </div>
         </div>
-
         <div className="sidebar-menu">
           <div className="menu-group">
-            <div className="menu-group-title">Profil</div>
-            <button 
-              className={activeSection === 'profile' ? 'active' : ''} 
-              onClick={() => setActiveSection('profile')}
-            >
-              <span className="icon">👤</span>
-              Mon Profil
+            <button className={activeSection === 'profile' ? 'active' : ''} onClick={() => setActiveSection('profile')}>
+              <FaUser className="icon" />
+              <span>Mon Profil</span>
             </button>
-            {/* <button 
-              className={activeSection === 'documents' ? 'active' : ''} 
-              onClick={() => setActiveSection('documents')}
-            >
-              <span className="icon">📄</span>
-              Documents Médicaux
-            </button> */}
           </div>
-
           <div className="menu-group">
-            <div className="menu-group-title">Rendez-vous</div>
-            <button 
-              className={activeSection === 'all-appointments' ? 'active' : ''} 
-              onClick={() => setActiveSection('all-appointments')}
-            >
-              <span className="icon">📋</span>
-              Tous mes rendez-vous
+            <button className={activeSection === 'all-appointments' ? 'active' : ''} onClick={() => setActiveSection('all-appointments')}>
+              <FaFileMedical className="icon" />
+              <span>Mes Rdv</span>
             </button>
-            <button 
-              className={activeSection === 'new-appointment' ? 'active' : ''} 
-              onClick={() => setActiveSection('new-appointment')}
-            >
-              <span className="icon">📅</span>
-              Nouveau Rendez-vous
+            <button className={activeSection === 'new-appointment' ? 'active' : ''} onClick={() => setActiveSection('new-appointment')}>
+              <FaCalendarAlt className="icon" />
+              <span>Nouveau Rdv</span>
             </button>
           </div>
-
           <div className="menu-group">
-            <div className="menu-group-title">Résultats & Communication</div>
-            <button 
-              className={activeSection === 'medical-reports' ? 'active' : ''} 
-              onClick={() => setActiveSection('medical-reports')}
-            >
-              <span className="icon">📋</span>
-              Rapports Médicaux
+            <button className={activeSection === 'medical-reports' ? 'active' : ''} onClick={() => setActiveSection('medical-reports')}>
+              <FaFileMedical className="icon" />
+              <span>Rapports Médicaux</span>
             </button>
-            <button 
-              className={activeSection === 'lab-results' ? 'active' : ''} 
-              onClick={() => setActiveSection('lab-results')}
-            >
-              <span className="icon">🔬</span>
-              Résultats Laboratoire
+            <button className={activeSection === 'lab-results' ? 'active' : ''} onClick={() => setActiveSection('lab-results')}>
+              <FaFlask className="icon" />
+              <span>Résultats Laboratoire</span>
             </button>
-            <button 
-              className={`nav-button ${activeSection === 'messages' ? 'active' : ''}`}
-              onClick={() => setActiveSection('messages')}
-            >
-              <span>💬 Messagerie</span>
-              {unreadMessages > 0 && (
-                <span className="unread-badge">
-                  {unreadMessages}
-                </span>
-              )}
+            <button className={activeSection === 'messages' ? 'active' : ''} onClick={() => setActiveSection('messages')}>
+              <FaComments className="icon" />
+              <span>Messagerie</span>
+              {unreadMessages > 0 && <span className="unread-badge">{unreadMessages}</span>}
             </button>
-            <button 
-              className={activeSection === 'notifications' ? 'active' : ''} 
-              onClick={() => setActiveSection('notifications')}
-            >
-              <span className="icon">🔔</span>
-              Notifications
+            <button className={activeSection === 'notifications' ? 'active' : ''} onClick={() => setActiveSection('notifications')}>
+              <FaBell className="icon" />
+              <span>Notifications</span>
             </button>
           </div>
-
           <button className="logout-button" onClick={handleLogout}>
-            <span className="icon">🚪</span>
-            Déconnexion
+            <FaSignOutAlt className="icon" />
+            <span>Déconnexion</span>
           </button>
         </div>
       </aside>
-
       <main className="dashboard">
         {message && <div className="alert">{message}</div>}
 
@@ -1161,7 +1123,8 @@ const PatientDashboard = () => {
           <>
             {activeSection === 'profile' && (
               <>
-                <h2>👤 Mon profil</h2>
+              
+                <h2> Mon profil</h2>
                 <div className="profile-card">
                   <div className="profile-header">
                     <div style={styles.profilePhotoContainer}>
@@ -1860,7 +1823,7 @@ const PatientDashboard = () => {
 
             {activeSection === 'all-appointments' && (
               <>
-                <h2>📋 Tous mes rendez-vous</h2>
+                <h2> Mes rendez-vous</h2>
                 <div className="all-appointments-section">
                   <div className="appointments-category">
                     <div 
@@ -1877,7 +1840,7 @@ const PatientDashboard = () => {
                         marginBottom: expandedSections.medical ? '10px' : '0'
                       }}
                     >
-                      <h3 style={{ margin: 0 }}>👨‍⚕️ Rendez-vous Médecins</h3>
+                      <h3 style={{ margin: 0 }}>👨‍⚕️ Rendez-vous avec Médecins</h3>
                       <span>{expandedSections.medical ? '▼' : '▶'}</span>
                     </div>
                     {expandedSections.medical && (
@@ -1912,16 +1875,7 @@ const PatientDashboard = () => {
                                     <div className="appointment-actions">
                                     {apt.status !== 'cancelled' && (
                                       <>
-                                        <button
-                                          onClick={() => {
-                                            setSelectedAppointment(apt);
-                                            fetchChatMessages(apt._id);
-                                            setActiveSection('messages');
-                                          }}
-                                          className="chat-button"
-                                        >
-                                          💬 Chat
-                                        </button>
+                                        
                                         <button
                                           onClick={() => handleCancelAppointment(apt._id, 'medical')}
                                           className="cancel-button"
@@ -1956,7 +1910,7 @@ const PatientDashboard = () => {
                       marginBottom: expandedSections.laboratory ? '10px' : '0'
                     }}
                   >
-                    <h3 style={{ margin: 0 }}>🔬 Rendez-vous Laboratoire</h3>
+                    <h3 style={{ margin: 0 }}>🔬 Rendez-vous avec Laboratoire</h3>
                     <span>{expandedSections.laboratory ? '▼' : '▶'}</span>
                   </div>
                   {expandedSections.laboratory && (
@@ -2021,7 +1975,7 @@ const PatientDashboard = () => {
                       marginBottom: expandedSections.hospital ? '10px' : '0'
                     }}
                   >
-                    <h3 style={{ margin: 0 }}>🏥 Rendez-vous Hôpital</h3>
+                    <h3 style={{ margin: 0 }}>🏥 Rendez-vous avecHôpital</h3>
                     <span>{expandedSections.hospital ? '▼' : '▶'}</span>
                   </div>
                   {expandedSections.hospital && (

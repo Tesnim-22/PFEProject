@@ -3,6 +3,7 @@ import { Link, Routes, Route, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Calendar from 'react-calendar';
 import '../styles/DoctorDashboard.css';
+import { FaUserMd, FaCalendarAlt, FaHistory, FaComments, FaFileMedical, FaBook, FaSignOutAlt, FaUserCircle } from 'react-icons/fa';
 
 const UnifiedMessagesView = () => {
   const [conversations, setConversations] = useState([]);
@@ -3476,56 +3477,18 @@ const DoctorDashboard = () => {
   return (
     <div className="dashboard-container">
       <aside className="sidebar">
-        <h2>Espace Docteur</h2>
-        <nav>
-          <ul>
-            <li>
-              <Link to="">👤 Mon Profil</Link>
-            </li>
-            <li>
-              <Link to="calendar">📅 Calendrier</Link>
-            </li>
-            <li>
-              <Link to="upcoming-appointments">📅 Rendez-vous à venir</Link>
-            </li>
-            {/* <li>
-              <Link to="pending-appointments">⏳ Demandes en attente</Link>
-            </li> */}
-            <li>
-              <Link to="past-appointments">📚 Historique</Link>
-            </li>
-            <li>
-              <Link to="messages">💬 Messagerie</Link>
-            </li>
-            <li>
-              <Link to="medical-reports">📋 Rapports Médicaux</Link>
-            </li>
-            <li>
-              <Link to="articles">📚 Articles</Link>
-            </li>
-            <li>
-              <button 
-                onClick={handleLogout}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  backgroundColor: '#fff0f0',
-                  color: '#1a1a1a',
-                  border: '1px solid #ffcdd2',
-                  borderRadius: '8px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  marginTop: 'auto'
-                }}
-              >
-                <span>🚪</span>
-                Déconnexion
-              </button>
-            </li>
-          </ul>
+      <div className="user-info">
+            <FaUserCircle size={32} style={{ marginRight: 8, color: "#038A91" }} />
+            <span className="user-role" style={{ fontSize: "1rem", fontWeight: 500, color: "#038A91" }}>Interface Docteur</span>
+          </div>
+        <nav className="sidebar-menu">
+          <button className="sidebar-btn" onClick={() => navigate('')}><FaUserMd className="icon" /><span>Mon Profil</span></button>
+          <button className="sidebar-btn" onClick={() => navigate('calendar')}><FaCalendarAlt className="icon" /><span>Calendrier</span></button>
+          <button className="sidebar-btn" onClick={() => navigate('past-appointments')}><FaHistory className="icon" /><span>Historique</span></button>
+          <button className="sidebar-btn" onClick={() => navigate('messages')}><FaComments className="icon" /><span>Messagerie</span></button>
+          <button className="sidebar-btn" onClick={() => navigate('medical-reports')}><FaFileMedical className="icon" /><span>Rapports Médicaux</span></button>
+          <button className="sidebar-btn" onClick={() => navigate('articles')}><FaBook className="icon" /><span>Articles</span></button>
+          <button className="sidebar-btn logout-btn" onClick={handleLogout}><FaSignOutAlt className="icon" /><span>Déconnexion</span></button>
         </nav>
       </aside>
       <main className="main-content">
