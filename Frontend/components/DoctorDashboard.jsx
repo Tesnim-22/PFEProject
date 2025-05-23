@@ -12,7 +12,8 @@ const UnifiedMessagesView = () => {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('all'); // 'all', 'patients', 'labs'
+  const [activeTab, setActiveTab] = useState('patients'); // 'all', 'patients', 'labs'
+  const [searchTerm, setSearchTerm] = useState(''); // Ajout pour la recherche
   const messagesEndRef = useRef(null);
   const doctorId = localStorage.getItem('userId');
 
@@ -219,142 +220,113 @@ const UnifiedMessagesView = () => {
   };
 
   const filteredConversations = conversations.filter(conv => {
-    if (activeTab === 'all') return true;
     if (activeTab === 'patients') return conv.type === 'Patient';
     if (activeTab === 'labs') return conv.type === 'Labs';
     return true;
+  }).filter(conv => {
+    // Filtrage par recherche
+    const name = `${conv.contact?.prenom || ''} ${conv.contact?.nom || ''}`.toLowerCase();
+    return name.includes(searchTerm.toLowerCase());
   });
 
   return (
-    <div className="messages-container" style={{ 
-      height: '100vh', 
-      display: 'flex',
-      backgroundColor: '#f8f9fa',
-      color: '#000000'
-    }}>
-      <div className="conversations-list" style={{
-        flex: '0 0 300px',
-        borderRight: '1px solid #e0e0e0',
-        display: 'flex',
-        flexDirection: 'column',
-        color: '#000000'
-      }}>
+    <div className="messagerie-container">
+      <div className="contacts-list">
         <div style={{
           padding: '20px',
           borderBottom: '1px solid #e0e0e0',
           backgroundColor: 'white'
         }}>
           <h3 style={{ margin: '0 0 15px 0' }}>Messages</h3>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            placeholder="Rechercher un nom..."
+            style={{
+              width: '100%',
+              marginBottom: '10px',
+              padding: '8px 14px',
+              borderRadius: '8px',
+              border: '1px solid #e0e0e0',
+              fontSize: '1rem',
+              outline: 'none',
+              background: '#f8f9fa',
+              color: '#222',
+              boxSizing: 'border-box',
+              transition: 'border 0.2s'
+            }}
+          />
           <div style={{
             display: 'flex',
-            gap: '10px',
-            backgroundColor: '#f1f3f4',
-            padding: '4px',
-            borderRadius: '8px'
+            gap: '8px',
+            backgroundColor: '#f8f9fa',
+            padding: '6px',
+            borderRadius: '12px',
+            boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)'
           }}>
-            <button
-              onClick={() => setActiveTab('all')}
-              style={{
-                flex: 1,
-                padding: '8px',
-                border: 'none',
-                borderRadius: '6px',
-                backgroundColor: activeTab === 'all' ? 'white' : 'transparent',
-                cursor: 'pointer',
-                boxShadow: activeTab === 'all' ? '0 2px 4px rgba(0, 0, 0, 0.1)' : 'none',
-                color: '#000000'
-              }}
-            >
-              Tous
-            </button>
             <button
               onClick={() => setActiveTab('patients')}
               style={{
                 flex: 1,
-                padding: '8px',
+                padding: '10px 16px',
                 border: 'none',
-                borderRadius: '6px',
-                backgroundColor: activeTab === 'patients' ? 'white' : 'transparent',
+                borderRadius: '8px',
+                backgroundColor: activeTab === 'patients' ? '#1976d2' : 'transparent',
+                color: activeTab === 'patients' ? 'white' : '#666',
+                fontWeight: 500,
                 cursor: 'pointer',
-                boxShadow: activeTab === 'patients' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
-                color: '#000000'
+                transition: 'all 0.2s ease',
+                fontSize: '0.95rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
               }}
             >
-              Patients
+              <span>👤</span> Patients
             </button>
             <button
               onClick={() => setActiveTab('labs')}
               style={{
                 flex: 1,
-                padding: '8px',
+                padding: '10px 16px',
                 border: 'none',
-                borderRadius: '6px',
-                backgroundColor: activeTab === 'labs' ? 'white' : 'transparent',
+                borderRadius: '8px',
+                backgroundColor: activeTab === 'labs' ? '#1976d2' : 'transparent',
+                color: activeTab === 'labs' ? 'white' : '#666',
+                fontWeight: 500,
                 cursor: 'pointer',
-                boxShadow: activeTab === 'labs' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
-                color: '#000000'
+                transition: 'all 0.2s ease',
+                fontSize: '0.95rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
               }}
             >
-              Labos
+              <span>🔬</span> Laboratoire
             </button>
           </div>
         </div>
-
-        <div style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: '10px'
-        }}>
+        <div className="contacts-group">
           {loading && filteredConversations.length === 0 ? (
-            <div style={{ padding: '20px', textAlign: 'center' }}>
-              Chargement des conversations...
-            </div>
+            <div className="empty-state">Chargement des conversations...</div>
           ) : filteredConversations.length === 0 ? (
-            <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
-              Aucune conversation
-            </div>
+            <div className="empty-state">Aucune conversation</div>
           ) : (
             filteredConversations.map(conv => (
               <div
                 key={`${conv.type}-${conv.id}`}
+                className={`contact-item${selectedConversation?.id === conv.id ? ' active' : ''}`}
                 onClick={() => setSelectedConversation(conv)}
-                style={{
-                  padding: '15px',
-                  marginBottom: '10px',
-                  backgroundColor: selectedConversation?.id === conv.id ? '#e3f2fd' : 'white',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                  transition: 'all 0.2s ease',
-                  color: '#000000'
-                }}
               >
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  color: '#000000'
-                }}>
-                  <div style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '50%',
-                    backgroundColor: conv.type === 'Patient' ? '#bbdefb' : '#c8e6c9',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '1.2rem',
-                    color: '#000000'
-                  }}>
-                    {conv.type === 'Patient' ? '👤' : '🔬'}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <h4 style={{ margin: '0', fontSize: '1rem' }}>
+                <div className="contact-info">
+                  <div className="contact-name">
                       {`${conv.contact?.prenom || ''} ${conv.contact?.nom || ''}`}
-                    </h4>
-                    <small style={{ color: '#666' }}>
+                  </div>
+                  <div className="contact-details">
                       {conv.type === 'Patient' ? '👤 Patient' : '🔬 Laboratoire'}
-                    </small>
                   </div>
                 </div>
               </div>
@@ -362,25 +334,11 @@ const UnifiedMessagesView = () => {
           )}
         </div>
       </div>
-
-      <div className="chat-section" style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        backgroundColor: 'white'
-      }}>
+      <div className="chat-container">
         {selectedConversation ? (
           <>
-            <div style={{
-              padding: '20px',
-              borderBottom: '1px solid #e0e0e0',
-              backgroundColor: 'white'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px'
-              }}>
+            <div className="chat-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{
                   width: '40px',
                   height: '40px',
@@ -405,137 +363,44 @@ const UnifiedMessagesView = () => {
                 </div>
               </div>
             </div>
-
-            <div style={{
-              flex: 1,
-              overflowY: 'auto',
-              padding: '20px',
-              backgroundColor: '#f8f9fa'
-            }}>
+            <div className="chat-messages">
               {loading ? (
-                <div style={{ textAlign: 'center', padding: '20px' }}>
-                  Chargement des messages...
-                </div>
+                <div className="empty-state">Chargement des messages...</div>
               ) : messages.length === 0 ? (
-                <div style={{ 
-                  textAlign: 'center', 
-                  padding: '40px',
-                  color: '#666'
-                }}>
-                  Aucun message dans cette conversation
-                </div>
+                <div className="empty-state">Aucun message dans cette conversation</div>
               ) : (
                 <>
                   {messages.map((msg, index) => (
                     <div
                       key={msg._id || index}
-                      style={{
-                        display: 'flex',
-                        justifyContent: msg.senderId === doctorId ? 'flex-end' : 'flex-start',
-                        marginBottom: '16px',
-                        color: '#000000'
-                      }}
+                      className={`message${msg.senderId === doctorId ? ' sent' : ' received'}`}
                     >
-                      <div style={{
-                        maxWidth: '70%',
-                        padding: '14px 18px',
-                        borderRadius: '16px',
-                        backgroundColor: msg.senderId === doctorId ? '#1976d2' : 'white',
-                        color: msg.senderId === doctorId ? 'white' : '#2c3e50',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                        fontSize: '15px',
-                        lineHeight: '1.5',
-                        letterSpacing: '0.3px',
-                        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
-                      }}>
-                        <p style={{ 
-                          margin: '0 0 6px 0',
-                          fontWeight: '400'
-                        }}>
-                          {msg.content}
-                        </p>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: msg.senderId === doctorId ? 'flex-end' : 'flex-start',
-                          gap: '6px',
-                          marginTop: '4px',
-                          color: '#000000'
-                        }}>
-                          <small style={{
-                            opacity: 0.85,
-                            fontSize: '12px',
-                            fontWeight: '500'
-                          }}>
-                            {formatDate(msg.createdAt)}
-                          </small>
-                        </div>
-                      </div>
+                      <div className="message-content">{msg.content}</div>
+                      <div className="message-time">{formatDate(msg.createdAt)}</div>
                     </div>
                   ))}
                   <div ref={messagesEndRef} />
                 </>
               )}
             </div>
-
-            <form
-              onSubmit={handleSendMessage}
-              style={{
-                padding: '20px',
-                borderTop: '1px solid #e0e0e0',
-                backgroundColor: 'white',
-                display: 'flex',
-                gap: '12px'
-              }}
-            >
+            <form className="chat-input" onSubmit={handleSendMessage}>
               <input
                 type="text"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder="Écrivez votre message..."
-                style={{
-                  flex: 1,
-                  padding: '14px 20px',
-                  borderRadius: '24px',
-                  border: '1px solid #e0e0e0',
-                  outline: 'none',
-                  fontSize: '15px',
-                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-                  transition: 'border-color 0.2s ease',
-                  color: '#000000'
-                }}
               />
               <button
                 type="submit"
+                className="send-button"
                 disabled={loading || !newMessage.trim()}
-                style={{
-                  padding: '14px 28px',
-                  borderRadius: '24px',
-                  border: 'none',
-                  backgroundColor: '#1976d2',
-                  color: 'white',
-                  cursor: 'pointer',
-                  opacity: loading || !newMessage.trim() ? 0.7 : 1,
-                  fontSize: '15px',
-                  fontWeight: '500',
-                  transition: 'all 0.2s ease',
-                  ':hover': {
-                    backgroundColor: '#1565c0'
-                  }
-                }}
               >
                 {loading ? 'Envoi...' : 'Envoyer'}
               </button>
             </form>
           </>
         ) : (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100%',
-            color: '#666'
-          }}>
+          <div className="no-chat-selected">
             <p>👈 Sélectionnez une conversation pour commencer</p>
           </div>
         )}
@@ -1001,9 +866,9 @@ const LabMessagesView = () => {
   return (
     <div className="messages-container" style={{ color: '#000000' }}>
       <div className="laboratories-list">
-        <h3>🔬 Laboratoires</h3>
+        <h3>🔬 Labo</h3>
         {loading && laboratories.length === 0 ? (
-          <div className="loading">Chargement des laboratoires...</div>
+          <div className="loading">Chargement des labo...</div>
         ) : laboratories.length === 0 ? (
           <div className="no-labs" style={{ color: '#000000' }}>Aucun laboratoire disponible</div>
         ) : (
@@ -1130,6 +995,8 @@ const PastAppointmentsView = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [sortOrder, setSortOrder] = useState('desc');
+  const [currentPage, setCurrentPage] = useState(1); // Pagination
+  const appointmentsPerPage = 9;
   const doctorId = localStorage.getItem('userId');
 
   useEffect(() => {
@@ -1195,6 +1062,17 @@ const PastAppointmentsView = () => {
       if (filterStatus === 'all') return matchesSearch;
       return matchesSearch && apt.status === filterStatus;
     });
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredAppointments.length / appointmentsPerPage);
+  const paginatedAppointments = filteredAppointments.slice(
+    (currentPage - 1) * appointmentsPerPage,
+    currentPage * appointmentsPerPage
+  );
+
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages) setCurrentPage(page);
+  };
 
   return (
     <div className="dashboard-content" style={{ padding: '20px', color: '#000000' }}>
@@ -1289,12 +1167,13 @@ const PastAppointmentsView = () => {
           {searchTerm ? 'Aucun rendez-vous ne correspond à votre recherche' : 'Aucun rendez-vous passé'}
         </div>
       ) : (
+        <>
         <div style={{
           display: 'grid',
           gap: '15px',
           gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))'
         }}>
-          {filteredAppointments.map(apt => (
+          {paginatedAppointments.map(apt => (
             <div
               key={apt._id}
               style={{
@@ -1405,6 +1284,66 @@ const PastAppointmentsView = () => {
             </div>
           ))}
         </div>
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '8px',
+            margin: '30px 0 0 0'
+          }}>
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              style={{
+                padding: '8px 14px',
+                borderRadius: '6px',
+                border: '1px solid #ddd',
+                background: currentPage === 1 ? '#f1f1f1' : '#fff',
+                color: '#1976d2',
+                cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                fontWeight: 500
+              }}
+            >
+              Précédent
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button
+                key={i + 1}
+                onClick={() => handlePageChange(i + 1)}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid #1976d2',
+                  background: currentPage === i + 1 ? '#1976d2' : '#fff',
+                  color: currentPage === i + 1 ? '#fff' : '#1976d2',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  minWidth: '36px'
+                }}
+              >
+                {i + 1}
+              </button>
+            ))}
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              style={{
+                padding: '8px 14px',
+                borderRadius: '6px',
+                border: '1px solid #ddd',
+                background: currentPage === totalPages ? '#f1f1f1' : '#fff',
+                color: '#1976d2',
+                cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                fontWeight: 500
+              }}
+            >
+              Suivant
+            </button>
+        </div>
+        )}
+        </>
       )}
     </div>
   );
