@@ -146,12 +146,7 @@ const styles = {
     overflow: 'hidden',
     boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
   },
-  profilePhoto: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-    transition: 'transform 0.3s ease',
-  },
+    profilePhoto: {    width: '100%',    height: '100%',    objectFit: 'cover',    transition: 'transform 0.3s ease',  },  completionNotice: {    marginTop: '15px',    padding: '12px',    backgroundColor: '#e3f2fd',    border: '1px solid #2196f3',    borderRadius: '8px',    fontSize: '0.9rem'  },
   changePhotoBtn: {
     position: 'absolute',
     bottom: '0',
@@ -341,7 +336,7 @@ const PatientDashboard = () => {
     'Urologie'
   ];
 
-  useEffect(() => {
+    useEffect(() => {
     const storedId = localStorage.getItem('userId');
     console.log('📱 Stored userId:', storedId);
     if (!storedId) {
@@ -351,9 +346,18 @@ const PatientDashboard = () => {
     }
 
     setUserId(storedId);
+    
+    // Vérifier si l'utilisateur vient de compléter son profil
+    const profileCompleted = localStorage.getItem('profileCompleted');
+    if (profileCompleted === 'true') {
+      console.log('🎉 Profil patient complété, rechargement des données...');
+      // Supprimer le flag pour éviter les rechargements inutiles
+      localStorage.removeItem('profileCompleted');
+    }
+    
     fetchProfile(storedId);
     fetchNotifications(storedId);
-      fetchMedicalDocuments(storedId);
+    fetchMedicalDocuments(storedId);
     
     // Charger les rendez-vous si on est dans la section messages ou rendez-vous
     if (activeSection === 'messages' || activeSection === 'all-appointments') {
@@ -446,34 +450,66 @@ const PatientDashboard = () => {
     }
   }, [selectedRegion, hospitals, activeSection, appointmentType]);
 
-  const fetchProfile = async (id) => {
+      const fetchProfile = async (id) => {
     try {
       setIsLoading(true);
-      const res = await axios.get(`${API_BASE_URL}/api/users/${id}`);
-      setProfile(res.data);
+      
+      // L'endpoint /api/users/{id} retourne déjà les données fusionnées utilisateur + patient
+      const userRes = await axios.get(`${API_BASE_URL}/api/users/${id}`);
+      const profileData = userRes.data;
+      
+      console.log("✅ Profil complet récupéré (données utilisateur + patient):", profileData);
+      
+      // Vérifier si les champs patient sont vides pour suggérer la complétion du profil
+      if (profileData.roles && profileData.roles.includes('Patient')) {
+        const hasEmptyPatientFields = !profileData.emergencyPhone || 
+                                    !profileData.bloodType || 
+                                    !profileData.chronicDiseases;
+        
+        if (hasEmptyPatientFields) {
+          profileData.needsPatientProfileCompletion = true;
+          console.log("💡 Certains champs patient sont vides - suggestion de complétion du profil");
+        }
+      }
+      
+      setProfile(profileData);
     } catch (error) {
+      console.error("❌ Erreur récupération profil utilisateur:", error);
       setMessage("❌ Erreur récupération profil.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const fetchNotifications = async (id) => {
+    const fetchNotifications = async (id) => {
     try {
       const res = await axios.get(`${API_BASE_URL}/api/notifications/${id}`);
       setNotifications(res.data);
     } catch (error) {
-      console.error("❌ Erreur notifications:", error);
+      // Si l'erreur est 404, l'utilisateur n'a pas encore de notifications
+      if (error.response && error.response.status === 404) {
+        console.log("🔔 Aucune notification trouvée pour ce patient (normal pour un nouvel utilisateur)");
+        setNotifications([]);
+      } else {
+        console.error("❌ Erreur notifications:", error);
+      }
     }
   };
 
-  const fetchMedicalDocuments = async (id) => {
+    const fetchMedicalDocuments = async (id) => {
     try {
       const res = await axios.get(`${API_BASE_URL}/api/patient/medical-documents/${id}`);
       setMedicalDocuments(res.data);
     } catch (error) {
-      console.error("❌ Erreur récupération documents:", error);
-      setMessage("Erreur lors de la récupération des documents médicaux.");
+      // Si l'erreur est 404, cela signifie que l'utilisateur n'a pas encore de documents
+      // Ce n'est pas une vraie erreur, juste un état initial normal
+      if (error.response && error.response.status === 404) {
+        console.log("📝 Aucun document médical trouvé pour ce patient (normal pour un nouvel utilisateur)");
+        setMedicalDocuments([]);
+      } else {
+        console.error("❌ Erreur récupération documents:", error);
+        setMessage("Erreur lors de la récupération des documents médicaux.");
+      }
     }
   };
 
@@ -713,13 +749,19 @@ const PatientDashboard = () => {
     }
   };
 
-  const fetchLabAppointments = async (id) => {
+    const fetchLabAppointments = async (id) => {
     try {
       const response = await axios.get(`${API_BASE_URL}/api/lab-appointments/patient/${id}`);
       setLabAppointments(response.data);
     } catch (error) {
-      setLabAppointments([]);
-      console.error("❌ Erreur lors de la récupération des rendez-vous laboratoire:", error);
+      // Si l'erreur est 404, l'utilisateur n'a pas encore de rendez-vous laboratoire
+      if (error.response && error.response.status === 404) {
+        console.log("🔬 Aucun rendez-vous laboratoire trouvé pour ce patient (normal pour un nouvel utilisateur)");
+        setLabAppointments([]);
+      } else {
+        setLabAppointments([]);
+        console.error("❌ Erreur lors de la récupération des rendez-vous laboratoire:", error);
+      }
     }
   };
 
@@ -741,14 +783,20 @@ const PatientDashboard = () => {
     }
   };
 
-  const fetchLabResults = async (id) => {
+    const fetchLabResults = async (id) => {
     try {
       const response = await axios.get(`${API_BASE_URL}/api/lab-results/patient/${id}`);
       console.log('Résultats de laboratoire reçus:', response.data);
       setLabResults(response.data);
     } catch (error) {
-      console.error('Erreur lors de la récupération des résultats:', error);
-      setError("Erreur lors de la récupération des résultats de laboratoire");
+      // Si l'erreur est 404, l'utilisateur n'a pas encore de résultats
+      if (error.response && error.response.status === 404) {
+        console.log("🧪 Aucun résultat de laboratoire trouvé pour ce patient (normal pour un nouvel utilisateur)");
+        setLabResults([]);
+      } else {
+        console.error('Erreur lors de la récupération des résultats:', error);
+        setError("Erreur lors de la récupération des résultats de laboratoire");
+      }
     }
   };
 
@@ -974,10 +1022,38 @@ const PatientDashboard = () => {
     }));
   };
 
-  const handleUpdateProfile = async () => {
+    const handleUpdateProfile = async () => {
     try {
-      const response = await axios.put(`${API_BASE_URL}/api/users/${userId}`, editedProfile);
-      setProfile(response.data);
+      // Séparer les données utilisateur de base et les données patient
+      const userFields = ['nom', 'prenom', 'email', 'telephone', 'adresse', 'cin', 'region'];
+      const patientFields = ['emergencyPhone', 'bloodType', 'chronicDiseases'];
+      
+      const userUpdateData = {};
+      const patientUpdateData = {};
+      
+      // Distribuer les données modifiées entre les deux collections
+      Object.keys(editedProfile).forEach(key => {
+        if (userFields.includes(key)) {
+          userUpdateData[key] = editedProfile[key];
+        } else if (patientFields.includes(key)) {
+          patientUpdateData[key] = editedProfile[key];
+        }
+      });
+      
+      // Mettre à jour les données utilisateur si nécessaire
+      if (Object.keys(userUpdateData).length > 0) {
+        console.log("🔄 Mise à jour des données utilisateur:", userUpdateData);
+        await axios.put(`${API_BASE_URL}/api/users/${userId}`, userUpdateData);
+      }
+      
+      // Mettre à jour les données patient si nécessaire
+      if (Object.keys(patientUpdateData).length > 0) {
+        console.log("🔄 Mise à jour des données patient:", patientUpdateData);
+                 await axios.put(`${API_BASE_URL}/patient/profile/${userId}`, patientUpdateData);
+      }
+      
+            // Recharger le profil complet pour afficher les changements      await fetchProfile(userId);
+      
       setIsEditing(false);
       setMessage("✅ Profil mis à jour avec succès !");
     } catch (error) {
@@ -1251,11 +1327,7 @@ const PatientDashboard = () => {
                         <p><strong>Contact d'urgence :</strong> {profile.emergencyPhone || '-'}</p>
                         <p><strong>Groupe sanguin :</strong> {profile.bloodType || '-'}</p>
                         <p><strong>Maladies chroniques :</strong> {profile.chronicDiseases || '-'}</p>
-                        <div className="profile-actions">
-                          <button onClick={handleEditProfile} className="edit-btn">
-                            ✏️ Modifier le profil
-                          </button>
-                </div>
+                        <div className="profile-actions">                          <button onClick={handleEditProfile} className="edit-btn">                            ✏️ Modifier le profil                          </button>                          {profile.needsPatientProfileCompletion && (                            <div className="completion-notice" style={styles.completionNotice}>                              <p>💡 <strong>Conseil :</strong> Complétez votre profil patient pour une meilleure expérience (téléphone d'urgence, groupe sanguin, etc.)</p>                            </div>                          )}                        </div>
               </>
             )}
                   </div>

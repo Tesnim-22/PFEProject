@@ -18,6 +18,8 @@ const patientSchema = new mongoose.Schema({
     medicalHistory: { type: String },
     allergies: [String],
     bloodType: { type: String },
+    emergencyPhone: { type: String },
+    chronicDiseases: { type: String },
     emergencyContact: {
         name: String,
         phone: String,

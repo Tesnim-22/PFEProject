@@ -16,6 +16,7 @@ const auth = require('./middlewares/auth');
 // ❗ Correction ici
 const Appointment = require('./models/Appointment');
 const Notification = require('./models/Notification');
+const AdminNotification = require('./models/AdminNotification');
 const Patient = require('./models/Patient');
 const Message = require('./models/Message');
 const LabResult = require('./models/LabResult');
@@ -338,7 +339,10 @@ app.post('/signup', async(req, res) => {
         });
 
         await newUser.save();
-        res.status(201).json({ message: 'Utilisateur inscrit avec succès !' });
+        res.status(201).json({ 
+            message: 'Utilisateur inscrit avec succès !',
+            userId: newUser._id 
+        });
     } catch (error) {
         console.error('❌ Erreur d\'enregistrement :', error);
         res.status(500).json({ message: 'Erreur serveur.' });
@@ -553,22 +557,53 @@ app.put('/patient/profile/:id', upload.single('photo'), async(req, res) => {
     const photoPath = req.file ? `/uploads/${req.file.filename}` : undefined;
 
     try {
-        const updateData = {
-            emergencyPhone,
-            bloodType,
-            chronicDiseases,
+        console.log('🔄 Mise à jour profil patient pour ID:', id);
+        console.log('📋 Données reçues:', { emergencyPhone, bloodType, chronicDiseases, photoPath });
+
+        // Mettre à jour les informations de base de l'utilisateur
+        const userUpdateData = {
             profileCompleted: true
         };
 
         if (photoPath) {
-            updateData.photo = photoPath;
+            userUpdateData.photo = photoPath;
         }
 
-        const updated = await User.findByIdAndUpdate(id, updateData, { new: true });
+        const updatedUser = await User.findByIdAndUpdate(id, userUpdateData, { new: true });
+        if (!updatedUser) return res.status(404).json({ message: "Patient non trouvé." });
 
-        if (!updated) return res.status(404).json({ message: "Patient non trouvé." });
+        console.log('✅ Utilisateur mis à jour:', updatedUser);
 
-        res.status(200).json({ message: "Profil patient mis à jour avec succès ✅", user: updated });
+        // Mettre à jour ou créer les informations patient
+        let patient = await Patient.findOne({ userId: id });
+        
+        if (!patient) {
+            console.log('📝 Création d\'un nouveau profil patient');
+            patient = new Patient({ userId: id });
+        }
+
+        // Mise à jour des informations patient
+        patient.emergencyPhone = emergencyPhone || '';
+        patient.bloodType = bloodType || '';
+        patient.chronicDiseases = chronicDiseases || '';
+        
+        // Si emergencyPhone est fourni, l'ajouter aussi dans emergencyContact
+        if (emergencyPhone) {
+            patient.emergencyContact = {
+                phone: emergencyPhone,
+                name: patient.emergencyContact?.name || '',
+                relationship: patient.emergencyContact?.relationship || ''
+            };
+        }
+
+        await patient.save();
+        console.log('✅ Informations patient sauvegardées:', patient);
+
+        res.status(200).json({ 
+            message: "Profil patient mis à jour avec succès ✅", 
+            user: updatedUser,
+            patient: patient
+        });
     } catch (error) {
         console.error("❌ Erreur mise à jour profil patient :", error);
         res.status(500).json({ message: "Erreur serveur lors de la mise à jour." });
@@ -751,8 +786,24 @@ app.post('/ambulancier-info', upload.single('diploma'), async(req, res) => {
 
 app.get('/admin/notifications', async(req, res) => {
     try {
-        const allNotifications = await Notification.find().sort({ date: -1 }); // tri du plus récent
-        res.status(200).json(allNotifications);
+        const adminNotifications = await AdminNotification.find()
+            .populate('sentBy', 'nom prenom email')
+            .sort({ createdAt: -1 }); // tri du plus récent
+        
+        // Transformation pour correspondre au format attendu par le frontend
+        const formattedNotifications = adminNotifications.map(notif => ({
+            _id: notif._id,
+            title: notif.title,
+            message: notif.message,
+            type: notif.type,
+            priority: notif.priority,
+            timestamp: notif.createdAt,
+            status: notif.status,
+            recipientType: notif.recipientType,
+            recipients: notif.recipients
+        }));
+        
+        res.status(200).json(formattedNotifications);
     } catch (error) {
         console.error("❌ Erreur récupération des notifications :", error);
         res.status(500).json({ message: "Erreur serveur lors de la récupération des notifications." });
@@ -760,16 +811,84 @@ app.get('/admin/notifications', async(req, res) => {
 });
 
 app.post('/admin/notify', async(req, res) => {
-    const { message } = req.body;
+    const { 
+        title, 
+        message, 
+        type, 
+        priority, 
+        recipientType, 
+        recipients 
+    } = req.body;
 
-    if (!message || message.trim() === '') {
-        return res.status(400).json({ message: "Le message est requis." });
+    if (!title || title.trim() === '' || !message || message.trim() === '') {
+        return res.status(400).json({ message: "Le titre et le message sont requis." });
+    }
+
+    if (!recipientType) {
+        return res.status(400).json({ message: "Le type de destinataire est requis." });
     }
 
     try {
-        const notif = new Notification({ message });
-        await notif.save();
-        res.status(201).json({ message: "✅ Notification envoyée !" });
+        // Pour l'instant, on utilise un ID admin par défaut
+        // Dans un vrai système, on récupérerait ceci du token JWT
+        let adminUser = await User.findOne({ roles: 'admin' });
+        if (!adminUser) {
+            return res.status(400).json({ message: "Administrateur non trouvé." });
+        }
+
+        // Créer la notification administrative
+        const adminNotif = new AdminNotification({
+            title,
+            message,
+            type: type || 'info',
+            priority: priority || 'normal',
+            recipientType,
+            recipients: recipientType === 'specific' ? recipients : [],
+            sentBy: adminUser._id
+        });
+
+        await adminNotif.save();
+
+        // Maintenant, créer des notifications individuelles pour chaque utilisateur concerné
+        let targetUsers = [];
+
+        switch (recipientType) {
+            case 'doctors':
+                targetUsers = await User.find({ roles: 'Doctor' });
+                break;
+            case 'patients':
+                targetUsers = await User.find({ roles: 'Patient' });
+                break;
+            case 'labs':
+                targetUsers = await User.find({ roles: 'Labs' });
+                break;
+            case 'specific':
+                if (recipients && recipients.length > 0) {
+                    targetUsers = await User.find({ _id: { $in: recipients } });
+                }
+                break;
+            default:
+                targetUsers = await User.find({ roles: { $ne: 'admin' } });
+                break;
+        }
+
+        // Créer des notifications individuelles pour chaque utilisateur
+        const individualNotifications = targetUsers.map(user => ({
+            userId: user._id,
+            title,
+            message
+        }));
+
+        if (individualNotifications.length > 0) {
+            await Notification.insertMany(individualNotifications);
+        }
+
+        console.log(`✅ Notification envoyée à ${targetUsers.length} utilisateur(s)`);
+        res.status(201).json({ 
+            message: "✅ Notification envoyée avec succès!", 
+            _id: adminNotif._id,
+            sentTo: targetUsers.length 
+        });
     } catch (error) {
         console.error("❌ Erreur envoi notification :", error);
         res.status(500).json({ message: "Erreur serveur." });
@@ -905,9 +1024,10 @@ app.get('/api/users/:id', async(req, res) => {
             
             // Vérifier si patientInfo existe et contient les données
             if (patientInfo) {
-                userResponse.emergencyPhone = patientInfo.emergencyContact?.phone || '';
+                // Priorité : utiliser les champs directs d'abord, sinon emergencyContact
+                userResponse.emergencyPhone = patientInfo.emergencyPhone || patientInfo.emergencyContact?.phone || '';
                 userResponse.bloodType = patientInfo.bloodType || '';
-                userResponse.chronicDiseases = patientInfo.medicalHistory || '';
+                userResponse.chronicDiseases = patientInfo.chronicDiseases || patientInfo.medicalHistory || '';
                 console.log("✅ Informations patient ajoutées:", {
                     emergencyPhone: userResponse.emergencyPhone,
                     bloodType: userResponse.bloodType,
@@ -3031,9 +3151,10 @@ app.get('/api/users/:id', async(req, res) => {
             
             // Vérifier si patientInfo existe et contient les données
             if (patientInfo) {
-                userResponse.emergencyPhone = patientInfo.emergencyContact?.phone || '';
+                // Priorité : utiliser les champs directs d'abord, sinon emergencyContact
+                userResponse.emergencyPhone = patientInfo.emergencyPhone || patientInfo.emergencyContact?.phone || '';
                 userResponse.bloodType = patientInfo.bloodType || '';
-                userResponse.chronicDiseases = patientInfo.medicalHistory || '';
+                userResponse.chronicDiseases = patientInfo.chronicDiseases || patientInfo.medicalHistory || '';
                 console.log("✅ Informations patient ajoutées:", {
                     emergencyPhone: userResponse.emergencyPhone,
                     bloodType: userResponse.bloodType,

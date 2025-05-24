@@ -588,29 +588,7 @@ td select {
     }
 }
 
-/* === RECENT USERS === */
-
-.recent-users {
-    background-color: white;
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-
-/* === RESPONSIVE === */
-
-@media (max-width: 768px) {
-    .sidebar {
-        display: none;
-    }
-    .main-content {
-        padding: 20px;
-    }
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
-}
+/* === USERS SECTION === */.users-section {    background-color: white;    padding: 25px;    border-radius: 12px;    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);}.users-header {    display: flex;    justify-content: space-between;    align-items: center;    margin-bottom: 25px;}.users-header h2 {    margin: 0;    color: #1e293b;}.reset-filters-btn {    background-color: #64748b;    color: white;    border: none;    padding: 8px 16px;    border-radius: 6px;    cursor: pointer;    font-size: 14px;    font-weight: 500;    transition: background-color 0.3s;    display: flex;    align-items: center;    gap: 8px;}.reset-filters-btn:hover {    background-color: #475569;}/* === ADVANCED FILTERS === */.advanced-filters {    background: #f8fafc;    border-radius: 12px;    padding: 20px;    margin-bottom: 25px;    border: 1px solid #e2e8f0;}.filters-row {    display: grid;    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));    gap: 20px;    margin-bottom: 15px;}.filter-group {    display: flex;    flex-direction: column;    gap: 6px;}.filter-group label {    font-weight: 600;    color: #374151;    font-size: 14px;    display: flex;    align-items: center;    gap: 6px;}.filter-select,.search-input {    padding: 10px 12px;    border: 1px solid #d1d5db;    border-radius: 8px;    font-size: 14px;    background-color: white;    transition: all 0.3s ease;}.filter-select:focus,.search-input:focus {    border-color: #3b82f6;    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);    outline: none;}.sort-controls {    display: flex;    gap: 8px;    align-items: center;}.sort-order-btn {    background-color: #f1f5f9;    border: 1px solid #d1d5db;    border-radius: 6px;    width: 36px;    height: 36px;    display: flex;    align-items: center;    justify-content: center;    cursor: pointer;    font-size: 16px;    font-weight: bold;    color: #374151;    transition: all 0.3s ease;}.sort-order-btn:hover {    background-color: #e2e8f0;    border-color: #9ca3af;}.results-info {    display: flex;    justify-content: space-between;    align-items: center;    padding-top: 15px;    border-top: 1px solid #e2e8f0;}.results-count {    font-size: 14px;    color: #64748b;    font-weight: 500;}/* === USERS TABLE === */.users-table-container {    border-radius: 12px;    overflow: hidden;    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);}.users-table-container table {    margin: 0;    box-shadow: none;}.user-name {    font-weight: 500;    color: #1e293b;}.role-badge {    padding: 4px 8px;    border-radius: 4px;    font-size: 12px;    font-weight: 500;}.role-badge.admin {    background-color: #fef3c7;    color: #92400e;}.role-select {    padding: 6px 10px;    border: 1px solid #d1d5db;    border-radius: 6px;    background-color: #f9fafb;    font-size: 14px;    min-width: 120px;}.status-badge {    padding: 4px 8px;    border-radius: 4px;    font-size: 12px;    font-weight: 500;    display: inline-flex;    align-items: center;    gap: 4px;}.status-badge.validated {    background-color: #dcfce7;    color: #166534;}.status-badge.pending {    background-color: #fef3c7;    color: #92400e;}.document-link {    color: #3b82f6;    text-decoration: none;    font-size: 13px;    font-weight: 500;    display: inline-flex;    align-items: center;    gap: 4px;    transition: color 0.3s;}.document-link:hover {    color: #2563eb;    text-decoration: underline;}.no-document {    color: #94a3b8;    font-size: 13px;    font-style: italic;}.no-results {    text-align: center;    padding: 40px 20px;    color: #64748b;    background: #f8fafc;    border-radius: 8px;    margin-top: 20px;}.no-results p {    margin: 0;    font-size: 16px;}/* Row styling based on validation status */tbody tr.validated {    background-color: #fefffe;}tbody tr.pending {    background-color: #fffbeb;}tbody tr:hover {    background-color: #f1f5f9 !important;}/* === RECENT USERS === */.recent-users {    background-color: white;    padding: 25px;    border-radius: 12px;    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);}/* === RESPONSIVE === */@media (max-width: 768px) {    .sidebar {        display: none;    }    .main-content {        margin-left: 0;        padding: 20px;    }    .stats-grid {        grid-template-columns: 1fr;    }        /* Responsive filters */    .filters-row {        grid-template-columns: 1fr;        gap: 15px;    }        .users-header {        flex-direction: column;        gap: 15px;        align-items: flex-start;    }        .reset-filters-btn {        width: 100%;        justify-content: center;    }        .sort-controls {        flex-direction: column;        gap: 8px;    }        .sort-controls .filter-select {        width: 100%;    }}@media (max-width: 1024px) {    .filters-row {        grid-template-columns: repeat(2, 1fr);    }}
 
 /* === NOTIFICATION STATUS === */
 .notification-status {

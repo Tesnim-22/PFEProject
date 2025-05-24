@@ -18,6 +18,13 @@ const AdminDashboard = () => {
   const [notificationPriority, setNotificationPriority] = useState('normal');
   const [isSending, setIsSending] = useState(false);
   const [notificationHistory, setNotificationHistory] = useState([]);
+  
+  // États pour le filtrage avancé des utilisateurs
+  const [userSearchTerm, setUserSearchTerm] = useState("");
+  const [selectedRole, setSelectedRole] = useState("all");
+  const [validationStatus, setValidationStatus] = useState("all");
+  const [sortBy, setSortBy] = useState("email");
+  const [sortOrder, setSortOrder] = useState("asc");
 
   useEffect(() => {
     const role = localStorage.getItem("userRole");
@@ -214,21 +221,94 @@ const AdminDashboard = () => {
     (user.prenom && user.prenom.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  // Fonction de filtrage avancé et tri des utilisateurs
+  const getFilteredAndSortedUsers = () => {
+    let filtered = allUsers.filter(user => {
+      // Filtre par recherche textuelle
+      const searchMatch = userSearchTerm === "" || 
+        user.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+        (user.nom && user.nom.toLowerCase().includes(userSearchTerm.toLowerCase())) ||
+        (user.prenom && user.prenom.toLowerCase().includes(userSearchTerm.toLowerCase())) ||
+        (user.roles && user.roles.some(role => role.toLowerCase().includes(userSearchTerm.toLowerCase())));
+
+      // Filtre par rôle
+      const roleMatch = selectedRole === "all" || 
+        (user.roles && user.roles.some(role => role.toLowerCase() === selectedRole.toLowerCase()));
+
+      // Filtre par statut de validation
+      let validationMatch = true;
+      if (validationStatus === "validated") {
+        validationMatch = user.profileCompleted && user.isValidated;
+      } else if (validationStatus === "pending") {
+        validationMatch = !user.profileCompleted || !user.isValidated;
+      } else if (validationStatus === "rejected") {
+        validationMatch = user.isRejected || false;
+      }
+
+      return searchMatch && roleMatch && validationMatch;
+    });
+
+    // Tri des résultats
+    filtered.sort((a, b) => {
+      let aValue, bValue;
+      
+      switch (sortBy) {
+        case "email":
+          aValue = a.email || "";
+          bValue = b.email || "";
+          break;
+        case "name":
+          aValue = `${a.nom || ""} ${a.prenom || ""}`.trim();
+          bValue = `${b.nom || ""} ${b.prenom || ""}`.trim();
+          break;
+        case "role":
+          aValue = a.roles ? a.roles[0] || "" : "";
+          bValue = b.roles ? b.roles[0] || "" : "";
+          break;
+        case "createdAt":
+          aValue = new Date(a.createdAt || 0);
+          bValue = new Date(b.createdAt || 0);
+          break;
+        default:
+          aValue = a.email || "";
+          bValue = b.email || "";
+      }
+
+      if (sortBy === "createdAt") {
+        return sortOrder === "asc" ? aValue - bValue : bValue - aValue;
+      } else {
+        const comparison = aValue.toString().localeCompare(bValue.toString());
+        return sortOrder === "asc" ? comparison : -comparison;
+      }
+    });
+
+    return filtered;
+  };
+
   const filterUsers = (type) => {
     switch (type) {
       case "all":
-        setFilteredUsers(allUsers);
+        setValidationStatus("all");
         break;
       case "validated":
-        setFilteredUsers(allUsers.filter((u) => u.profileCompleted && !u.roles.includes('Patient')));
+        setValidationStatus("validated");
         break;
       case "pending":
-        setFilteredUsers(allUsers.filter((u) => !u.profileCompleted && !u.roles.includes('Patient')));
+        setValidationStatus("pending");
         break;
       default:
         break;
     }
     setActiveSection("users");
+  };
+
+  // Fonction pour réinitialiser tous les filtres
+  const resetFilters = () => {
+    setUserSearchTerm("");
+    setSelectedRole("all");
+    setValidationStatus("all");
+    setSortBy("email");
+    setSortOrder("asc");
   };
 
   const handleLogout = () => {
@@ -317,73 +397,182 @@ const AdminDashboard = () => {
 
           {activeSection === "users" && (
             <div className="users-section">
-              <h2>Gestion des Utilisateurs</h2>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Email</th>
-                    <th>Rôle</th>
-                    <th>Document</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredUsers.map((user) => (
-                    <tr key={user._id}>
-                      <td>{user.email}</td>
-                      <td>
-                        {user.email === 'admin2@healthapp.com' ? (
-                          <span>Admin</span>
-                        ) : (
-                          <select
-                            value={user.roles[0]}
-                            onChange={(e) => updateUserRole(user._id, e.target.value)}
-                          >
-                            <option value="Patient">Patient</option>
-                            <option value="Doctor">Doctor</option>
-                            <option value="Labs">Labs</option>
-                            <option value="Hospital">Hospital</option>
-                            <option value="Cabinet">Cabinet</option>
-                            <option value="Ambulancier">Ambulancier</option>
-                            <option value="Admin">Admin</option>
-                          </select>
-                        )}
-                      </td>
-                      <td>
-                        {user.email === 'admin2@healthapp.com' ? (
-                          "-"
-                        ) : (
-                          user.roles[0].toLowerCase() !== 'patient' && (user.diploma || user.photo) ? (
-                            <a
-                              href={`http://localhost:5001${user.diploma || user.photo}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              Voir document
-                            </a>
-                          ) : (
-                            "Aucun document"
-                          )
-                        )}
-                      </td>
-                      <td>
-                        {user.email !== 'admin2@healthapp.com' && (
-                          <div className="user-actions">
-                            {!user.isValidated && (
-                              <button className="validate" onClick={() => validateUser(user._id)}>
-                                Valider
-                              </button>
-                            )}
-                            <button className="delete" onClick={() => deleteUser(user._id)}>
-                              Supprimer
-                            </button>
-                          </div>
-                        )}
-                      </td>
+              <div className="users-header">
+                <h2>Gestion des Utilisateurs</h2>
+                <button onClick={resetFilters} className="reset-filters-btn">
+                  🔄 Réinitialiser les filtres
+                </button>
+              </div>
+
+              {/* Filtres avancés */}
+              <div className="advanced-filters">
+                <div className="filters-row">
+                  <div className="filter-group">
+                    <label>🔍 Rechercher</label>
+                    <input
+                      type="text"
+                      placeholder="Nom, email, rôle..."
+                      value={userSearchTerm}
+                      onChange={(e) => setUserSearchTerm(e.target.value)}
+                      className="search-input"
+                    />
+                  </div>
+
+                  <div className="filter-group">
+                    <label>👤 Rôle</label>
+                    <select
+                      value={selectedRole}
+                      onChange={(e) => setSelectedRole(e.target.value)}
+                      className="filter-select"
+                    >
+                      <option value="all">Tous les rôles</option>
+                      <option value="Patient">Patient</option>
+                      <option value="Doctor">Médecin</option>
+                      <option value="Labs">Laboratoire</option>
+                      <option value="Hospital">Hôpital</option>
+                      <option value="Cabinet">Cabinet</option>
+                      <option value="Ambulancier">Ambulancier</option>
+                      <option value="Admin">Administrateur</option>
+                    </select>
+                  </div>
+
+                  <div className="filter-group">
+                    <label>✅ Statut</label>
+                    <select
+                      value={validationStatus}
+                      onChange={(e) => setValidationStatus(e.target.value)}
+                      className="filter-select"
+                    >
+                      <option value="all">Tous les statuts</option>
+                      <option value="validated">Validés</option>
+                      <option value="pending">En attente</option>
+                      <option value="rejected">Rejetés</option>
+                    </select>
+                  </div>
+
+                  <div className="filter-group">
+                    <label>📊 Trier par</label>
+                    <div className="sort-controls">
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        className="filter-select"
+                      >
+                        <option value="email">Email</option>
+                        <option value="name">Nom</option>
+                        <option value="role">Rôle</option>
+                        <option value="createdAt">Date d'inscription</option>
+                      </select>
+                      <button
+                        onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                        className="sort-order-btn"
+                        title={sortOrder === "asc" ? "Croissant" : "Décroissant"}
+                      >
+                        {sortOrder === "asc" ? "↑" : "↓"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="results-info">
+                  <span className="results-count">
+                    {getFilteredAndSortedUsers().length} utilisateur(s) trouvé(s)
+                  </span>
+                </div>
+              </div>
+
+              {/* Table des utilisateurs */}
+              <div className="users-table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Nom complet</th>
+                      <th>Email</th>
+                      <th>Rôle</th>
+                      <th>Statut</th>
+                      <th>Document</th>
+                      <th>Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {getFilteredAndSortedUsers().map((user) => (
+                      <tr key={user._id} className={user.isValidated ? 'validated' : 'pending'}>
+                        <td>
+                          <div className="user-name">
+                            {user.nom && user.prenom 
+                              ? `${user.nom} ${user.prenom}`
+                              : "Non renseigné"
+                            }
+                          </div>
+                        </td>
+                        <td>{user.email}</td>
+                        <td>
+                          {user.email === 'admin2@healthapp.com' ? (
+                            <span className="role-badge admin">Admin</span>
+                          ) : (
+                            <select
+                              value={user.roles[0]}
+                              onChange={(e) => updateUserRole(user._id, e.target.value)}
+                              className="role-select"
+                            >
+                              <option value="Patient">Patient</option>
+                              <option value="Doctor">Doctor</option>
+                              <option value="Labs">Labs</option>
+                              <option value="Hospital">Hospital</option>
+                              <option value="Cabinet">Cabinet</option>
+                              <option value="Ambulancier">Ambulancier</option>
+                              <option value="Admin">Admin</option>
+                            </select>
+                          )}
+                        </td>
+                        <td>
+                          <span className={`status-badge ${user.isValidated ? 'validated' : 'pending'}`}>
+                            {user.isValidated ? '✅ Validé' : '⏳ En attente'}
+                          </span>
+                        </td>
+                        <td>
+                          {user.email === 'admin2@healthapp.com' ? (
+                            <span className="no-document">-</span>
+                          ) : (
+                            user.roles[0].toLowerCase() !== 'patient' && (user.diploma || user.photo) ? (
+                              <a
+                                href={`http://localhost:5001${user.diploma || user.photo}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="document-link"
+                              >
+                                📄 Voir document
+                              </a>
+                            ) : (
+                              <span className="no-document">Aucun document</span>
+                            )
+                          )}
+                        </td>
+                        <td>
+                          {user.email !== 'admin2@healthapp.com' && (
+                            <div className="user-actions">
+                              {!user.isValidated && (
+                                <button className="validate" onClick={() => validateUser(user._id)}>
+                                  ✅ Valider
+                                </button>
+                              )}
+                              <button className="delete" onClick={() => deleteUser(user._id)}>
+                                🗑️ Supprimer
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {getFilteredAndSortedUsers().length === 0 && (
+                  <div className="no-results">
+                    <p>Aucun utilisateur ne correspond aux critères de recherche.</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

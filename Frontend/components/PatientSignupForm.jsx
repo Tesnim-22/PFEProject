@@ -21,34 +21,82 @@ const PatientSignupForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    
     if (!emergencyPhone) {
       setMessage("Le téléphone d'urgence est obligatoire.");
       return;
     }
-
-    const formData = new FormData();
-    formData.append('emergencyPhone', emergencyPhone);
-    formData.append('bloodType', bloodType);
-    formData.append('chronicDiseases', chronicDiseases);
-    if (photo) formData.append('photo', photo);
-
+    
+    const userId = localStorage.getItem('userId');
+    console.log('🔍 UserId récupéré depuis localStorage:', userId);
+    
+    if (!userId) {
+      setMessage("❌ Erreur: ID utilisateur non trouvé. Veuillez vous reconnecter.");
+      return;
+    }
+    
+    // Debug : Afficher les données envoyées
+    console.log('📋 Données à envoyer:', {
+      emergencyPhone,
+      bloodType,
+      chronicDiseases,
+      photoSelected: !!photo
+    });
+    
     try {
-      const userId = localStorage.getItem('userId');
-      const response = await fetch(`http://localhost:5001/patient/profile/${userId}`, {
-        method: 'PUT',
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        setMessage('✅ Profil patient complété avec succès !');
-        setTimeout(() => {
-          navigate('/patient-dashboard');
-        }, 1000);
+      console.log('🚀 Envoi des données vers:', `http://localhost:5001/patient/profile/${userId}`);
+      
+      if (photo) {
+        // Si une photo est sélectionnée, utiliser FormData
+        const formData = new FormData();
+        formData.append('emergencyPhone', emergencyPhone || '');
+        formData.append('bloodType', bloodType || '');
+        formData.append('chronicDiseases', chronicDiseases || '');
+        formData.append('photo', photo);
+        
+        const response = await fetch(`http://localhost:5001/patient/profile/${userId}`, {
+          method: 'PUT',
+          body: formData,
+        });
+        
+        const result = await response.json();
+        console.log('📥 Réponse reçue (avec photo):', result);
+        
+        if (response.ok) {
+          setMessage('✅ Profil patient complété avec succès !');
+          localStorage.setItem('profileCompleted', 'true');
+          setTimeout(() => {
+            navigate('/patient-dashboard');
+          }, 1000);
+        } else {
+          setMessage(result.message || '❌ Une erreur est survenue.');
+        }
       } else {
-        setMessage(result.message || '❌ Une erreur est survenue.');
+        // Si pas de photo, utiliser JSON comme dans PatientDashboard
+        const response = await fetch(`http://localhost:5001/patient/profile/${userId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            emergencyPhone: emergencyPhone || '',
+            bloodType: bloodType || '',
+            chronicDiseases: chronicDiseases || ''
+          }),
+        });
+        
+        const result = await response.json();
+        console.log('📥 Réponse reçue (sans photo):', result);
+        
+        if (response.ok) {
+          setMessage('✅ Profil patient complété avec succès !');
+          localStorage.setItem('profileCompleted', 'true');
+          setTimeout(() => {
+            navigate('/patient-dashboard');
+          }, 1000);
+        } else {
+          setMessage(result.message || '❌ Une erreur est survenue.');
+        }
       }
     } catch (error) {
       console.error('Erreur formulaire patient :', error);
