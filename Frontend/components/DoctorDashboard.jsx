@@ -14,6 +14,7 @@ const UnifiedMessagesView = () => {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('patients'); // 'all', 'patients', 'labs'
   const [searchTerm, setSearchTerm] = useState(''); // Ajout pour la recherche
+  const [unreadCounts, setUnreadCounts] = useState({}); // Compteur de messages non lus
   const messagesEndRef = useRef(null);
   const doctorId = localStorage.getItem('userId');
 
@@ -23,7 +24,25 @@ const UnifiedMessagesView = () => {
 
   useEffect(() => {
     fetchAllConversations();
+    fetchUnreadCounts();
+    
+    // Actualiser les compteurs de messages non lus toutes les 10 secondes
+    const interval = setInterval(() => {
+      fetchUnreadCounts();
+    }, 10000);
+    
+    return () => clearInterval(interval);
   }, []);
+
+  const fetchUnreadCounts = async () => {
+    try {
+      // Récupérer le nombre de messages non lus pour chaque conversation
+      const response = await axios.get(`http://localhost:5001/api/messages/unread-counts/${doctorId}`);
+      setUnreadCounts(response.data);
+    } catch (error) {
+      console.error('Erreur récupération compteurs non lus:', error);
+    }
+  };
 
   useEffect(() => {
     if (selectedConversation) {
@@ -136,6 +155,23 @@ const UnifiedMessagesView = () => {
       allMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
       setMessages(allMessages);
+
+      // Marquer les messages comme lus
+      const unreadMessages = allMessages
+        .filter(msg => msg.receiverId === doctorId && !msg.isRead)
+        .map(msg => msg._id);
+      
+      if (unreadMessages.length > 0) {
+        await axios.put('http://localhost:5001/api/messages/read', {
+          messageIds: unreadMessages
+        });
+        
+        // Mettre à jour le compteur de messages non lus
+        setUnreadCounts(prev => ({
+          ...prev,
+          [patientId]: 0
+        }));
+      }
     } catch (error) {
       console.error('Erreur récupération messages patient:', error);
       setError('Erreur lors du chargement des messages');
@@ -149,6 +185,18 @@ const UnifiedMessagesView = () => {
       setLoading(true);
       const response = await axios.get(`http://localhost:5001/api/lab-doctor-messages/${labId}/${doctorId}`);
       setMessages(response.data);
+
+      // Marquer les messages comme lus pour les laboratoires
+      await axios.put(`http://localhost:5001/api/lab-doctor-messages/read`, {
+        receiverId: doctorId,
+        senderId: labId
+      });
+
+      // Mettre à jour le compteur de messages non lus
+      setUnreadCounts(prev => ({
+        ...prev,
+        [labId]: 0
+      }));
     } catch (error) {
       console.error('Erreur récupération messages laboratoire:', error);
       setError('Erreur lors du chargement des messages');
@@ -200,6 +248,14 @@ const UnifiedMessagesView = () => {
       setMessages(prev => [...prev, newMessageData]);
       setNewMessage('');
       scrollToBottom();
+
+      // Mettre à jour le compteur si c'est un message reçu
+      if (newMessageData.senderId !== doctorId) {
+        setUnreadCounts(prev => ({
+          ...prev,
+          [selectedConversation.id]: (prev[selectedConversation.id] || 0) + 1
+        }));
+      }
     } catch (error) {
       console.error('Erreur lors de l\'envoi du message:', error);
       setError('Impossible d\'envoyer le message');
@@ -230,103 +286,244 @@ const UnifiedMessagesView = () => {
   });
 
   return (
-    <div className="messagerie-container">
-      <div className="contacts-list">
+    <div className="messagerie-container" style={{
+      height: 'calc(100vh - 40px)',
+      display: 'flex',
+      backgroundColor: '#f8fafc',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      margin: '20px',
+      borderRadius: '12px',
+      overflow: 'hidden',
+      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
+    }}>
+      <div className="contacts-list" style={{
+        width: '320px',
+        backgroundColor: '#ffffff',
+        borderRight: '1px solid #e2e8f0',
+        display: 'flex',
+        flexDirection: 'column',
+        boxShadow: '2px 0 8px rgba(0,0,0,0.05)'
+      }}>
         <div style={{
-          padding: '20px',
-          borderBottom: '1px solid #e0e0e0',
-          backgroundColor: 'white'
+          padding: '24px 20px',
+          borderBottom: '1px solid #e2e8f0',
+          backgroundColor: '#ffffff'
         }}>
-          <h3 style={{ margin: '0 0 15px 0' }}>Messages</h3>
+          <h3 style={{ 
+            margin: '0 0 20px 0',
+            fontSize: '1.5rem',
+            fontWeight: '700',
+            color: '#1e293b',
+            letterSpacing: '-0.025em'
+          }}>
+            Messagerie
+          </h3>
           <input
             type="text"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            placeholder="Rechercher un nom..."
+            placeholder="Rechercher une conversation..."
             style={{
               width: '100%',
-              marginBottom: '10px',
-              padding: '8px 14px',
-              borderRadius: '8px',
-              border: '1px solid #e0e0e0',
-              fontSize: '1rem',
+              marginBottom: '16px',
+              padding: '12px 16px',
+              borderRadius: '12px',
+              border: '1px solid #e2e8f0',
+              fontSize: '0.95rem',
               outline: 'none',
-              background: '#f8f9fa',
-              color: '#222',
+              background: '#f8fafc',
+              color: '#374151',
               boxSizing: 'border-box',
-              transition: 'border 0.2s'
+              transition: 'all 0.2s ease'
+            }}
+            onFocus={(e) => {
+              e.target.style.borderColor = '#0f766e';
+              e.target.style.backgroundColor = '#ffffff';
+              e.target.style.boxShadow = '0 0 0 3px rgba(15, 118, 110, 0.1)';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = '#e2e8f0';
+              e.target.style.backgroundColor = '#f8fafc';
+              e.target.style.boxShadow = 'none';
             }}
           />
           <div style={{
             display: 'flex',
-            gap: '8px',
-            backgroundColor: '#f8f9fa',
-            padding: '6px',
-            borderRadius: '12px',
-            boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)'
+            gap: '4px',
+            backgroundColor: '#f1f5f9',
+            padding: '4px',
+            borderRadius: '12px'
           }}>
             <button
               onClick={() => setActiveTab('patients')}
               style={{
                 flex: 1,
-                padding: '10px 16px',
+                padding: '10px 14px',
                 border: 'none',
                 borderRadius: '8px',
-                backgroundColor: activeTab === 'patients' ? '#1976d2' : 'transparent',
-                color: activeTab === 'patients' ? 'white' : '#666',
-                fontWeight: 500,
+                backgroundColor: activeTab === 'patients' ? '#0f766e' : 'transparent',
+                color: activeTab === 'patients' ? 'white' : '#64748b',
+                fontWeight: activeTab === 'patients' ? '600' : '500',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
-                fontSize: '0.95rem',
+                fontSize: '0.875rem',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '6px'
               }}
             >
-              <span>👤</span> Patients
+              Patients
             </button>
             <button
               onClick={() => setActiveTab('labs')}
               style={{
                 flex: 1,
-                padding: '10px 16px',
+                padding: '10px 14px',
                 border: 'none',
                 borderRadius: '8px',
-                backgroundColor: activeTab === 'labs' ? '#1976d2' : 'transparent',
-                color: activeTab === 'labs' ? 'white' : '#666',
-                fontWeight: 500,
+                backgroundColor: activeTab === 'labs' ? '#0f766e' : 'transparent',
+                color: activeTab === 'labs' ? 'white' : '#64748b',
+                fontWeight: activeTab === 'labs' ? '600' : '500',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
-                fontSize: '0.95rem',
+                fontSize: '0.875rem',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '6px'
               }}
             >
-              <span>🔬</span> Laboratoire
+              Laboratoires
             </button>
           </div>
         </div>
-        <div className="contacts-group">
+        <div className="contacts-group" style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '8px'
+        }}>
           {loading && filteredConversations.length === 0 ? (
-            <div className="empty-state">Chargement des conversations...</div>
+            <div style={{
+              padding: '40px 20px',
+              textAlign: 'center',
+              color: '#64748b',
+              fontSize: '0.95rem'
+            }}>
+              Chargement des conversations...
+            </div>
           ) : filteredConversations.length === 0 ? (
-            <div className="empty-state">Aucune conversation</div>
+            <div style={{
+              padding: '40px 20px',
+              textAlign: 'center',
+              color: '#64748b',
+              fontSize: '0.95rem'
+            }}>
+              Aucune conversation trouvée
+            </div>
           ) : (
             filteredConversations.map(conv => (
               <div
                 key={`${conv.type}-${conv.id}`}
-                className={`contact-item${selectedConversation?.id === conv.id ? ' active' : ''}`}
                 onClick={() => setSelectedConversation(conv)}
+                style={{
+                  padding: '16px',
+                  margin: '4px 0',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  backgroundColor: selectedConversation?.id === conv.id ? '#f0f4ff' : 'transparent',
+                  border: selectedConversation?.id === conv.id ? '1px solid #c7d2fe' : '1px solid transparent',
+                  position: 'relative'
+                }}
+                onMouseEnter={(e) => {
+                  if (selectedConversation?.id !== conv.id) {
+                    e.target.style.backgroundColor = '#f8fafc';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (selectedConversation?.id !== conv.id) {
+                    e.target.style.backgroundColor = 'transparent';
+                  }
+                }}
               >
-                <div className="contact-info">
-                  <div className="contact-name">
-                      {`${conv.contact?.prenom || ''} ${conv.contact?.nom || ''}`}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px'
+                }}>
+                  <div style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '12px',
+                    backgroundColor: conv.type === 'Patient' ? '#dcfce7' : '#dcfce7',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1.2rem',
+                    fontWeight: '600',
+                    color: conv.type === 'Patient' ? '#059669' : '#059669'
+                  }}>
+                    {conv.type === 'Patient' ? 'P' : 'L'}
                   </div>
-                  <div className="contact-details">
-                      {conv.type === 'Patient' ? '👤 Patient' : '🔬 Laboratoire'}
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontWeight: '600',
+                      fontSize: '0.95rem',
+                      color: '#1e293b',
+                      marginBottom: '2px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      {`${conv.contact?.prenom || ''} ${conv.contact?.nom || ''}`}
+                      {unreadCounts[conv.id] > 0 && (
+                        <span style={{
+                          backgroundColor: '#ef4444',
+                          color: 'white',
+                          fontSize: '0.7rem',
+                          fontWeight: '600',
+                          padding: '2px 6px',
+                          borderRadius: '10px',
+                          minWidth: '18px',
+                          height: '18px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          lineHeight: '1'
+                        }}>
+                          {unreadCounts[conv.id]}
+                        </span>
+                      )}
+                  </div>
+                    <div style={{
+                      fontSize: '0.8rem',
+                      color: '#64748b',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      <span style={{
+                        width: '6px',
+                        height: '6px',
+                        borderRadius: '50%',
+                        backgroundColor: conv.type === 'Patient' ? '#10b981' : '#10b981'
+                      }}></span>
+                      {conv.type === 'Patient' ? 'Patient' : 'Laboratoire'}
+                      {unreadCounts[conv.id] > 0 && (
+                        <span style={{
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
+                          backgroundColor: '#ef4444',
+                          marginLeft: 'auto',
+                          animation: 'pulse 2s infinite'
+                        }}></span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -334,74 +531,283 @@ const UnifiedMessagesView = () => {
           )}
         </div>
       </div>
-      <div className="chat-container">
+      <div className="chat-container" style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: '#ffffff'
+      }}>
         {selectedConversation ? (
           <>
-            <div className="chat-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div className="chat-header" style={{
+              padding: '20px 24px',
+              borderBottom: '1px solid #e2e8f0',
+              backgroundColor: '#ffffff',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <div style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  backgroundColor: selectedConversation.type === 'Patient' ? '#bbdefb' : '#c8e6c9',
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '12px',
+                  backgroundColor: selectedConversation.type === 'Patient' ? '#dcfce7' : '#dcfce7',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '1.2rem'
+                  fontSize: '1.4rem',
+                  fontWeight: '600',
+                  color: selectedConversation.type === 'Patient' ? '#059669' : '#059669'
                 }}>
-                  {selectedConversation.type === 'Patient' ? '👤' : '🔬'}
+                  {selectedConversation.type === 'Patient' ? 'P' : 'L'}
                 </div>
                 <div>
-                  <h3 style={{ margin: '0' }}>
+                  <h3 style={{ 
+                    margin: '0',
+                    fontSize: '1.2rem',
+                    fontWeight: '700',
+                    color: '#1e293b',
+                    letterSpacing: '-0.025em'
+                  }}>
                     {`${selectedConversation.contact?.prenom || ''} ${selectedConversation.contact?.nom || ''}`}
                   </h3>
-                  <p style={{ margin: '5px 0 0 0', color: '#666' }}>
+                  <p style={{ 
+                    margin: '4px 0 0 0', 
+                    color: '#64748b',
+                    fontSize: '0.9rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
+                    <span style={{
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      backgroundColor: '#10b981'
+                    }}></span>
                     {selectedConversation.type === 'Patient'
-                      ? `📞 ${selectedConversation.contact?.telephone}`
-                      : `📍 ${selectedConversation.contact?.adresse}`}
+                      ? selectedConversation.contact?.telephone
+                      : selectedConversation.contact?.adresse}
                   </p>
                 </div>
               </div>
             </div>
-            <div className="chat-messages">
+            <div className="chat-messages" style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '24px',
+              backgroundColor: '#f8fafc',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px'
+            }}>
               {loading ? (
-                <div className="empty-state">Chargement des messages...</div>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  height: '200px',
+                  color: '#64748b',
+                  fontSize: '0.95rem'
+                }}>
+                  Chargement des messages...
+                </div>
               ) : messages.length === 0 ? (
-                <div className="empty-state">Aucun message dans cette conversation</div>
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  height: '200px',
+                  color: '#64748b',
+                  fontSize: '0.95rem',
+                  gap: '8px'
+                }}>
+                  <div style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '50%',
+                    backgroundColor: '#e2e8f0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1.5rem',
+                    marginBottom: '8px'
+                  }}>
+                    💬
+                  </div>
+                  Aucun message dans cette conversation
+                </div>
               ) : (
                 <>
                   {messages.map((msg, index) => (
                     <div
                       key={msg._id || index}
-                      className={`message${msg.senderId === doctorId ? ' sent' : ' received'}`}
+                      style={{
+                        display: 'flex',
+                        justifyContent: msg.senderId === doctorId ? 'flex-end' : 'flex-start',
+                        marginBottom: '8px'
+                      }}
                     >
-                      <div className="message-content">{msg.content}</div>
-                      <div className="message-time">{formatDate(msg.createdAt)}</div>
+                      <div style={{
+                        maxWidth: '70%',
+                        padding: '12px 16px',
+                        borderRadius: '16px',
+                        backgroundColor: msg.senderId === doctorId ? '#0f766e' : '#ffffff',
+                        color: msg.senderId === doctorId ? '#ffffff' : '#1e293b',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                        position: 'relative'
+                      }}>
+                        <div style={{
+                          fontSize: '0.95rem',
+                          lineHeight: '1.5',
+                          marginBottom: '4px'
+                        }}>
+                          {msg.content}
+                        </div>
+                        <div style={{
+                          fontSize: '0.75rem',
+                          opacity: 0.7,
+                          textAlign: msg.senderId === doctorId ? 'right' : 'left'
+                        }}>
+                          {formatDate(msg.createdAt)}
+                        </div>
+                      </div>
                     </div>
                   ))}
                   <div ref={messagesEndRef} />
                 </>
               )}
             </div>
-            <form className="chat-input" onSubmit={handleSendMessage}>
+            <form className="chat-input" onSubmit={handleSendMessage} style={{
+              padding: '20px 24px',
+              borderTop: '1px solid #e2e8f0',
+              backgroundColor: '#ffffff',
+              display: 'flex',
+              gap: '12px',
+              alignItems: 'center'
+            }}>
               <input
                 type="text"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Écrivez votre message..."
+                placeholder="Tapez votre message..."
+                style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  borderRadius: '24px',
+                  border: '1px solid #e2e8f0',
+                  outline: 'none',
+                  fontSize: '0.95rem',
+                  backgroundColor: '#f8fafc',
+                  color: '#374151',
+                  transition: 'all 0.2s ease'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#0f766e';
+                  e.target.style.backgroundColor = '#ffffff';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(15, 118, 110, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e2e8f0';
+                  e.target.style.backgroundColor = '#f8fafc';
+                  e.target.style.boxShadow = 'none';
+                }}
               />
               <button
                 type="submit"
-                className="send-button"
                 disabled={loading || !newMessage.trim()}
+                style={{
+                  padding: '12px 20px',
+                  borderRadius: '20px',
+                  border: 'none',
+                  backgroundColor: loading || !newMessage.trim() ? '#e2e8f0' : '#0f766e',
+                  color: loading || !newMessage.trim() ? '#9ca3af' : '#ffffff',
+                  cursor: loading || !newMessage.trim() ? 'not-allowed' : 'pointer',
+                  fontSize: '0.9rem',
+                  fontWeight: '600',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+                onMouseEnter={(e) => {
+                  if (!loading && newMessage.trim()) {
+                    e.target.style.backgroundColor = '#0d5c5c';
+                    e.target.style.transform = 'translateY(-1px)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!loading && newMessage.trim()) {
+                    e.target.style.backgroundColor = '#0f766e';
+                    e.target.style.transform = 'translateY(0)';
+                  }
+                }}
               >
-                {loading ? 'Envoi...' : 'Envoyer'}
+                {loading ? (
+                  <>
+                    <span style={{
+                      width: '16px',
+                      height: '16px',
+                      border: '2px solid transparent',
+                      borderTop: '2px solid currentColor',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite'
+                    }}></span>
+                    Envoi...
+                  </>
+                ) : (
+                  <>
+                    <span>📤</span>
+                    Envoyer
+                  </>
+                )}
               </button>
             </form>
           </>
         ) : (
-          <div className="no-chat-selected">
-            <p>👈 Sélectionnez une conversation pour commencer</p>
+          <div className="no-chat-selected" style={{
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '100%',
+            color: '#64748b',
+            fontSize: '1rem',
+            gap: '16px'
+          }}>
+            <div style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              backgroundColor: '#f1f5f9',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '2rem',
+              marginBottom: '8px'
+            }}>
+              💬
+            </div>
+            <div style={{
+              textAlign: 'center',
+              maxWidth: '300px'
+            }}>
+              <h3 style={{
+                margin: '0 0 8px 0',
+                fontSize: '1.2rem',
+                fontWeight: '600',
+                color: '#374151'
+              }}>
+                Sélectionnez une conversation
+              </h3>
+              <p style={{
+                margin: 0,
+                color: '#64748b',
+                fontSize: '0.95rem'
+              }}>
+                Choisissez un patient ou un laboratoire dans la liste pour commencer à échanger des messages
+              </p>
+            </div>
           </div>
         )}
       </div>
@@ -688,7 +1094,7 @@ const MessagesView = () => {
                         margin: '10px',
                         padding: '12px 16px',
                         borderRadius: '12px',
-                        backgroundColor: isMessageFromDoctor(msg) ? '#1976d2' : '#fff',
+                        backgroundColor: isMessageFromDoctor(msg) ? '#0f766e' : '#fff',
                         color: isMessageFromDoctor(msg) ? '#fff' : '#2c3e50',
                         alignSelf: isMessageFromDoctor(msg) ? 'flex-end' : 'flex-start',
                         boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
@@ -739,7 +1145,7 @@ const MessagesView = () => {
                   padding: '12px 24px',
                   borderRadius: '24px',
                   border: 'none',
-                  backgroundColor: '#1976d2',
+                  backgroundColor: '#0f766e',
                   color: '#fff',
                   cursor: 'pointer',
                   fontSize: '1rem',
@@ -996,7 +1402,8 @@ const PastAppointmentsView = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [sortOrder, setSortOrder] = useState('desc');
   const [currentPage, setCurrentPage] = useState(1); // Pagination
-  const appointmentsPerPage = 9;
+  const [selectedAppointment, setSelectedAppointment] = useState(null); // Pour afficher les détails
+  const appointmentsPerPage = 12; // Augmenté pour une meilleure utilisation de l'espace
   const doctorId = localStorage.getItem('userId');
 
   useEffect(() => {
@@ -1038,9 +1445,9 @@ const PastAppointmentsView = () => {
 
   const getStatusText = (status) => {
     switch (status) {
-      case 'cancelled': return '❌ Annulé';
-      case 'completed': return '✅ Terminé';
-      default: return '📅 Passé';
+      case 'cancelled': return 'Annulé';
+      case 'completed': return 'Terminé';
+      default: return 'Passé';
     }
   };
 
@@ -1075,23 +1482,60 @@ const PastAppointmentsView = () => {
   };
 
   return (
-    <div className="dashboard-content" style={{ padding: '20px', color: '#000000' }}>
+    <div className="dashboard-content" style={{ 
+      padding: '24px', 
+      color: '#000000',
+      maxWidth: '1400px',
+      margin: '0 auto'
+    }}>
+      {/* Header optimisé */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '20px',
-        color: '#000000'  // Ajout de la couleur noire pour le texte
+        alignItems: 'flex-start',
+        marginBottom: '24px',
+        flexWrap: 'wrap',
+        gap: '16px'
       }}>
-        <h2 style={{ margin: 0 }}>📚 Historique des rendez-vous</h2>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div>
+          <h2 style={{ 
+            margin: '0 0 8px 0', 
+            fontSize: '2rem',
+            color: '#1e293b',
+            fontWeight: '700'
+          }}>
+            Historique des rendez-vous
+          </h2>
+          <p style={{
+            margin: 0,
+            color: '#64748b',
+            fontSize: '0.95rem'
+          }}>
+            Consultez et gérez vos rendez-vous passés
+          </p>
+        </div>
+        
+        {/* Filtres compacts */}
+        <div style={{ 
+          display: 'flex', 
+          gap: '8px',
+          alignItems: 'center',
+          flexWrap: 'wrap'
+        }}>
           <select 
             value={sortOrder}
             onChange={(e) => setSortOrder(e.target.value)}
             style={{
-              padding: '8px',
-              borderRadius: '4px',
-              border: '1px solid #ddd'
+              padding: '8px 12px',
+              borderRadius: '6px',
+              border: '1px solid #d1d5db',
+              backgroundColor: '#ffffff',
+              fontSize: '0.875rem',
+              color: '#374151',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              outline: 'none',
+              minWidth: '120px'
             }}
           >
             <option value="desc">Plus récent</option>
@@ -1101,9 +1545,16 @@ const PastAppointmentsView = () => {
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
             style={{
-              padding: '8px',
-              borderRadius: '4px',
-              border: '1px solid #ddd'
+              padding: '8px 12px',
+              borderRadius: '6px',
+              border: '1px solid #d1d5db',
+              backgroundColor: '#ffffff',
+              fontSize: '0.875rem',
+              color: '#374151',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              outline: 'none',
+              minWidth: '140px'
             }}
           >
             <option value="all">Tous les statuts</option>
@@ -1113,25 +1564,32 @@ const PastAppointmentsView = () => {
         </div>
       </div>
 
+      {/* Barre de recherche optimisée */}
       <div style={{
         backgroundColor: 'white',
-        padding: '15px',
+        padding: '16px',
         borderRadius: '8px',
         marginBottom: '20px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        border: '1px solid #e5e7eb'
       }}>
         <input
           type="text"
-          placeholder="Rechercher un patient ou un motif..."
+          placeholder="Rechercher par nom de patient ou motif de consultation..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           style={{
             width: '100%',
-            padding: '10px',
-            borderRadius: '4px',
-            border: '1px solid #ddd',
-            fontSize: '1rem'
+            padding: '12px 16px',
+            borderRadius: '6px',
+            border: '1px solid #d1d5db',
+            fontSize: '0.95rem',
+            backgroundColor: '#ffffff',
+            transition: 'border-color 0.2s ease',
+            outline: 'none'
           }}
+          onFocus={(e) => e.target.style.borderColor = '#10b981'}
+          onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
         />
       </div>
 
@@ -1168,119 +1626,137 @@ const PastAppointmentsView = () => {
         </div>
       ) : (
         <>
+        {/* Indication pour l'utilisateur */}
+        <div style={{
+          backgroundColor: '#f8f9fa',
+          borderLeft: '3px solid #10b981',
+          borderRadius: '4px',
+          padding: '8px 12px',
+          marginBottom: '16px',
+          fontSize: '13px',
+          color: '#6b7280',
+          fontStyle: 'italic'
+        }}>
+          Cliquez sur un rendez-vous pour afficher les informations détaillées
+        </div>
+
         <div style={{
           display: 'grid',
-          gap: '15px',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))'
+          gap: '16px',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+          marginBottom: '24px'
         }}>
           {paginatedAppointments.map(apt => (
             <div
               key={apt._id}
+              onClick={() => setSelectedAppointment(selectedAppointment?._id === apt._id ? null : apt)}
+              onMouseEnter={(e) => {
+                if (selectedAppointment?._id !== apt._id) {
+                  e.target.style.borderColor = '#10b981';
+                  e.target.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.15)';
+                  e.target.style.transform = 'translateY(-1px)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (selectedAppointment?._id !== apt._id) {
+                  e.target.style.borderColor = '#e5e7eb';
+                  e.target.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+                  e.target.style.transform = 'translateY(0)';
+                }
+              }}
               style={{
                 backgroundColor: 'white',
                 borderRadius: '8px',
-                padding: '15px',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                border: '1px solid #eee',
-                transition: 'transform 0.2s ease',
+                padding: '16px',
+                boxShadow: selectedAppointment?._id === apt._id ? '0 4px 12px rgba(15, 118, 110, 0.15)' : '0 1px 3px rgba(0,0,0,0.1)',
+                border: selectedAppointment?._id === apt._id ? '2px solid #0f766e' : '1px solid #e5e7eb',
+                transition: 'all 0.2s ease',
                 cursor: 'pointer',
-                ':hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                }
+                position: 'relative'
               }}
             >
               <div style={{
                 display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                marginBottom: '10px'
-              }}>
-                <div style={{
-                  width: '40px',
-                  height: '40px',
-                  backgroundColor: '#f0f0f0',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '1.2rem',
-                  color: '#000000'  // Ajout de la couleur noire pour le texte
-                }}>
-                  👤
-          </div>
-                <div>
-                  <h4 style={{ margin: '0', color: '#2c3e50' }}>
-                    {apt.patient?.prenom} {apt.patient?.nom}
-                  </h4>
-                  <small style={{ color: '#666' }}>
-                    ID: {apt.patient?._id}
-                  </small>
-                </div>
-              </div>
-
-              <div style={{ marginBottom: '10px' }}>
-                <p style={{ margin: '5px 0', color: '#666' }}>
-                  📧 {apt.patient?.email}
-                </p>
-                <p style={{ margin: '5px 0', color: '#666' }}>
-                  📞 {apt.patient?.telephone}
-                </p>
-              </div>
-
-              <div style={{
-                backgroundColor: '#f8f9fa',
-                padding: '10px',
-                borderRadius: '4px',
-                marginBottom: '10px'
-              }}>
-                <p style={{ margin: '0', color: '#2c3e50' }}>
-                  🗓️ {formatDate(apt.date)}
-                </p>
-                {apt.reason && (
-                  <p style={{ margin: '5px 0 0 0', color: '#666' }}>
-                    📝 {apt.reason}
-                  </p>
-                )}
-              </div>
-
-              <div style={{
-                display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                marginTop: '10px',
-                paddingTop: '10px',
-                borderTop: '1px solid #eee',
-                color: '#000000'  // Ajout de la couleur noire pour le texte
+                marginBottom: '10px'
               }}>
+                <h4 style={{ 
+                  margin: '0', 
+                  color: '#1f2937',
+                  fontSize: '1.1rem',
+                  fontWeight: '600'
+                }}>
+                  {apt.patient?.prenom} {apt.patient?.nom}
+                </h4>
                 <span className={`status ${getStatusClass(apt.status)}`}
                   style={{
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    fontSize: '0.9rem',
-                    backgroundColor: apt.status === 'completed' ? '#e8f5e9' :
-                                   apt.status === 'cancelled' ? '#ffebee' :
-                                   '#f5f5f5',
-                    color: apt.status === 'completed' ? '#2e7d32' :
-                           apt.status === 'cancelled' ? '#c62828' :
-                           '#616161'
+                    padding: '6px 12px',
+                    borderRadius: '20px',
+                    fontSize: '0.75rem',
+                    fontWeight: '500',
+                    backgroundColor: apt.status === 'completed' ? '#dcfce7' :
+                                   apt.status === 'cancelled' ? '#fef2f2' :
+                                   '#f3f4f6',
+                    color: apt.status === 'completed' ? '#166534' :
+                           apt.status === 'cancelled' ? '#dc2626' :
+                           '#6b7280'
                   }}>
                   {getStatusText(apt.status)}
                 </span>
-                <button
-                  onClick={() => {/* Ajouter la logique pour voir les détails */}}
-                  style={{
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    border: '1px solid #ddd',
-                    backgroundColor: 'white',
-                    cursor: 'pointer',
-                    fontSize: '0.9rem'
-                  }}
-                >
-                  Voir détails
-                </button>
               </div>
+
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                margin: '5px 0'
+              }}>
+                <p style={{ margin: '0', color: '#6b7280', fontSize: '0.875rem' }}>
+                  {formatDate(apt.date)}
+                </p>
+                {selectedAppointment?._id !== apt._id && (
+                  <span style={{
+                    fontSize: '0.75rem',
+                    color: '#10b981',
+                    fontWeight: '500',
+                    opacity: '0.8',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Détails
+                  </span>
+                )}
+              </div>
+
+              {selectedAppointment?._id === apt._id && (
+                <div style={{
+                  marginTop: '15px',
+                  paddingTop: '15px',
+                  borderTop: '1px solid #eee'
+                }}>
+                  <div style={{ marginBottom: '10px' }}>
+                    <p style={{ margin: '5px 0', color: '#666', fontSize: '0.9rem' }}>
+                      Email: {apt.patient?.email}
+                    </p>
+                    <p style={{ margin: '5px 0', color: '#666', fontSize: '0.9rem' }}>
+                      Téléphone: {apt.patient?.telephone}
+                    </p>
+                  </div>
+                  {apt.reason && (
+                    <div style={{
+                      backgroundColor: '#f8f9fa',
+                      padding: '10px',
+                      borderRadius: '4px',
+                      marginTop: '10px'
+                    }}>
+                      <p style={{ margin: '0', color: '#2c3e50', fontSize: '0.9rem' }}>
+                        Motif: {apt.reason}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -1290,56 +1766,77 @@ const PastAppointmentsView = () => {
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            gap: '8px',
-            margin: '30px 0 0 0'
+            gap: '4px',
+            margin: '40px 0 20px 0',
+            padding: '20px'
           }}>
             <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
               style={{
-                padding: '8px 14px',
-                borderRadius: '6px',
-                border: '1px solid #ddd',
-                background: currentPage === 1 ? '#f1f1f1' : '#fff',
-                color: '#1976d2',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                background: currentPage === 1 ? '#f8f9fa' : '#ffffff',
+                color: currentPage === 1 ? '#9ca3af' : '#374151',
                 cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                fontWeight: 500
+                fontWeight: '500',
+                fontSize: '14px',
+                boxShadow: currentPage === 1 ? 'none' : '0 1px 3px rgba(0,0,0,0.1)',
+                transition: 'all 0.2s ease',
+                opacity: currentPage === 1 ? '0.5' : '1'
               }}
             >
-              Précédent
+              ← Précédent
             </button>
-            {Array.from({ length: totalPages }, (_, i) => (
-              <button
-                key={i + 1}
-                onClick={() => handlePageChange(i + 1)}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #1976d2',
-                  background: currentPage === i + 1 ? '#1976d2' : '#fff',
-                  color: currentPage === i + 1 ? '#fff' : '#1976d2',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  minWidth: '36px'
-                }}
-              >
-                {i + 1}
-              </button>
-            ))}
+            
+            <div style={{
+              display: 'flex',
+              gap: '2px',
+              margin: '0 8px'
+            }}>
+              {Array.from({ length: totalPages }, (_, i) => (
+                <button
+                  key={i + 1}
+                  onClick={() => handlePageChange(i + 1)}
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: currentPage === i + 1 ? '#0f766e' : '#ffffff',
+                    color: currentPage === i + 1 ? '#ffffff' : '#374151',
+                    fontWeight: currentPage === i + 1 ? '600' : '500',
+                    cursor: 'pointer',
+                    minWidth: '44px',
+                    fontSize: '14px',
+                    boxShadow: currentPage === i + 1 ? '0 2px 8px rgba(15, 118, 110, 0.3)' : '0 1px 3px rgba(0,0,0,0.1)',
+                    transition: 'all 0.2s ease',
+                    transform: currentPage === i + 1 ? 'translateY(-1px)' : 'none'
+                  }}
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+            
             <button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
               style={{
-                padding: '8px 14px',
-                borderRadius: '6px',
-                border: '1px solid #ddd',
-                background: currentPage === totalPages ? '#f1f1f1' : '#fff',
-                color: '#1976d2',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                background: currentPage === totalPages ? '#f8f9fa' : '#ffffff',
+                color: currentPage === totalPages ? '#9ca3af' : '#374151',
                 cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                fontWeight: 500
+                fontWeight: '500',
+                fontSize: '14px',
+                boxShadow: currentPage === totalPages ? 'none' : '0 1px 3px rgba(0,0,0,0.1)',
+                transition: 'all 0.2s ease',
+                opacity: currentPage === totalPages ? '0.5' : '1'
               }}
             >
-              Suivant
+              Suivant →
             </button>
         </div>
         )}
@@ -1502,7 +1999,7 @@ const PendingAppointmentsView = () => {
                 marginBottom: '15px',
                 boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
                 cursor: 'pointer',
-                border: selectedPatient === apt.patient._id ? '2px solid #1976d2' : '1px solid #e0e0e0'
+                border: selectedPatient === apt.patient._id ? '2px solid #0f766e' : '1px solid #e0e0e0'
               }}
               onClick={() => setSelectedPatient(apt.patient._id)}
             >
@@ -1641,9 +2138,9 @@ const PendingAppointmentsView = () => {
                   style={{
                     display: 'inline-block',
                     marginTop: '10px',
-                    padding: '8px 16px',
-                    backgroundColor: '#1976d2',
-                    color: 'white',
+                                      padding: '8px 16px',
+                  backgroundColor: '#0f766e',
+                  color: 'white',
                     textDecoration: 'none',
                     borderRadius: '4px',
                     fontSize: '0.9rem'
@@ -1739,6 +2236,8 @@ const CalendarView = () => {
   const [medicalRecords, setMedicalRecords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const appointmentsPerPage = 2;
   const doctorId = localStorage.getItem('userId');
 
   const formatDate = (dateString) => {
@@ -1809,6 +2308,7 @@ const CalendarView = () => {
       return aptDate.toDateString() === date.toDateString();
     });
     setDayAppointments(filtered.sort((a, b) => new Date(a.date) - new Date(b.date)));
+    setCurrentPage(1); // Reset pagination when date changes
   };
 
   const handleAppointmentClick = (appointment) => {
@@ -1854,6 +2354,16 @@ const CalendarView = () => {
       case 'completed': return '✔️ Terminé';
       default: return status;
     }
+  };
+
+  // Pagination logic
+  const indexOfLastAppointment = currentPage * appointmentsPerPage;
+  const indexOfFirstAppointment = indexOfLastAppointment - appointmentsPerPage;
+  const currentAppointments = dayAppointments.slice(indexOfFirstAppointment, indexOfLastAppointment);
+  const totalPages = Math.ceil(dayAppointments.length / appointmentsPerPage);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
   };
 
   const PatientDetailsModal = ({ appointment, onClose, formatDate, loading, error, medicalRecords }) => {
@@ -2097,32 +2607,85 @@ const CalendarView = () => {
               <p>Aucun rendez-vous prévu pour cette date</p>
               </div>
             ) : (
-            <div className="appointment-list">
-              {dayAppointments.map(apt => (
-                <div 
-                  key={apt._id} 
-                  className="appointment-item"
-                  onClick={() => handleAppointmentClick(apt)}
-                >
-                      <div className="appointment-time">
-                    {formatTime(apt.date)}
+            <>
+              <div className="appointment-list">
+                {currentAppointments.map(apt => (
+                  <div 
+                    key={apt._id} 
+                    className="appointment-item"
+                    onClick={() => handleAppointmentClick(apt)}
+                  >
+                        <div className="appointment-time">
+                      {formatTime(apt.date)}
+                        </div>
+                    <div className="appointment-patient">
+                      <strong>{apt.patient?.prenom} {apt.patient?.nom}</strong>
+                      <div>📞 {apt.patient?.telephone}</div>
+                      <div>📧 {apt.patient?.email}</div>
+                        </div>
+                        {apt.reason && (
+                      <div className="appointment-reason">
+                        📝 {apt.reason}
                       </div>
-                  <div className="appointment-patient">
-                    <strong>{apt.patient?.prenom} {apt.patient?.nom}</strong>
-                    <div>📞 {apt.patient?.telephone}</div>
-                    <div>📧 {apt.patient?.email}</div>
+                    )}
+                    <span className={`appointment-status ${getStatusClass(apt.status)}`}>
+                      {getStatusText(apt.status)}
+                    </span>
                       </div>
-                      {apt.reason && (
-                    <div className="appointment-reason">
-                      📝 {apt.reason}
-                    </div>
-                  )}
-                  <span className={`appointment-status ${getStatusClass(apt.status)}`}>
-                    {getStatusText(apt.status)}
-                  </span>
-                    </div>
-                  ))}
-              </div>
+                    ))}
+                </div>
+                
+                {totalPages > 1 && (
+                  <div className="pagination-controls" style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    marginTop: '1rem',
+                    padding: '1rem'
+                  }}>
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        border: '1px solid #e0e0e0',
+                        borderRadius: '6px',
+                        background: currentPage === 1 ? '#f5f5f5' : '#ffffff',
+                        color: currentPage === 1 ? '#999' : '#333',
+                        cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                        fontSize: '0.9rem'
+                      }}
+                    >
+                      ← Précédent
+                    </button>
+                    
+                    <span style={{
+                      padding: '0.5rem 1rem',
+                      color: '#666',
+                      fontSize: '0.9rem'
+                    }}>
+                      Page {currentPage} sur {totalPages}
+                    </span>
+                    
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        border: '1px solid #e0e0e0',
+                        borderRadius: '6px',
+                        background: currentPage === totalPages ? '#f5f5f5' : '#ffffff',
+                        color: currentPage === totalPages ? '#999' : '#333',
+                        cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                        fontSize: '0.9rem'
+                      }}
+                    >
+                      Suivant →
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -2137,16 +2700,7 @@ const CalendarView = () => {
           medicalRecords={medicalRecords}
         />
       )}
-      <div className="no-appointments" key="no-chat" style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-        color: '#000000',  // Changement de la couleur grise en noir
-        fontSize: '1.1rem'
-      }}>
-        <p>👈 Sélectionnez une date pour voir les rendez-vous</p>
-      </div>
+
     </div>
   );
 };
@@ -2157,6 +2711,9 @@ const ArticlesView = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [expandedArticles, setExpandedArticles] = useState(new Set());
+  const articlesPerPage = 6;
   const [newArticle, setNewArticle] = useState({
     title: '',
     content: '',
@@ -2280,17 +2837,59 @@ const ArticlesView = () => {
     setShowArticleForm(!showArticleForm);
   };
 
+  const toggleArticleExpansion = (articleId) => {
+    const newExpanded = new Set(expandedArticles);
+    if (newExpanded.has(articleId)) {
+      newExpanded.delete(articleId);
+    } else {
+      newExpanded.add(articleId);
+    }
+    setExpandedArticles(newExpanded);
+  };
+
+  const truncateContent = (content, maxLength = 100) => {
+    if (content.length <= maxLength) return content;
+    return content.substring(0, maxLength) + '...';
+  };
+
+  // Pagination logic
+  const totalPages = Math.ceil(articles.length / articlesPerPage);
+  const startIndex = (currentPage - 1) * articlesPerPage;
+  const endIndex = startIndex + articlesPerPage;
+  const currentArticles = articles.slice(startIndex, endIndex);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
   return (
-    <div className="articles-container">
+    <div className="articles-container" style={{ 
+      padding: '2rem',
+      maxWidth: '1400px',
+      margin: '0 auto',
+      color: '#000000'
+    }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h2>
-          <span role="img" aria-label="articles">📚</span>
+        <h2 style={{
+          fontSize: '1.8rem',
+          color: '#00796b'
+        }}>
           Articles
         </h2>
-        <button className="add-article-btn" onClick={toggleArticleForm}>
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
+        <button 
+          onClick={toggleArticleForm}
+          style={{
+            padding: '0.75rem 1.5rem',
+            backgroundColor: '#00796b',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '1rem',
+            fontWeight: '500',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+        >
           Ajouter un article
         </button>
       </div>
@@ -2313,124 +2912,376 @@ const ArticlesView = () => {
           backgroundColor: '#e8f5e9',
           color: '#2e7d32',
           borderRadius: '8px',
-          marginBottom: '1rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem'
+          marginBottom: '1rem'
         }}>
-          <span role="img" aria-label="success">✅</span>
           {success}
         </div>
       )}
 
       {showArticleForm && (
-        <div className="article-form">
-        <h3>Nouvel Article</h3>
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          padding: '2rem',
+          marginBottom: '2rem',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+        }}>
+          <h3 style={{
+            fontSize: '1.2rem',
+            marginBottom: '1.5rem',
+            color: '#00796b'
+          }}>
+            Nouvel Article
+          </h3>
           <form onSubmit={handleSubmit}>
-        <div className="form-group">
-              <label htmlFor="title">Titre</label>
-          <input
-            type="text"
-                id="title"
-                name="title"
-            value={newArticle.title}
-                onChange={handleInputChange}
-                placeholder="Titre de l'article"
-            required
-          />
-        </div>
-        <div className="form-group">
-              <label htmlFor="category">Catégorie</label>
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '0.5rem',
+                fontWeight: '500'
+              }}>
+                Titre
+              </label>
               <input
                 type="text"
-                id="category"
+                name="title"
+                value={newArticle.title}
+                onChange={handleInputChange}
+                placeholder="Titre de l'article"
+                required
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid #e0e0e0',
+                  fontSize: '1rem'
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '0.5rem',
+                fontWeight: '500'
+              }}>
+                Catégorie
+              </label>
+              <input
+                type="text"
                 name="category"
                 value={newArticle.category}
                 onChange={handleInputChange}
                 placeholder="Catégorie de l'article"
                 required
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid #e0e0e0',
+                  fontSize: '1rem'
+                }}
               />
             </div>
-            <div className="form-group">
-              <label htmlFor="content">Contenu</label>
-          <textarea
-                id="content"
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '0.5rem',
+                fontWeight: '500'
+              }}>
+                Contenu
+              </label>
+              <textarea
                 name="content"
-            value={newArticle.content}
+                value={newArticle.content}
                 onChange={handleInputChange}
                 placeholder="Contenu de l'article"
                 rows="6"
-            required
-          />
-        </div>
-        <div className="form-group">
-              <label htmlFor="image">Image</label>
-          <input
+                required
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid #e0e0e0',
+                  fontSize: '1rem',
+                  resize: 'vertical'
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '0.5rem',
+                fontWeight: '500'
+              }}>
+                Image
+              </label>
+              <input
                 type="file"
-                id="image"
                 onChange={handleFileChange}
                 accept="image/*"
-          />
-        </div>
-        <div className="form-group">
-              <label htmlFor="tags">Tags (séparés par des virgules)</label>
-          <input
-            type="text"
-                id="tags"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid #e0e0e0',
+                  fontSize: '1rem'
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '0.5rem',
+                fontWeight: '500'
+              }}>
+                Tags (séparés par des virgules)
+              </label>
+              <input
+                type="text"
                 name="tags"
-            value={newArticle.tags}
+                value={newArticle.tags}
                 onChange={handleInputChange}
                 placeholder="santé, médecine, conseils..."
                 required
-          />
-        </div>
-            <button type="submit" className="publish-btn" disabled={loading}>
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid #e0e0e0',
+                  fontSize: '1rem'
+                }}
+              />
+            </div>
+            <button 
+              type="submit" 
+              disabled={loading}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                backgroundColor: '#00796b',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '1rem',
+                fontWeight: '500',
+                cursor: 'pointer',
+                opacity: loading ? '0.7' : '1',
+                transition: 'all 0.2s ease'
+              }}
+            >
               {loading ? 'Publication...' : 'Publier l\'article'}
-        </button>
-      </form>
+            </button>
+          </form>
         </div>
       )}
 
-      <div className="articles-list">
+      <div style={{ marginTop: '2rem' }}>
         {loading && articles.length === 0 ? (
-          <div className="loading-articles">
-            <span role="img" aria-label="loading">🔄</span>
-            Chargement des articles...
+          <div style={{
+            textAlign: 'center',
+            padding: '2rem',
+            color: '#666'
+          }}>
+            <p>Chargement des articles...</p>
           </div>
         ) : articles.length === 0 ? (
-          <div className="no-articles">
-            <span role="img" aria-label="empty" style={{ fontSize: '3rem', marginBottom: '1rem', display: 'block' }}>
-              📝
-            </span>
+          <div style={{
+            textAlign: 'center',
+            padding: '2rem',
+            color: '#666'
+          }}>
             <p>Aucun article publié pour le moment</p>
           </div>
         ) : (
-          articles.map((article) => (
-            <div key={article._id} className="article-card">
-              {article.imageUrl && (
-                <img src={article.imageUrl} alt={article.title} className="article-image" />
-              )}
-              <div className="article-content">
-                <div className="article-category">
-                  <span role="img" aria-label="category">📌</span>
-                  {article.category}
-                </div>
-                <h3>{article.title}</h3>
-                <p className="article-text">{article.content}</p>
-                  <div className="article-tags">
-                    {article.tags.map((tag, index) => (
-                    <span key={index} className="tag">{tag}</span>
-                    ))}
+          <>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '1rem',
+              marginBottom: '2rem'
+            }}>
+              {currentArticles.map((article) => (
+                <div 
+                  key={article._id} 
+                  style={{
+                    backgroundColor: 'white',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                    transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+                  }}
+                >
+                  {article.imageUrl && (
+                    <img 
+                      src={article.imageUrl} 
+                      alt={article.title} 
+                      style={{
+                        width: '100%',
+                        height: '120px',
+                        objectFit: 'cover'
+                      }}
+                    />
+                  )}
+                  <div style={{ padding: '0.75rem' }}>
+                    <div style={{
+                      display: 'inline-block',
+                      backgroundColor: '#e0f2f1',
+                      color: '#00796b',
+                      padding: '0.2rem 0.6rem',
+                      borderRadius: '15px',
+                      fontSize: '0.7rem',
+                      fontWeight: '500',
+                      marginBottom: '0.75rem'
+                    }}>
+                      {article.category}
+                    </div>
+                    
+                    <h3 style={{
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      color: '#333',
+                      marginBottom: '0.5rem',
+                      lineHeight: '1.3'
+                    }}>
+                      {article.title}
+                    </h3>
+                    
+                    <p style={{
+                      color: '#666',
+                      lineHeight: '1.5',
+                      marginBottom: '0.75rem',
+                      fontSize: '0.9rem'
+                    }}>
+                      {expandedArticles.has(article._id) 
+                        ? article.content 
+                        : truncateContent(article.content)
+                      }
+                    </p>
+
+                    {article.tags && article.tags.length > 0 && (
+                      <div style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '0.3rem',
+                        marginBottom: '0.75rem'
+                      }}>
+                        {article.tags.map((tag, index) => (
+                          <span 
+                            key={index} 
+                            style={{
+                              backgroundColor: '#f5f5f5',
+                              color: '#666',
+                              padding: '0.2rem 0.4rem',
+                              borderRadius: '10px',
+                              fontSize: '0.7rem'
+                            }}
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      paddingTop: '0.75rem',
+                      borderTop: '1px solid #f0f0f0'
+                    }}>
+                      <small style={{ color: '#999', fontSize: '0.8rem' }}>
+                        {new Date(article.createdAt).toLocaleDateString('fr-FR')}
+                      </small>
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        {article.content.length > 100 && (
+                          <button
+                            onClick={() => toggleArticleExpansion(article._id)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#00796b',
+                              cursor: 'pointer',
+                              fontSize: '0.8rem',
+                              fontWeight: '500'
+                            }}
+                          >
+                            {expandedArticles.has(article._id) ? 'Lire moins' : 'Lire la suite'}
+                          </button>
+                        )}
+                        <button 
+                          onClick={() => handleDeleteArticle(article._id)}
+                          style={{
+                            padding: '0.4rem 0.8rem',
+                            backgroundColor: '#ffebee',
+                            color: '#c62828',
+                            border: 'none',
+                            borderRadius: '5px',
+                            cursor: 'pointer',
+                            fontSize: '0.8rem',
+                            fontWeight: '500'
+                          }}
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                <div className="article-footer">
-                  <small>{new Date(article.createdAt).toLocaleDateString()}</small>
-                  <button className="delete-btn" onClick={() => handleDeleteArticle(article._id)}>
-                    Supprimer
-                  </button>
                 </div>
-              </div>
+              ))}
             </div>
-          ))
+
+            {/* Pagination */}
+            {articles.length > articlesPerPage && (
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '0.5rem',
+                marginTop: '2rem',
+                padding: '1rem'
+              }}>
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    backgroundColor: currentPage === 1 ? '#f5f5f5' : '#00796b',
+                    color: currentPage === 1 ? '#999' : 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    fontSize: '0.9rem'
+                  }}
+                >
+                  Précédent
+                </button>
+
+                <span style={{
+                  padding: '0.5rem 1rem',
+                  color: '#666',
+                  fontSize: '0.9rem'
+                }}>
+                  Page {currentPage} sur {totalPages}
+                </span>
+
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    backgroundColor: currentPage === totalPages ? '#f5f5f5' : '#00796b',
+                    color: currentPage === totalPages ? '#999' : 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                    fontSize: '0.9rem'
+                  }}
+                >
+                  Suivant
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -2448,6 +3299,8 @@ const MedicalReportsView = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState('');
   const [reports, setReports] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const reportsPerPage = 2;
   const doctorId = localStorage.getItem('userId');
 
   // Utiliser useCallback pour mémoriser les fonctions
@@ -2646,6 +3499,16 @@ const MedicalReportsView = () => {
     });
   };
 
+  // Pagination logic
+  const totalPages = Math.ceil(reports.length / reportsPerPage);
+  const startIndex = (currentPage - 1) * reportsPerPage;
+  const endIndex = startIndex + reportsPerPage;
+  const currentReports = reports.slice(startIndex, endIndex);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
   return (
     <div className="medical-reports-container" style={{ 
       padding: '2rem',
@@ -2663,12 +3526,8 @@ const MedicalReportsView = () => {
       }}>
         <h2 style={{
           fontSize: '1.8rem',
-          color: '#00796b',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem'
+          color: '#00796b'
         }}>
-          <span role="img" aria-label="reports">📋</span>
           Rapports Médicaux
         </h2>
       </div>
@@ -2682,7 +3541,7 @@ const MedicalReportsView = () => {
           borderRadius: '8px',
           marginBottom: '1rem'
         }}>
-          <span role="img" aria-label="error">⚠️</span> {error}
+          {error}
         </div>
       )}
 
@@ -2694,7 +3553,7 @@ const MedicalReportsView = () => {
           borderRadius: '8px',
           marginBottom: '1rem'
         }}>
-          <span role="img" aria-label="success">✅</span> {success}
+          {success}
         </div>
       )}
 
@@ -2714,12 +3573,8 @@ const MedicalReportsView = () => {
           <h3 style={{
             fontSize: '1.2rem',
             marginBottom: '1.5rem',
-            color: '#00796b',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
+            color: '#00796b'
           }}>
-            <span role="img" aria-label="new-report">📝</span>
             Nouveau Rapport
           </h3>
 
@@ -2817,7 +3672,6 @@ const MedicalReportsView = () => {
                   id="file-input"
               />
                 <label htmlFor="file-input" style={{ cursor: 'pointer' }}>
-                  <span role="img" aria-label="upload">📎</span>
                   {file ? file.name : 'Cliquez ou glissez un fichier ici'}
                 </label>
               </div>
@@ -2865,17 +3719,7 @@ const MedicalReportsView = () => {
                 transition: 'all 0.2s ease'
               }}
             >
-              {loading ? (
-                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                  <span role="img" aria-label="loading">🔄</span>
-                  Envoi en cours...
-                </span>
-              ) : (
-                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                  <span role="img" aria-label="send">📤</span>
-                  Envoyer le rapport
-                </span>
-              )}
+              {loading ? 'Envoi en cours...' : 'Envoyer le rapport'}
             </button>
           </form>
         </div>
@@ -2890,12 +3734,8 @@ const MedicalReportsView = () => {
           <h3 style={{
             fontSize: '1.2rem',
             marginBottom: '1.5rem',
-            color: '#00796b',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
+            color: '#00796b'
           }}>
-            <span role="img" aria-label="list">📋</span>
             Rapports récents
           </h3>
 
@@ -2905,7 +3745,6 @@ const MedicalReportsView = () => {
               padding: '2rem',
               color: '#666'
             }}>
-              <span role="img" aria-label="loading" style={{ fontSize: '2rem' }}>🔄</span>
               <p>Chargement des rapports...</p>
             </div>
           ) : reports.length === 0 ? (
@@ -2914,15 +3753,15 @@ const MedicalReportsView = () => {
               padding: '2rem',
               color: '#666'
             }}>
-              <span role="img" aria-label="empty" style={{ fontSize: '2rem' }}>📂</span>
               <p>Aucun rapport médical</p>
             </div>
           ) : (
-            <div style={{
-              display: 'grid',
-              gap: '1rem'
-            }}>
-              {reports.map(report => {
+            <>
+              <div style={{
+                display: 'grid',
+                gap: '1rem'
+              }}>
+                {currentReports.map(report => {
                 if (!report || !report._id) return null; // Skip invalid reports
 
                 // Vérifier si patientId existe et a les propriétés nécessaires
@@ -2976,13 +3815,9 @@ const MedicalReportsView = () => {
                           color: 'white',
                           textDecoration: 'none',
                           borderRadius: '4px',
-                          fontSize: '0.9rem',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem'
+                          fontSize: '0.9rem'
                         }}
                       >
-                        <span role="img" aria-label="view">👁️</span>
                         Voir le rapport
                       </a>
                       <button 
@@ -2995,20 +3830,69 @@ const MedicalReportsView = () => {
                           border: 'none',
                           borderRadius: '4px',
                           cursor: 'pointer',
-                          fontSize: '0.9rem',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem'
+                          fontSize: '0.9rem'
                         }}
                       >
-                        <span role="img" aria-label="delete">🗑️</span>
                         Supprimer
                       </button>
                     </div>
                   </div>
                 );
               })}
-            </div>
+              </div>
+
+              {/* Pagination */}
+              {reports.length > reportsPerPage && (
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  marginTop: '1.5rem',
+                  padding: '1rem'
+                }}>
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: currentPage === 1 ? '#f5f5f5' : '#00796b',
+                      color: currentPage === 1 ? '#999' : 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                      fontSize: '0.9rem'
+                    }}
+                  >
+                    Précédent
+                  </button>
+
+                  <span style={{
+                    padding: '0.5rem 1rem',
+                    color: '#666',
+                    fontSize: '0.9rem'
+                  }}>
+                    Page {currentPage} sur {totalPages}
+                  </span>
+
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: currentPage === totalPages ? '#f5f5f5' : '#00796b',
+                      color: currentPage === totalPages ? '#999' : 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                      fontSize: '0.9rem'
+                    }}
+                  >
+                    Suivant
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -3127,10 +4011,17 @@ const ProfileView = () => {
   if (error) {
     return (
       <div className="doctor-error">
-        <span className="error-icon">⚠️</span>
+        <div className="error-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48" style={{color: '#ef4444'}}>
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+          </svg>
+        </div>
         <p>{error}</p>
         <button onClick={fetchDoctorInfo} className="retry-btn">
-          🔄 Réessayer
+          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style={{marginRight: '0.5rem'}}>
+            <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+          </svg>
+          Réessayer
         </button>
       </div>
     );
@@ -3146,20 +4037,6 @@ const ProfileView = () => {
       )}
 
       <div className="profile-header">
-        <div className="profile-title">
-          <h1>
-            <span className="profile-icon">👨‍⚕️</span>
-            Mon Profil
-          </h1>
-          {!isEditing && (
-            <button 
-              className="edit-profile-btn"
-              onClick={() => setIsEditing(true)}
-            >
-              ✏️ Modifier le profil
-            </button>
-          )}
-        </div>
         <div className="profile-avatar">
           {isEditing ? (
             <div className="avatar-upload">
@@ -3169,14 +4046,17 @@ const ProfileView = () => {
                 className="avatar-preview"
                 onError={(e) => { e.target.src = '../assets/images/default-avatar.png'; console.error('Failed to load avatar:', e.target.src); }}
                 style={{
-                  width: '150px',
-                  height: '150px',
+                  width: '80px',
+                  height: '80px',
                   borderRadius: '50%',
                   objectFit: 'cover'
                 }}
               />
               <label className="avatar-upload-btn">
-                📸 Changer la photo
+                <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" style={{marginRight: '0.5rem'}}>
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+                Changer
                 <input
                   type="file"
                   accept="image/*"
@@ -3192,76 +4072,72 @@ const ProfileView = () => {
               className="avatar-image"
               onError={(e) => { e.target.src = '../assets/images/default-avatar.png'; console.error('Failed to load avatar:', e.target.src); }}
               style={{
-                width: '150px',
-                height: '150px',
+                width: '80px',
+                height: '80px',
                 borderRadius: '50%',
                 objectFit: 'cover'
               }}
             />
           )}
         </div>
+        <div className="profile-title">
+          <h1>Mon Profil</h1>
+        </div>
       </div>
 
       {!isEditing ? (
-        <div className="profile-info" style={{ color: '#000000' }}>
-          <div className="info-card">
-            <div className="info-section personal-info" style={{ color: '#000000' }}>
-              <div className="section-header">
-                <span className="section-icon">👤</span>
-                <h2>Informations personnelles</h2>
+        <div className="profile-info-simple">
+          <div className="info-section-simple">
+            <h3>Informations personnelles</h3>
+            <div className="info-grid-simple">
+              <div className="info-item-simple">
+                <span className="label">Nom :</span>
+                <span className="value">{doctorInfo.nom}</span>
               </div>
-              <div className="info-content">
-                <div className="info-row">
-                  <div className="info-label">Nom</div>
-                  <div className="info-value">{doctorInfo.nom}</div>
+              <div className="info-item-simple">
+                <span className="label">Prénom :</span>
+                <span className="value">{doctorInfo.prenom}</span>
                 </div>
-                <div className="info-row">
-                  <div className="info-label">Prénom</div>
-                  <div className="info-value">{doctorInfo.prenom}</div>
+              <div className="info-item-simple">
+                <span className="label">Email :</span>
+                <span className="value">{doctorInfo.email}</span>
                 </div>
-                <div className="info-row">
-                  <div className="info-label">Email</div>
-                  <div className="info-value">{doctorInfo.email}</div>
-                </div>
-                <div className="info-row">
-                  <div className="info-label">Téléphone</div>
-                  <div className="info-value">{doctorInfo.telephone}</div>
+              <div className="info-item-simple">
+                <span className="label">Téléphone :</span>
+                <span className="value">{doctorInfo.telephone}</span>
                 </div>
               </div>
             </div>
 
-            <div className="info-section professional-info">
-              <div className="section-header">
-                <span className="section-icon">🏥</span>
-                <h2>Informations professionnelles</h2>
+          <div className="info-section-simple">
+            <h3>Informations professionnelles</h3>
+            <div className="info-grid-simple">
+              <div className="info-item-simple">
+                <span className="label">Spécialité :</span>
+                <span className="value">{doctorInfo.specialty}</span>
               </div>
-              <div className="info-content">
-                <div className="info-row">
-                  <div className="info-label">Spécialité</div>
-                  <div className="info-value">{doctorInfo.specialty}</div>
+              <div className="info-item-simple">
+                <span className="label">Région :</span>
+                <span className="value">{doctorInfo.region}</span>
                 </div>
-                <div className="info-row">
-                  <div className="info-label">Région</div>
-                  <div className="info-value">{doctorInfo.region}</div>
+              <div className="info-item-simple">
+                <span className="label">Adresse :</span>
+                <span className="value">{doctorInfo.adresse}</span>
                 </div>
-                <div className="info-row">
-                  <div className="info-label">Adresse du cabinet</div>
-                  <div className="info-value">{doctorInfo.adresse}</div>
                 </div>
               </div>
-            </div>
-          </div>
+          
+          <button 
+            className="edit-profile-btn-simple"
+            onClick={() => setIsEditing(true)}
+          >
+            Modifier le profil
+          </button>
           </div>
         ) : (
-        <form onSubmit={handleSubmit} className="edit-form">
-          <div className="form-card">
-            <div className="form-section">
-              <div className="section-header">
-                <span className="section-icon">👤</span>
-                <h2>Informations personnelles</h2>
-                </div>
-              <div className="form-content">
-                <div className="form-row">
+        <form onSubmit={handleSubmit} className="edit-form-simple">
+          <div className="form-section-simple">
+            <h3>Informations personnelles</h3>
                   <div className="form-group">
                     <label>Nom</label>
                     <input
@@ -3282,8 +4158,6 @@ const ProfileView = () => {
                       required
                     />
                 </div>
-              </div>
-                <div className="form-row">
                   <div className="form-group">
                     <label>Email</label>
                     <input
@@ -3303,18 +4177,11 @@ const ProfileView = () => {
                       onChange={handleInputChange}
                       required
                     />
-                  </div>
-                </div>
               </div>
             </div>
 
-            <div className="form-section">
-              <div className="section-header">
-                <span className="section-icon">🏥</span>
-                <h2>Informations professionnelles</h2>
-              </div>
-              <div className="form-content">
-                <div className="form-row">
+          <div className="form-section-simple">
+            <h3>Informations professionnelles</h3>
                   <div className="form-group">
                     <label>Spécialité</label>
                     <input
@@ -3360,9 +4227,7 @@ const ProfileView = () => {
                       <option value="Kébili">Kébili</option>
                     </select>
                   </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group full-width">
+            <div className="form-group">
                     <label>Adresse du cabinet</label>
                     <input
                       type="text"
@@ -3371,33 +4236,23 @@ const ProfileView = () => {
                       onChange={handleInputChange}
                       required
                     />
-                  </div>
-                </div>
               </div>
             </div>
 
-            <div className="form-actions">
-              <button type="submit" className="save-btn" disabled={loading}>
-                {loading ? (
-                  <>
-                    <span className="spinner"></span>
-                    Enregistrement...
-                  </>
-                ) : (
-                  <>💾 Enregistrer</>
-                )}
+          <div className="form-actions-simple">
+            <button type="submit" className="save-btn-simple" disabled={loading}>
+              {loading ? 'Enregistrement...' : 'Enregistrer'}
               </button>
               <button 
                 type="button" 
-                className="cancel-btn"
+              className="cancel-btn-simple"
                 onClick={() => {
                   setIsEditing(false);
                   setEditedInfo(doctorInfo);
                 }}
               >
-                ❌ Annuler
+              Annuler
               </button>
-      </div>
           </div>
         </form>
       )}
@@ -3407,30 +4262,144 @@ const ProfileView = () => {
 
 const DoctorDashboard = () => {
   const navigate = useNavigate();
+  const [activeRoute, setActiveRoute] = useState('');
+  const [totalUnreadMessages, setTotalUnreadMessages] = useState(0);
+  const doctorId = localStorage.getItem('userId');
 
   const handleLogout = () => {
     localStorage.clear();
     window.location.href = '/login';
   };
 
+  const handleNavigation = (route) => {
+    setActiveRoute(route);
+    navigate(route);
+  };
+
+  // Fonction pour récupérer le total des messages non lus
+  const fetchTotalUnreadMessages = async () => {
+    try {
+      const response = await axios.get(`http://localhost:5001/api/messages/total-unread/${doctorId}`);
+      setTotalUnreadMessages(response.data.total || 0);
+    } catch (error) {
+      console.error('Erreur récupération total messages non lus:', error);
+    }
+  };
+
+  // Récupérer le total des messages non lus au chargement
+  React.useEffect(() => {
+    if (doctorId) {
+      fetchTotalUnreadMessages();
+      // Actualiser toutes les 10 secondes pour détecter rapidement les nouveaux messages
+      const interval = setInterval(fetchTotalUnreadMessages, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [doctorId]);
+
   return (
     <div className="dashboard-container">
-      <aside className="sidebar">
-      <div className="user-info">
-            <FaUserCircle size={32} style={{ marginRight: 8, color: "#038A91" }} />
-            <span className="user-role" style={{ fontSize: "1rem", fontWeight: 500, color: "#038A91" }}>Interface Docteur</span>
+      <aside className="medical-sidebar">
+        <div className="sidebar-header">
+          <div className="medical-logo">
+            <div className="logo-text">
+              <h2>PatientPath</h2>
+              <span>Espace Médecin</span>
           </div>
-        <nav className="sidebar-menu">
-          <button className="sidebar-btn" onClick={() => navigate('')}><FaUserMd className="icon" /><span>Mon Profil</span></button>
-          <button className="sidebar-btn" onClick={() => navigate('calendar')}><FaCalendarAlt className="icon" /><span>Calendrier</span></button>
-          <button className="sidebar-btn" onClick={() => navigate('past-appointments')}><FaHistory className="icon" /><span>Historique</span></button>
-          <button className="sidebar-btn" onClick={() => navigate('messages')}><FaComments className="icon" /><span>Messagerie</span></button>
-          <button className="sidebar-btn" onClick={() => navigate('medical-reports')}><FaFileMedical className="icon" /><span>Rapports Médicaux</span></button>
-          <button className="sidebar-btn" onClick={() => navigate('articles')}><FaBook className="icon" /><span>Articles</span></button>
-          <button className="sidebar-btn logout-btn" onClick={handleLogout}><FaSignOutAlt className="icon" /><span>Déconnexion</span></button>
+          </div>
+        </div>
+
+        <nav className="sidebar-navigation">
+          <div className="nav-section">
+            <span className="nav-section-title">TABLEAU DE BORD</span>
+            <button 
+              className={`nav-item ${activeRoute === '' ? 'active' : ''}`}
+              onClick={() => handleNavigation('')}
+            >
+              <FaUserMd className="nav-icon" />
+              <span className="nav-text">Mon Profil</span>
+            </button>
+          </div>
+
+          <div className="nav-section">
+            <span className="nav-section-title">RENDEZ-VOUS</span>
+            <button 
+              className={`nav-item ${activeRoute === 'calendar' ? 'active' : ''}`}
+              onClick={() => handleNavigation('calendar')}
+            >
+              <FaCalendarAlt className="nav-icon" />
+              <span className="nav-text">Calendrier</span>
+            </button>
+            <button 
+              className={`nav-item ${activeRoute === 'past-appointments' ? 'active' : ''}`}
+              onClick={() => handleNavigation('past-appointments')}
+            >
+              <FaHistory className="nav-icon" />
+              <span className="nav-text">Historique</span>
+            </button>
+          </div>
+
+          <div className="nav-section">
+            <span className="nav-section-title">COMMUNICATION</span>
+            <button 
+              className={`nav-item ${activeRoute === 'messages' ? 'active' : ''}`}
+              onClick={() => handleNavigation('messages')}
+              style={{ position: 'relative' }}
+            >
+              <FaComments className="nav-icon" />
+              <span className="nav-text">Messagerie</span>
+              {totalUnreadMessages > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: '8px',
+                  right: '12px',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  fontSize: '0.7rem',
+                  fontWeight: '600',
+                  padding: '2px 6px',
+                  borderRadius: '10px',
+                  minWidth: '18px',
+                  height: '18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  lineHeight: '1',
+                  animation: 'pulse 2s infinite'
+                }}>
+                  {totalUnreadMessages > 99 ? '99+' : totalUnreadMessages}
+                </span>
+              )}
+            </button>
+          </div>
+
+          <div className="nav-section">
+            <span className="nav-section-title">DOCUMENTS</span>
+            <button 
+              className={`nav-item ${activeRoute === 'medical-reports' ? 'active' : ''}`}
+              onClick={() => handleNavigation('medical-reports')}
+            >
+              <FaFileMedical className="nav-icon" />
+              <span className="nav-text">Rapports Médicaux</span>
+            </button>
+            <button 
+              className={`nav-item ${activeRoute === 'articles' ? 'active' : ''}`}
+              onClick={() => handleNavigation('articles')}
+            >
+              <FaBook className="nav-icon" />
+              <span className="nav-text">Articles</span>
+            </button>
+          </div>
         </nav>
+
+        <div className="sidebar-footer">
+          <button className="logout-button" onClick={handleLogout}>
+            <FaSignOutAlt className="nav-icon" />
+            <span className="nav-text">Déconnexion</span>
+          </button>
+        </div>
       </aside>
-      <main className="main-content">
+      
+      <main className="main-content" style={{ height: '100vh', overflow: 'auto' }}>
         <Routes>
           <Route path="/" element={<ProfileView />} />
           <Route path="calendar" element={<CalendarView />} />

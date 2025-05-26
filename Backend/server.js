@@ -2103,6 +2103,82 @@ app.put('/api/lab-doctor-messages/read', async (req, res) => {
   }
 });
 
+// Route pour récupérer le nombre de messages non lus par conversation pour un médecin
+app.get('/api/messages/unread-counts/:doctorId', async (req, res) => {
+  try {
+    const { doctorId } = req.params;
+    const unreadCounts = {};
+
+    // Compter les messages non lus des patients
+    const patientMessages = await Message.aggregate([
+      {
+        $match: {
+          receiverId: new mongoose.Types.ObjectId(doctorId),
+          isRead: false
+        }
+      },
+      {
+        $group: {
+          _id: '$senderId',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Compter les messages non lus des laboratoires
+    const labMessages = await LabDoctorMessage.aggregate([
+      {
+        $match: {
+          receiverId: new mongoose.Types.ObjectId(doctorId),
+          isRead: false
+        }
+      },
+      {
+        $group: {
+          _id: '$senderId',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Combiner les résultats
+    [...patientMessages, ...labMessages].forEach(item => {
+      unreadCounts[item._id.toString()] = item.count;
+    });
+
+    res.status(200).json(unreadCounts);
+  } catch (error) {
+    console.error('❌ Erreur récupération compteurs non lus:', error);
+    res.status(500).json({ message: 'Erreur serveur.' });
+  }
+});
+
+// Route pour récupérer le total des messages non lus pour un médecin
+app.get('/api/messages/total-unread/:doctorId', async (req, res) => {
+  try {
+    const { doctorId } = req.params;
+
+    // Compter les messages non lus des patients
+    const patientUnreadCount = await Message.countDocuments({
+      receiverId: doctorId,
+      isRead: false
+    });
+
+    // Compter les messages non lus des laboratoires
+    const labUnreadCount = await LabDoctorMessage.countDocuments({
+      receiverId: doctorId,
+      isRead: false
+    });
+
+    const total = patientUnreadCount + labUnreadCount;
+
+    res.status(200).json({ total });
+  } catch (error) {
+    console.error('❌ Erreur récupération total messages non lus:', error);
+    res.status(500).json({ message: 'Erreur serveur.' });
+  }
+});
+
 // Routes pour les rendez-vous d'hôpital
 app.post('/api/hospital-appointments', async (req, res) => {
     try {
