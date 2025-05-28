@@ -62,7 +62,7 @@
 .contact-box button {
     width: 100%;
     padding: 14px;
-    background-color: #3d6e7b;
+    background-color: #107053;
     color: white;
     font-size: 0.8rem;
     font-weight: 600;
@@ -73,7 +73,7 @@
 }
 
 .contact-box button:hover {
-    background-color: #6f9490;
+    background-color: #538b86 !important;
 }
 
 .status-message {

@@ -2,6 +2,7 @@
     max-width: 1200px;
     margin: 2.5rem auto 0;
     padding: 1.5rem;
+    background-color: white;
 }
 
 .articles-header {
@@ -110,7 +111,7 @@
 .read-more {
     margin-top: auto;
     /* pousse le bouton en bas */
-    background: #245e61;
+    background: #206d60 !important;
     color: white;
     border: none;
     padding: 0.8rem 1.5rem;

@@ -1519,9 +1519,9 @@ const PastAppointmentsView = () => {
         <div style={{ 
           display: 'flex', 
           gap: '8px',
-          alignItems: 'center',
+        alignItems: 'center',
           flexWrap: 'wrap'
-        }}>
+      }}>
           <select 
             value={sortOrder}
             onChange={(e) => setSortOrder(e.target.value)}
@@ -1706,10 +1706,10 @@ const PastAppointmentsView = () => {
                 </span>
               </div>
 
-              <div style={{ 
-                display: 'flex', 
+                <div style={{
+                  display: 'flex',
                 justifyContent: 'space-between', 
-                alignItems: 'center',
+                  alignItems: 'center',
                 margin: '5px 0'
               }}>
                 <p style={{ margin: '0', color: '#6b7280', fontSize: '0.875rem' }}>
@@ -1735,27 +1735,27 @@ const PastAppointmentsView = () => {
                   paddingTop: '15px',
                   borderTop: '1px solid #eee'
                 }}>
-                  <div style={{ marginBottom: '10px' }}>
+              <div style={{ marginBottom: '10px' }}>
                     <p style={{ margin: '5px 0', color: '#666', fontSize: '0.9rem' }}>
                       Email: {apt.patient?.email}
-                    </p>
+                </p>
                     <p style={{ margin: '5px 0', color: '#666', fontSize: '0.9rem' }}>
                       Téléphone: {apt.patient?.telephone}
-                    </p>
-                  </div>
+                </p>
+              </div>
                   {apt.reason && (
-                    <div style={{
-                      backgroundColor: '#f8f9fa',
-                      padding: '10px',
-                      borderRadius: '4px',
+              <div style={{
+                backgroundColor: '#f8f9fa',
+                padding: '10px',
+                borderRadius: '4px',
                       marginTop: '10px'
-                    }}>
+              }}>
                       <p style={{ margin: '0', color: '#2c3e50', fontSize: '0.9rem' }}>
                         Motif: {apt.reason}
-                      </p>
+                </p>
                     </div>
-                  )}
-                </div>
+                )}
+              </div>
               )}
             </div>
           ))}
@@ -1795,28 +1795,28 @@ const PastAppointmentsView = () => {
               gap: '2px',
               margin: '0 8px'
             }}>
-              {Array.from({ length: totalPages }, (_, i) => (
-                <button
-                  key={i + 1}
-                  onClick={() => handlePageChange(i + 1)}
-                  style={{
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button
+                key={i + 1}
+                onClick={() => handlePageChange(i + 1)}
+                style={{
                     padding: '10px 14px',
                     borderRadius: '8px',
                     border: 'none',
                     background: currentPage === i + 1 ? '#0f766e' : '#ffffff',
                     color: currentPage === i + 1 ? '#ffffff' : '#374151',
                     fontWeight: currentPage === i + 1 ? '600' : '500',
-                    cursor: 'pointer',
+                  cursor: 'pointer',
                     minWidth: '44px',
                     fontSize: '14px',
                     boxShadow: currentPage === i + 1 ? '0 2px 8px rgba(15, 118, 110, 0.3)' : '0 1px 3px rgba(0,0,0,0.1)',
                     transition: 'all 0.2s ease',
                     transform: currentPage === i + 1 ? 'translateY(-1px)' : 'none'
-                  }}
-                >
-                  {i + 1}
-                </button>
-              ))}
+                }}
+              >
+                {i + 1}
+              </button>
+            ))}
             </div>
             
             <button
@@ -2138,9 +2138,9 @@ const PendingAppointmentsView = () => {
                   style={{
                     display: 'inline-block',
                     marginTop: '10px',
-                                      padding: '8px 16px',
+                    padding: '8px 16px',
                   backgroundColor: '#0f766e',
-                  color: 'white',
+                    color: 'white',
                     textDecoration: 'none',
                     borderRadius: '4px',
                     fontSize: '0.9rem'
@@ -2608,31 +2608,31 @@ const CalendarView = () => {
               </div>
             ) : (
             <>
-              <div className="appointment-list">
+            <div className="appointment-list">
                 {currentAppointments.map(apt => (
-                  <div 
-                    key={apt._id} 
-                    className="appointment-item"
-                    onClick={() => handleAppointmentClick(apt)}
-                  >
-                        <div className="appointment-time">
-                      {formatTime(apt.date)}
-                        </div>
-                    <div className="appointment-patient">
-                      <strong>{apt.patient?.prenom} {apt.patient?.nom}</strong>
-                      <div>📞 {apt.patient?.telephone}</div>
-                      <div>📧 {apt.patient?.email}</div>
-                        </div>
-                        {apt.reason && (
-                      <div className="appointment-reason">
-                        📝 {apt.reason}
+                <div 
+                  key={apt._id} 
+                  className="appointment-item"
+                  onClick={() => handleAppointmentClick(apt)}
+                >
+                      <div className="appointment-time">
+                    {formatTime(apt.date)}
                       </div>
-                    )}
-                    <span className={`appointment-status ${getStatusClass(apt.status)}`}>
-                      {getStatusText(apt.status)}
-                    </span>
+                  <div className="appointment-patient">
+                    <strong>{apt.patient?.prenom} {apt.patient?.nom}</strong>
+                    <div>📞 {apt.patient?.telephone}</div>
+                    <div>📧 {apt.patient?.email}</div>
                       </div>
-                    ))}
+                      {apt.reason && (
+                    <div className="appointment-reason">
+                      📝 {apt.reason}
+                    </div>
+                  )}
+                  <span className={`appointment-status ${getStatusClass(apt.status)}`}>
+                    {getStatusText(apt.status)}
+                  </span>
+                    </div>
+                  ))}
                 </div>
                 
                 {totalPages > 1 && (
@@ -2683,7 +2683,7 @@ const CalendarView = () => {
                     >
                       Suivant →
                     </button>
-                  </div>
+              </div>
                 )}
               </>
             )}
@@ -2721,6 +2721,30 @@ const ArticlesView = () => {
     tags: '',
     image: null
   });
+  const [availableCategories, setAvailableCategories] = useState([
+    'Cardiologie',
+    'Dermatologie', 
+    'Neurologie',
+    'Pédiatrie',
+    'Gynécologie',
+    'Orthopédie',
+    'Psychiatrie',
+    'Ophtalmologie',
+    'ORL',
+    'Médecine générale',
+    'Endocrinologie',
+    'Gastroentérologie',
+    'Pneumologie',
+    'Urologie',
+    'Rhumatologie',
+    'Oncologie',
+    'Anesthésie',
+    'Radiologie',
+    'Médecine d\'urgence',
+    'Nutrition'
+  ]);
+  const [showCustomCategory, setShowCustomCategory] = useState(false);
+  const [customCategory, setCustomCategory] = useState('');
   const doctorId = localStorage.getItem('userId');
 
   useEffect(() => {
@@ -2756,6 +2780,32 @@ const ArticlesView = () => {
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleCategoryChange = (e) => {
+    const value = e.target.value;
+    if (value === 'custom') {
+      setShowCustomCategory(true);
+      setNewArticle(prev => ({ ...prev, category: '' }));
+    } else {
+      setShowCustomCategory(false);
+      setCustomCategory('');
+      setNewArticle(prev => ({ ...prev, category: value }));
+    }
+  };
+
+  const handleCustomCategoryChange = (e) => {
+    const value = e.target.value;
+    setCustomCategory(value);
+    setNewArticle(prev => ({ ...prev, category: value }));
+  };
+
+  const handleAddCustomCategory = () => {
+    if (customCategory.trim() && !availableCategories.includes(customCategory.trim())) {
+      setAvailableCategories(prev => [...prev, customCategory.trim()]);
+      setShowCustomCategory(false);
+      setCustomCategory('');
+    }
   };
 
   const handleFileChange = (e) => {
@@ -2810,6 +2860,8 @@ const ArticlesView = () => {
         tags: '',
         image: null
       });
+      setShowCustomCategory(false);
+      setCustomCategory('');
       setShowArticleForm(false);
       fetchArticles();
       setSuccess('✅ Article publié avec succès !');
@@ -2835,6 +2887,18 @@ const ArticlesView = () => {
 
   const toggleArticleForm = () => {
     setShowArticleForm(!showArticleForm);
+    if (showArticleForm) {
+      // Réinitialiser les états quand on ferme le formulaire
+      setShowCustomCategory(false);
+      setCustomCategory('');
+      setNewArticle({
+        title: '',
+        content: '',
+        category: '',
+        tags: '',
+        image: null
+      });
+    }
   };
 
   const toggleArticleExpansion = (articleId) => {
@@ -2942,13 +3006,13 @@ const ArticlesView = () => {
               }}>
                 Titre
               </label>
-              <input
-                type="text"
+          <input
+            type="text"
                 name="title"
-                value={newArticle.title}
+            value={newArticle.title}
                 onChange={handleInputChange}
                 placeholder="Titre de l'article"
-                required
+            required
                 style={{
                   width: '100%',
                   padding: '0.75rem',
@@ -2956,8 +3020,8 @@ const ArticlesView = () => {
                   border: '1px solid #e0e0e0',
                   fontSize: '1rem'
                 }}
-              />
-            </div>
+          />
+        </div>
             <div style={{ marginBottom: '1.5rem' }}>
               <label style={{
                 display: 'block',
@@ -2966,21 +3030,90 @@ const ArticlesView = () => {
               }}>
                 Catégorie
               </label>
-              <input
-                type="text"
-                name="category"
-                value={newArticle.category}
-                onChange={handleInputChange}
-                placeholder="Catégorie de l'article"
+              <select
+                value={showCustomCategory ? 'custom' : newArticle.category}
+                onChange={handleCategoryChange}
                 required
                 style={{
                   width: '100%',
                   padding: '0.75rem',
                   borderRadius: '8px',
                   border: '1px solid #e0e0e0',
-                  fontSize: '1rem'
+                  fontSize: '1rem',
+                  backgroundColor: '#fff',
+                  cursor: 'pointer'
                 }}
-              />
+              >
+                <option value="">Sélectionnez une catégorie</option>
+                {availableCategories.map((category, index) => (
+                  <option key={index} value={category}>
+                    {category}
+                  </option>
+                ))}
+                <option value="custom">➕ Ajouter une nouvelle catégorie</option>
+              </select>
+              
+              {showCustomCategory && (
+                <div style={{ 
+                  marginTop: '0.75rem',
+                  display: 'flex',
+                  gap: '0.5rem',
+                  alignItems: 'center'
+                }}>
+              <input
+                type="text"
+                    value={customCategory}
+                    onChange={handleCustomCategoryChange}
+                    placeholder="Nouvelle catégorie"
+                    style={{
+                      flex: 1,
+                      padding: '0.75rem',
+                      borderRadius: '8px',
+                      border: '1px solid #e0e0e0',
+                      fontSize: '1rem'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCustomCategory}
+                    disabled={!customCategory.trim()}
+                    style={{
+                      padding: '0.75rem 1rem',
+                      backgroundColor: '#00796b',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '0.9rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      opacity: !customCategory.trim() ? '0.5' : '1',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    Ajouter
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCustomCategory(false);
+                      setCustomCategory('');
+                      setNewArticle(prev => ({ ...prev, category: '' }));
+                    }}
+                    style={{
+                      padding: '0.75rem',
+                      backgroundColor: '#6b7280',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '0.9rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    ✕
+                  </button>
+            </div>
+              )}
             </div>
             <div style={{ marginBottom: '1.5rem' }}>
               <label style={{
@@ -2990,13 +3123,13 @@ const ArticlesView = () => {
               }}>
                 Contenu
               </label>
-              <textarea
+          <textarea
                 name="content"
-                value={newArticle.content}
+            value={newArticle.content}
                 onChange={handleInputChange}
                 placeholder="Contenu de l'article"
                 rows="6"
-                required
+            required
                 style={{
                   width: '100%',
                   padding: '0.75rem',
@@ -3005,8 +3138,8 @@ const ArticlesView = () => {
                   fontSize: '1rem',
                   resize: 'vertical'
                 }}
-              />
-            </div>
+          />
+        </div>
             <div style={{ marginBottom: '1.5rem' }}>
               <label style={{
                 display: 'block',
@@ -3015,7 +3148,7 @@ const ArticlesView = () => {
               }}>
                 Image
               </label>
-              <input
+          <input
                 type="file"
                 onChange={handleFileChange}
                 accept="image/*"
@@ -3026,8 +3159,8 @@ const ArticlesView = () => {
                   border: '1px solid #e0e0e0',
                   fontSize: '1rem'
                 }}
-              />
-            </div>
+          />
+        </div>
             <div style={{ marginBottom: '1.5rem' }}>
               <label style={{
                 display: 'block',
@@ -3036,10 +3169,10 @@ const ArticlesView = () => {
               }}>
                 Tags (séparés par des virgules)
               </label>
-              <input
-                type="text"
+          <input
+            type="text"
                 name="tags"
-                value={newArticle.tags}
+            value={newArticle.tags}
                 onChange={handleInputChange}
                 placeholder="santé, médecine, conseils..."
                 required
@@ -3050,8 +3183,8 @@ const ArticlesView = () => {
                   border: '1px solid #e0e0e0',
                   fontSize: '1rem'
                 }}
-              />
-            </div>
+          />
+        </div>
             <button 
               type="submit" 
               disabled={loading}
@@ -3070,8 +3203,8 @@ const ArticlesView = () => {
               }}
             >
               {loading ? 'Publication...' : 'Publier l\'article'}
-            </button>
-          </form>
+        </button>
+      </form>
         </div>
       )}
 
@@ -3111,7 +3244,7 @@ const ArticlesView = () => {
                     transition: 'transform 0.2s ease, box-shadow 0.2s ease'
                   }}
                 >
-                  {article.imageUrl && (
+              {article.imageUrl && (
                     <img 
                       src={article.imageUrl} 
                       alt={article.title} 
@@ -3121,7 +3254,7 @@ const ArticlesView = () => {
                         objectFit: 'cover'
                       }}
                     />
-                  )}
+              )}
                   <div style={{ padding: '0.75rem' }}>
                     <div style={{
                       display: 'inline-block',
@@ -3133,8 +3266,8 @@ const ArticlesView = () => {
                       fontWeight: '500',
                       marginBottom: '0.75rem'
                     }}>
-                      {article.category}
-                    </div>
+                  {article.category}
+                </div>
                     
                     <h3 style={{
                       fontSize: '1rem',
@@ -3165,7 +3298,7 @@ const ArticlesView = () => {
                         gap: '0.3rem',
                         marginBottom: '0.75rem'
                       }}>
-                        {article.tags.map((tag, index) => (
+                    {article.tags.map((tag, index) => (
                           <span 
                             key={index} 
                             style={{
@@ -3178,8 +3311,8 @@ const ArticlesView = () => {
                           >
                             {tag}
                           </span>
-                        ))}
-                      </div>
+                    ))}
+                  </div>
                     )}
 
                     <div style={{
@@ -3221,11 +3354,11 @@ const ArticlesView = () => {
                             fontWeight: '500'
                           }}
                         >
-                          Supprimer
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                    Supprimer
+                  </button>
+                </div>
+              </div>
+            </div>
                 </div>
               ))}
             </div>
@@ -3757,10 +3890,10 @@ const MedicalReportsView = () => {
             </div>
           ) : (
             <>
-              <div style={{
-                display: 'grid',
-                gap: '1rem'
-              }}>
+            <div style={{
+              display: 'grid',
+              gap: '1rem'
+            }}>
                 {currentReports.map(report => {
                 if (!report || !report._id) return null; // Skip invalid reports
 
@@ -3890,7 +4023,7 @@ const MedicalReportsView = () => {
                   >
                     Suivant
                   </button>
-                </div>
+            </div>
               )}
             </>
           )}

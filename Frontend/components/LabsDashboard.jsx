@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import '../styles/LabsDashboard.css';
+import '../styles/DoctorDashboard.css';
 import LabResultModal from './LabResultModal';
-import { FaUser, FaCalendarAlt, FaFlask, FaComments, FaSignOutAlt, FaUserCircle } from "react-icons/fa";
+import { FaUser, FaCalendarAlt, FaFlask, FaComments, FaSignOutAlt, FaUserCircle, FaEdit, FaCheck, FaTimes } from "react-icons/fa";
 
 const API_BASE_URL = 'http://localhost:5001';
 
@@ -21,6 +22,13 @@ const LabsDashboard = () => {
   const [profile, setProfile] = useState({});
   const [isEditing, setIsEditing] = useState(false);
   const [editedProfile, setEditedProfile] = useState({});
+  const [successMessage, setSuccessMessage] = useState('');
+  
+  // États pour la pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [appointmentsPerPage] = useState(5); // 5 rendez-vous par page
+  const [searchTerm, setSearchTerm] = useState(''); // État pour la recherche
+  const [expandedPatients, setExpandedPatients] = useState(new Set()); // Patients dont les RDV sont affichés
   
   // États pour la messagerie
   const [doctors, setDoctors] = useState([]);
@@ -143,8 +151,22 @@ const LabsDashboard = () => {
   };
 
   const getFilteredAppointments = () => {
-    if (filter === 'all') return appointments;
-    return appointments.filter(apt => apt.status === filter);
+    let filteredAppointments = appointments;
+    
+    // Filtrer par statut
+    if (filter !== 'all') {
+      filteredAppointments = filteredAppointments.filter(apt => apt.status === filter);
+    }
+    
+    // Filtrer par nom de patient
+    if (searchTerm.trim()) {
+      filteredAppointments = filteredAppointments.filter(apt => {
+        const patientName = `${apt.patient?.nom || ''} ${apt.patient?.prenom || ''}`.toLowerCase();
+        return patientName.includes(searchTerm.toLowerCase());
+      });
+    }
+    
+    return filteredAppointments;
   };
 
   const formatDate = (dateString) => {
@@ -406,251 +428,531 @@ const LabsDashboard = () => {
     }
   };
 
+  // Fonction pour grouper les rendez-vous par patient
+  const getGroupedAppointments = () => {
+    const filteredAppointments = getFilteredAppointments();
+    const sortedAppointments = sortAppointments(filteredAppointments);
+    
+    // Grouper par patient
+    const grouped = sortedAppointments.reduce((acc, appointment) => {
+      const patientId = appointment.patient?._id;
+      if (!patientId) return acc;
+      
+      if (!acc[patientId]) {
+        acc[patientId] = {
+          patient: appointment.patient,
+          appointments: []
+        };
+      }
+      acc[patientId].appointments.push(appointment);
+      return acc;
+    }, {});
+    
+    return Object.values(grouped);
+  };
+
+  // Fonctions de pagination
+  const getPaginatedAppointments = () => {
+    const groupedAppointments = getGroupedAppointments();
+    const indexOfLastGroup = currentPage * appointmentsPerPage;
+    const indexOfFirstGroup = indexOfLastGroup - appointmentsPerPage;
+    return groupedAppointments.slice(indexOfFirstGroup, indexOfLastGroup);
+  };
+
+  const getTotalPages = () => {
+    const groupedAppointments = getGroupedAppointments();
+    return Math.ceil(groupedAppointments.length / appointmentsPerPage);
+  };
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+
+  const handleFilterChange = (newFilter) => {
+    setFilter(newFilter);
+    setCurrentPage(1); // Reset à la première page lors du changement de filtre
+  };
+
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1); // Reset à la première page lors de la recherche
+  };
+
+  const clearSearch = () => {
+    setSearchTerm('');
+    setCurrentPage(1);
+  };
+
+  const togglePatientExpansion = (patientId) => {
+    const newExpanded = new Set(expandedPatients);
+    if (newExpanded.has(patientId)) {
+      newExpanded.delete(patientId);
+    } else {
+      newExpanded.add(patientId);
+    }
+    setExpandedPatients(newExpanded);
+  };
+
   if (loading && activeSection === 'appointments') return <div className="loading">Chargement...</div>;
 
   return (
-    <div className="labs-dashboard">
-      <aside className="sidebar">
+    <div className="dashboard-container">
+      <aside className="medical-sidebar">
         <div className="sidebar-header">
-          <div className="user-info">
-            <FaUserCircle size={32} style={{ marginRight: 8, color: "#038A91" }} />
-            <span className="user-role" style={{ fontSize: "1rem", fontWeight: 500, color: "#038A91" }}>Interface Laboratoire</span>
+          <div className="medical-logo">
+            <div className="logo-text">
+              <h2>PatientPath</h2>
+              <span>Espace Laboratoire</span>
           </div>
         </div>
-        <div className="sidebar-menu">
-          <div className="menu-group">
-            <button className={activeSection === 'profile' ? 'active' : ''} onClick={() => setActiveSection('profile')}>
-              <FaUser className="icon" />
-              <span>Mon Profil</span>
+        </div>
+
+        <nav className="sidebar-navigation">
+          <div className="nav-section">
+            <span className="nav-section-title">TABLEAU DE BORD</span>
+            <button 
+              className={`nav-item ${activeSection === 'profile' ? 'active' : ''}`}
+              onClick={() => setActiveSection('profile')}
+            >
+              <FaUser className="nav-icon" />
+              <span className="nav-text">Mon Profil</span>
             </button>
           </div>
-          <div className="menu-group">
-            <button className={activeSection === 'appointments' ? 'active' : ''} onClick={() => setActiveSection('appointments')}>
-              <FaCalendarAlt className="icon" />
-              <span>Rendez-vous</span>
+
+          <div className="nav-section">
+            <span className="nav-section-title">RENDEZ-VOUS</span>
+            <button 
+              className={`nav-item ${activeSection === 'appointments' ? 'active' : ''}`}
+              onClick={() => setActiveSection('appointments')}
+            >
+              <FaCalendarAlt className="nav-icon" />
+              <span className="nav-text">Rendez-vous</span>
             </button>
           </div>
-          <div className="menu-group">
-            <button className={activeSection === 'chat' ? 'active' : ''} onClick={() => setActiveSection('chat')}>
-              <FaComments className="icon" />
-              <span>Discussion Médecins</span>
+
+          <div className="nav-section">
+            <span className="nav-section-title">COMMUNICATION</span>
+            <button 
+              className={`nav-item ${activeSection === 'chat' ? 'active' : ''}`}
+              onClick={() => setActiveSection('chat')}
+            >
+              <FaComments className="nav-icon" />
+              <span className="nav-text">Discussion Médecins</span>
             </button>
-            <button className={activeSection === 'patient-chat' ? 'active' : ''} onClick={() => {
+            <button 
+              className={`nav-item ${activeSection === 'patient-chat' ? 'active' : ''}`}
+              onClick={() => {
               setActiveSection('patient-chat');
               fetchPatients(currentLabId);
-            }}>
-              <FaComments className="icon" />
-              <span>Discussion Patients</span>
+              }}
+            >
+              <FaComments className="nav-icon" />
+              <span className="nav-text">Discussion Patients</span>
             </button>
           </div>
+        </nav>
+
+        <div className="sidebar-footer">
           <button className="logout-button" onClick={handleLogout}>
-            <FaSignOutAlt className="icon" />
-            <span>Se déconnecter</span>
+            <FaSignOutAlt className="nav-icon" />
+            <span className="nav-text">Déconnexion</span>
           </button>
         </div>
       </aside>
 
       <main className="main-content">
-        {error && <div className="error-message">{error}</div>}
+        {error && !error.includes('✅') && <div className="error-message">{error}</div>}
 
         {activeSection === 'profile' && (
-          <div className="profile-section">
-            <h2>👤 Mon Profil</h2>
-            <div className="profile-form">
-              {isEditing ? (
-                <>
-                  <div className="form-group">
-                    <label>Nom :</label>
-                    <input
-                      type="text"
-                      value={editedProfile.nom || ''}
-                      onChange={(e) => setEditedProfile({...editedProfile, nom: e.target.value})}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Prénom :</label>
-                    <input
-                      type="text"
-                      value={editedProfile.prenom || ''}
-                      onChange={(e) => setEditedProfile({...editedProfile, prenom: e.target.value})}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Email :</label>
-                    <input
-                      type="email"
-                      value={editedProfile.email || ''}
-                      onChange={(e) => setEditedProfile({...editedProfile, email: e.target.value})}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Téléphone :</label>
-                    <input
-                      type="tel"
-                      value={editedProfile.telephone || ''}
-                      onChange={(e) => setEditedProfile({...editedProfile, telephone: e.target.value})}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Adresse :</label>
-                    <input
-                      type="text"
-                      value={editedProfile.adresse || ''}
-                      onChange={(e) => setEditedProfile({...editedProfile, adresse: e.target.value})}
-                    />
-                  </div>
-                  <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                    <button className="save-button" onClick={handleProfileSave}>
-                      ✅ Enregistrer
-                    </button>
-                    <button className="cancel-button" onClick={handleProfileCancel}>
-                      ❌ Annuler
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="form-group">
-                    <label>Nom :</label>
-                    <input type="text" value={profile.nom || ''} disabled />
-                  </div>
-                  <div className="form-group">
-                    <label>Prénom :</label>
-                    <input type="text" value={profile.prenom || ''} disabled />
-                  </div>
-                  <div className="form-group">
-                    <label>Email :</label>
-                    <input type="email" value={profile.email || ''} disabled />
-                  </div>
-                  <div className="form-group">
-                    <label>Téléphone :</label>
-                    <input type="tel" value={profile.telephone || ''} disabled />
-                  </div>
-                  <div className="form-group">
-                    <label>Adresse :</label>
-                    <input type="text" value={profile.adresse || ''} disabled />
-                  </div>
-                  <button className="edit-button" onClick={handleProfileEdit}>
-                    ✏️ Modifier le profil
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        )}
+          <div className="doctor-profile" style={{ color: '#000000' }}>
+            {error && error.includes('✅') && (
+              <div className="success-message">
+                <span className="success-icon">✅</span>
+                {error.replace('✅ ', '')}
+              </div>
+            )}
 
-        {activeSection === 'appointments' && (
-          <div className="appointments-container">
-            <div className="appointments-header">
-              <h2>📅 Rendez-vous</h2>
-              <div className="appointments-filters">
-                <button 
-                  className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
-                  onClick={() => setFilter('all')}
-                >
-                  🗂️ Tous
-                </button>
-                <button 
-                  className={`filter-btn ${filter === 'pending' ? 'active' : ''}`}
-                  onClick={() => setFilter('pending')}
-                >
-                  ⏳ En attente
-                </button>
-                <button 
-                  className={`filter-btn ${filter === 'confirmed' ? 'active' : ''}`}
-                  onClick={() => setFilter('confirmed')}
-                >
-                  ✅ Confirmés
-                </button>
-                <button 
-                  className={`filter-btn ${filter === 'cancelled' ? 'active' : ''}`}
-                  onClick={() => setFilter('cancelled')}
-                >
-                  ❌ Annulés
-                </button>
+            <div className="profile-header">
+              <div className="profile-avatar">
+                <img 
+                  src={profile.photo ? `http://localhost:5001${profile.photo}` : '../assets/images/default-avatar.png'}
+                  alt="Avatar"
+                  className="avatar-image"
+                  onError={(e) => { e.target.src = '../assets/images/default-avatar.png'; }}
+                  style={{
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '50%',
+                    objectFit: 'cover'
+                  }}
+                />
+              </div>
+              <div className="profile-title">
+                <h1>Mon Profil Laboratoire</h1>
               </div>
             </div>
 
-            {getFilteredAppointments().length === 0 ? (
-              <div className="no-appointments">
-                <p>🔍 Aucun rendez-vous {filter !== 'all' ? `${filter}` : ''} trouvé.</p>
+            {!isEditing ? (
+              <div className="profile-info-simple">
+                <div className="info-section-simple">
+                  <h3>Informations du laboratoire</h3>
+                  <div className="info-grid-simple">
+                    <div className="info-item-simple">
+                      <span className="label">Nom :</span>
+                      <span className="value">{profile.nom || 'Non renseigné'}</span>
+                    </div>
+                    <div className="info-item-simple">
+                      <span className="label">Prénom :</span>
+                      <span className="value">{profile.prenom || 'Non renseigné'}</span>
+                    </div>
+                    <div className="info-item-simple">
+                      <span className="label">Email :</span>
+                      <span className="value">{profile.email || 'Non renseigné'}</span>
+                    </div>
+                    <div className="info-item-simple">
+                      <span className="label">Téléphone :</span>
+                      <span className="value">{profile.telephone || 'Non renseigné'}</span>
+                    </div>
+                    <div className="info-item-simple">
+                      <span className="label">Adresse :</span>
+                      <span className="value">{profile.adresse || 'Non renseigné'}</span>
+                    </div>
+                    <div className="info-item-simple">
+                      <span className="label">Type :</span>
+                      <span className="value">Laboratoire d'analyses médicales</span>
+                    </div>
+                  </div>
+                </div>
+
+                <button className="edit-profile-btn-simple" onClick={handleProfileEdit}>
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" style={{marginRight: '0.5rem'}}>
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                  </svg>
+                  Modifier le profil
+                </button>
               </div>
             ) : (
-              <div className="appointments-grid">
-                {sortAppointments(getFilteredAppointments()).map((appointment) => {
-                  const status = getStatusLabel(appointment.status);
-                  return (
-                    <div 
-                      key={appointment._id} 
-                      className={`appointment-card ${status.class}`}
-                    >
-                      <div className="appointment-header">
-                        <div className="appointment-date">
-                          <div className="date-primary">
-                            {new Date(appointment.date).toLocaleDateString('fr-FR', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric'
-                            })}
-                          </div>
-                          <div className="date-secondary">
-                            {new Date(appointment.date).toLocaleTimeString('fr-FR', {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </div>
-                        </div>
-                        <span className={`status-badge ${appointment.status}`}>
-                          {status.icon} {status.text}
-                        </span>
-                      </div>
+              <form className="edit-form-simple" onSubmit={(e) => { e.preventDefault(); handleProfileSave(); }}>
+                <div className="form-section-simple">
+                  <h3>Modifier les informations</h3>
+                  
+                  <div className="form-group">
+                    <label>Nom du laboratoire</label>
+                    <input
+                      type="text"
+                      name="nom"
+                      value={editedProfile.nom || ''}
+                      onChange={(e) => setEditedProfile({...editedProfile, nom: e.target.value})}
+                      required
+                    />
+                  </div>
 
-                      <div className="appointment-body">
-                        <div className="patient-info">
-                          <h4>👤 Patient</h4>
-                          <p className="patient-name">{appointment.patient?.nom} {appointment.patient?.prenom}</p>
-                          <p className="patient-contact">
-                            <span>📧 {appointment.patient?.email}</span>
-                            <span>📞 {appointment.patient?.telephone}</span>
-                          </p>
-                        </div>
+                  <div className="form-group">
+                    <label>Prénom du responsable</label>
+                    <input
+                      type="text"
+                      name="prenom"
+                      value={editedProfile.prenom || ''}
+                      onChange={(e) => setEditedProfile({...editedProfile, prenom: e.target.value})}
+                      required
+                    />
+                  </div>
 
-                        <div className="appointment-details">
-                          <h4>📝 Motif</h4>
-                          <p>{appointment.reason}</p>
-                        </div>
+                  <div className="form-group">
+                    <label>Email</label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={editedProfile.email || ''}
+                      onChange={(e) => setEditedProfile({...editedProfile, email: e.target.value})}
+                      required
+                    />
+                  </div>
 
-                        <div className="appointment-actions">
-                          {appointment.status === 'pending' && (
-                            <>
-                              <button 
-                                className="action-btn confirm"
-                                onClick={() => handleStatusChange(appointment._id, 'confirmed')}
-                              >
-                                ✅ Confirmer
-                              </button>
-                              <button 
-                                className="action-btn cancel"
-                                onClick={() => handleStatusChange(appointment._id, 'cancelled')}
-                              >
-                                ❌ Annuler
-                              </button>
-                            </>
-                          )}
-                          {appointment.status === 'confirmed' && (
-                            <button 
-                              className="action-btn results"
-                              onClick={() => handleSendResults(appointment)}
-                            >
-                              📄 Envoyer les résultats
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                  <div className="form-group">
+                    <label>Téléphone</label>
+                    <input
+                      type="tel"
+                      name="telephone"
+                      value={editedProfile.telephone || ''}
+                      onChange={(e) => setEditedProfile({...editedProfile, telephone: e.target.value})}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Adresse du laboratoire</label>
+                    <input
+                      type="text"
+                      name="adresse"
+                      value={editedProfile.adresse || ''}
+                      onChange={(e) => setEditedProfile({...editedProfile, adresse: e.target.value})}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-actions-simple">
+                  <button type="submit" className="save-btn-simple">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" style={{marginRight: '0.5rem'}}>
+                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                    </svg>
+                    Enregistrer
+                    </button>
+                  <button 
+                    type="button" 
+                    className="cancel-btn-simple"
+                    onClick={handleProfileCancel}
+                  >
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" style={{marginRight: '0.5rem'}}>
+                      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                    Annuler
+                    </button>
+                  </div>
+              </form>
+            )}
+                  </div>
+        )}
+
+                {activeSection === 'appointments' && (
+          <div className="appointments-medical-view">
+            <div className="medical-header">
+              <div className="header-info">
+                <h2>Gestion des Rendez-vous</h2>
+                <p className="header-subtitle">Laboratoire d'analyses médicales</p>
               </div>
+              <div className="appointments-summary">
+                <div className="summary-item">
+                  <span className="summary-count">{appointments.filter(apt => apt.status === 'pending').length}</span>
+                  <span className="summary-label">En attente</span>
+                </div>
+                <div className="summary-item">
+                  <span className="summary-count">{appointments.filter(apt => apt.status === 'confirmed').length}</span>
+                  <span className="summary-label">Confirmés</span>
+                </div>
+                <div className="summary-item">
+                  <span className="summary-count">{appointments.length}</span>
+                  <span className="summary-label">Total</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="medical-controls">
+              <div className="search-section">
+                <div className="search-input-container">
+                  <input
+                    type="text"
+                    placeholder="Rechercher par nom de patient..."
+                    value={searchTerm}
+                    onChange={handleSearchChange}
+                    className="search-input"
+                  />
+                  {searchTerm && (
+                    <button 
+                      onClick={clearSearch}
+                      className="clear-search-btn"
+                      title="Effacer la recherche"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+                {searchTerm && (
+                  <div className="search-results-info">
+                    {getFilteredAppointments().length} résultat(s) pour "{searchTerm}"
+                  </div>
+                )}
+              </div>
+
+              <div className="medical-filters">
+                <button 
+                  className={`filter-tab ${filter === 'all' ? 'active' : ''}`}
+                  onClick={() => handleFilterChange('all')}
+                >
+                  Tous les rendez-vous
+                </button>
+                <button 
+                  className={`filter-tab ${filter === 'pending' ? 'active' : ''}`}
+                  onClick={() => handleFilterChange('pending')}
+                >
+                  En attente
+                </button>
+                <button 
+                  className={`filter-tab ${filter === 'confirmed' ? 'active' : ''}`}
+                  onClick={() => handleFilterChange('confirmed')}
+                >
+                  Confirmés
+                </button>
+                <button 
+                  className={`filter-tab ${filter === 'cancelled' ? 'active' : ''}`}
+                  onClick={() => handleFilterChange('cancelled')}
+                >
+                  Annulés
+                </button>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="medical-loading">
+                <div className="loading-spinner"></div>
+                <p>Chargement des rendez-vous...</p>
+              </div>
+            ) : getFilteredAppointments().length === 0 ? (
+              <div className="medical-empty">
+                <div className="empty-icon">📋</div>
+                <h3>Aucun rendez-vous trouvé</h3>
+                <p>Les nouveaux rendez-vous apparaîtront dans cette section</p>
+              </div>
+            ) : (
+              <>
+                <div className="appointments-list-medical">
+                  {getPaginatedAppointments().map((patientGroup) => {
+                    const isExpanded = expandedPatients.has(patientGroup.patient._id);
+                    return (
+                      <div key={patientGroup.patient._id} className="patient-group-medical">
+                        <div 
+                          className="patient-group-header clickable"
+                          onClick={() => togglePatientExpansion(patientGroup.patient._id)}
+                        >
+                          <div className="patient-info-header">
+                            <h3 className="patient-name-header">
+                              {patientGroup.patient.nom} {patientGroup.patient.prenom}
+                            </h3>
+                            <p className="patient-contact-header">{patientGroup.patient.email}</p>
+                          </div>
+                          <div className="patient-header-actions">
+                            <div className="appointments-count">
+                              {patientGroup.appointments.length} rendez-vous
+                            </div>
+                            <div className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>
+                              ▼
+                            </div>
+                          </div>
+                        </div>
+
+                        {isExpanded && (
+                          <div className="patient-appointments-list">
+                            {patientGroup.appointments.map((appointment) => {
+                              const status = getStatusLabel(appointment.status);
+                              return (
+                                <div key={appointment._id} className={`appointment-item-grouped ${appointment.status}`}>
+                                  <div className="appointment-header-grouped">
+                                    <div className="date-info-grouped">
+                                      <div className="date-primary">
+                                        {new Date(appointment.date).toLocaleDateString('fr-FR', {
+                                          weekday: 'long',
+                                          day: 'numeric',
+                                          month: 'long',
+                                          year: 'numeric'
+                                        })}
+                                      </div>
+                                      <div className="time-primary">
+                                        {new Date(appointment.date).toLocaleTimeString('fr-FR', {
+                                          hour: '2-digit',
+                                          minute: '2-digit'
+                                        })}
+                                      </div>
+                                    </div>
+                                    <div className={`status-badge-medical ${appointment.status}`}>
+                                      {status.text}
+                                    </div>
+                                  </div>
+
+                                  <div className="appointment-content-grouped">
+                                    <div className="reason-info-grouped">
+                                      <h4>Motif de consultation</h4>
+                                      <p>{appointment.reason}</p>
+                                    </div>
+
+                                    <div className="actions-grouped">
+                                      {appointment.status === 'pending' && (
+                                        <>
+                                          <button 
+                                            className="btn-medical confirm"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleStatusChange(appointment._id, 'confirmed');
+                                            }}
+                                          >
+                                            Confirmer
+                                          </button>
+                                          <button 
+                                            className="btn-medical cancel"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleStatusChange(appointment._id, 'cancelled');
+                                            }}
+                                          >
+                                            Refuser
+                                          </button>
+                                        </>
+                                      )}
+                                      {appointment.status === 'confirmed' && (
+                                        <button 
+                                          className="btn-medical results"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleSendResults(appointment);
+                                          }}
+                                        >
+                                          Envoyer les résultats
+                                        </button>
+                                      )}
+                                      {appointment.status === 'cancelled' && (
+                                        <span className="status-text cancelled">Rendez-vous annulé</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Pagination médicale */}
+                {getTotalPages() > 1 && (
+                  <div className="pagination-medical">
+                    <div className="pagination-info">
+                      Page {currentPage} sur {getTotalPages()} - {getGroupedAppointments().length} patient(s) avec {getFilteredAppointments().length} rendez-vous au total
+                    </div>
+                    
+                    <div className="pagination-controls">
+                      <button 
+                        className="pagination-btn"
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                      >
+                        Précédent
+                      </button>
+                      
+                      <div className="pagination-numbers">
+                        {Array.from({ length: getTotalPages() }, (_, i) => i + 1).map(pageNumber => (
+                          <button
+                            key={pageNumber}
+                            className={`pagination-number ${currentPage === pageNumber ? 'active' : ''}`}
+                            onClick={() => handlePageChange(pageNumber)}
+                          >
+                            {pageNumber}
+                          </button>
+                        ))}
+                      </div>
+                      
+                      <button 
+                        className="pagination-btn"
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === getTotalPages()}
+                      >
+                        Suivant
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

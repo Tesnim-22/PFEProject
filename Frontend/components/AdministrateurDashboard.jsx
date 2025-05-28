@@ -324,17 +324,50 @@ const AdminDashboard = () => {
         </div>
       )}
       
-      {/* Sidebar */}
-      <aside className="sidebar">
+      {/* Medical Sidebar */}
+      <aside className="medical-sidebar">
         <div className="sidebar-header">
-          <h2>Admin Panel</h2>
+          <div className="medical-logo">
+            <div className="logo-text">
+              <h2>PatientPath</h2>
+              <span>Interface Administrateur</span>
+            </div>
+          </div>
         </div>
-        <nav className="sidebar-nav">
-          <button onClick={() => setActiveSection("dashboard")}>🏠 Dashboard</button>
-          <button onClick={() => setActiveSection("users")}>👥 Utilisateurs</button>
-          <button onClick={() => setActiveSection("alerts")}>📢 Alertes</button>
-          <button onClick={handleLogout} className="logout-btn">🚪 Déconnexion</button>
-        </nav>
+        
+        <div className="sidebar-navigation">
+          <div className="nav-section">
+            <span className="nav-section-title">Navigation</span>
+            <button 
+              onClick={() => setActiveSection("dashboard")}
+              className={`nav-item ${activeSection === "dashboard" ? "active" : ""}`}
+            >
+              <span className="nav-icon">🏠</span>
+              <span className="nav-text">Dashboard</span>
+            </button>
+            <button 
+              onClick={() => setActiveSection("users")}
+              className={`nav-item ${activeSection === "users" ? "active" : ""}`}
+            >
+              <span className="nav-icon">👥</span>
+              <span className="nav-text">Utilisateurs</span>
+            </button>
+            <button 
+              onClick={() => setActiveSection("alerts")}
+              className={`nav-item ${activeSection === "alerts" ? "active" : ""}`}
+            >
+              <span className="nav-icon">📢</span>
+              <span className="nav-text">Alertes</span>
+            </button>
+          </div>
+        </div>
+        
+        <div className="sidebar-footer">
+          <button onClick={handleLogout} className="logout-button">
+            <span className="nav-icon">🚪</span>
+            <span className="nav-text">Déconnexion</span>
+          </button>
+        </div>
       </aside>
 
       {/* Main */}

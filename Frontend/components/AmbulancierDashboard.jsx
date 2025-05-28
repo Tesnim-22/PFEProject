@@ -72,34 +72,70 @@ const AmbulancierDashboard = () => {
 
   return (
     <div className="dashboard-wrapper">
-      <aside className="sidebar">
-        <div className="user-info" style={{ justifyContent: "center", flexDirection: "column", alignItems: "center", marginBottom: "2rem" }}>
-          <FaUserNurse size={38} style={{ color: "#038A91", marginBottom: 4 }} />
-          <span className="user-role" style={{ fontSize: "1rem", fontWeight: 700, color: "#038A91" }}>Ambulancier</span>
+      <aside className="medical-sidebar">
+        <div className="sidebar-header">
+          <div className="medical-logo">
+            <div className="logo-text">
+              <h2>PatientPath</h2>
+              <span>Service Ambulancier</span>
+            </div>
+          </div>
         </div>
-        <div className="sidebar-menu">
-          <button className={`sidebar-btn${activeSection === 'profile' ? ' active' : ''}`} onClick={() => setActiveSection('profile')}>
-            <FaUserNurse className="icon" /><span>Profil</span>
-          </button>
-          <button className={`sidebar-btn${activeSection === 'status' ? ' active' : ''}`} onClick={() => setActiveSection('status')}>
-            <FaCheck className="icon" /><span>Statut</span>
-          </button>
-          <button className={`sidebar-btn${activeSection === 'location' ? ' active' : ''}`} onClick={() => setActiveSection('location')}>
-            <FaMapMarkerAlt className="icon" /><span>Position</span>
-          </button>
-          <button className={`sidebar-btn${activeSection === 'calls' ? ' active' : ''}`} onClick={() => setActiveSection('calls')}>
-            <FaPhone className="icon" /><span>Appels</span>
-          </button>
-          <button className={`sidebar-btn${activeSection === 'reports' ? ' active' : ''}`} onClick={() => setActiveSection('reports')}>
-            <FaFileAlt className="icon" /><span>Rapports</span>
-          </button>
-          <button className={`sidebar-btn${activeSection === 'vehicle' ? ' active' : ''}`} onClick={() => setActiveSection('vehicle')}>
-            <FaCar className="icon" /><span>Véhicule</span>
+        
+        <div className="sidebar-navigation">
+          <div className="nav-section">
+            <span className="nav-section-title">Navigation</span>
+            <button 
+              onClick={() => setActiveSection('profile')}
+              className={`nav-item ${activeSection === 'profile' ? 'active' : ''}`}
+            >
+              <span className="nav-icon"><FaUserNurse /></span>
+              <span className="nav-text">Profil</span>
+            </button>
+            <button 
+              onClick={() => setActiveSection('status')}
+              className={`nav-item ${activeSection === 'status' ? 'active' : ''}`}
+            >
+              <span className="nav-icon"><FaCheck /></span>
+              <span className="nav-text">Statut</span>
+            </button>
+            <button 
+              onClick={() => setActiveSection('location')}
+              className={`nav-item ${activeSection === 'location' ? 'active' : ''}`}
+            >
+              <span className="nav-icon"><FaMapMarkerAlt /></span>
+              <span className="nav-text">Position</span>
+            </button>
+            <button 
+              onClick={() => setActiveSection('calls')}
+              className={`nav-item ${activeSection === 'calls' ? 'active' : ''}`}
+            >
+              <span className="nav-icon"><FaPhone /></span>
+              <span className="nav-text">Appels</span>
+            </button>
+            <button 
+              onClick={() => setActiveSection('reports')}
+              className={`nav-item ${activeSection === 'reports' ? 'active' : ''}`}
+            >
+              <span className="nav-icon"><FaFileAlt /></span>
+              <span className="nav-text">Rapports</span>
+            </button>
+            <button 
+              onClick={() => setActiveSection('vehicle')}
+              className={`nav-item ${activeSection === 'vehicle' ? 'active' : ''}`}
+            >
+              <span className="nav-icon"><FaCar /></span>
+              <span className="nav-text">Véhicule</span>
+            </button>
+          </div>
+        </div>
+        
+        <div className="sidebar-footer">
+          <button onClick={handleLogout} className="logout-button">
+            <span className="nav-icon">🚪</span>
+            <span className="nav-text">Déconnexion</span>
           </button>
         </div>
-        <button className="logout-btn" onClick={handleLogout}>
-          Déconnexion
-        </button>
       </aside>
 
       <main className="ambulance-dashboard">

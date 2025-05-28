@@ -43,12 +43,12 @@ const Navbar = () => {
   return (
     <nav className={`navbar ${visible ? 'show' : 'hide'}`}>
       <ul className="nav-links centered-nav-links">
-        <li><Link to="/"><FaHome /> Home</Link></li>
+        <li><Link to="/"><FaHome />Accueil</Link></li>
         <li><Link to="/articles"><FaNewspaper /> Articles</Link></li>
-        <li><Link to="/about"><FaInfoCircle /> About</Link></li>
+        <li><Link to="/about"><FaInfoCircle /> À propos</Link></li>
         <li><Link to="/contact"><FaEnvelope /> Contact</Link></li>
-        <li><Link to="/login"><FaSignInAlt /> Login</Link></li>
-        <li><Link to="/signin"><FaUserPlus /> Signup</Link></li>
+        <li><Link to="/login"><FaSignInAlt />Connexion</Link></li>
+        <li><Link to="/signin"><FaUserPlus /> Inscription</Link></li>
         {isDashboard && (
           <li>
             <button onClick={handleLogout} className="logout-button">

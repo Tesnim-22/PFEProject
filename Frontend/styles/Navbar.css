@@ -1,7 +1,7 @@
 /* Navbar container with elegant gradient */
 
 .navbar {
-    background: linear-gradient(90deg, #7099c3 0%, #4B6587 100%);
+    background: linear-gradient(90deg, #58ac9c 0%, #0b3a32 100%) !important;
     padding: 0.3rem 2rem;
     /* ⬅️ hauteur réduite */
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);

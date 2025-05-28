@@ -10,8 +10,9 @@ const Hero = memo(() => (
       <div className="hero-text">
         <h1>Votre santé, <span>simplifiée</span></h1>
         <p className="hero-subtitle">
-          Plateforme tout-en-un pour gérer vos rendez-vous, dossiers médicaux
-          et communications avec des professionnels certifiés.
+        Une plateforme complète pour vous accompagner tout au long de votre parcours de soins.
+
+
         </p>
         <div className="hero-cta">
           <Link to="/signin" className="cta-primary">Commencer maintenant</Link>

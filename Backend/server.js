@@ -162,6 +162,7 @@ const uploadArticleImage = multer({ storage: storageArticles });
 
 // MongoDB Connection String
 const uri = "mongodb+srv://tesnim:Tesnim.123456789@cluster0.50qhu.mongodb.net/HealthApp?retryWrites=true&w=majority";
+//const uri = "mongodb+srv://tesnimbenmim14:F8KwpX8CZlHguwAN@cluster1.tswh8fp.mongodb.net";
 
 mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => console.log('✅ Successfully connected to MongoDB Atlas!'))

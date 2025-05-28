@@ -865,9 +865,9 @@ body {
       transform: translateY(-50%);
       border: 6px solid transparent;
       border-right-color: #0d9488;
-    }
+  }
 
-      .main-content {
+  .main-content {
       margin-left: 70px;
       padding: 1.5rem;
     }
@@ -892,9 +892,9 @@ body {
   }
   
       .medical-sidebar {
-      width: 100%;
-      height: auto;
-      position: relative;
+    width: 100%;
+    height: auto;
+    position: relative;
       background: linear-gradient(90deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%);
     }
   
@@ -1005,13 +1005,13 @@ body {
 }
 
 .message.sent {
-  background-color: #00796b;
+  background-color: #fdfdfd;
   color: white;
   margin-left: auto;
 }
 
 .message.received {
-  background-color: #f8f9fa;
+  background-color: #f8f9fa !important;
   margin-right: auto;
 }
 
@@ -2119,7 +2119,7 @@ body {
 }
 
 .message.sent {
-    background: #f5faf8 !important;
+    background: #ffffff !important;
     margin-left: auto;
     border-bottom-right-radius: 4px;
 }

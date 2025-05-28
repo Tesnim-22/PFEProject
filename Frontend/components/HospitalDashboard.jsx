@@ -24,6 +24,18 @@ const HospitalDashboard = () => {
     }
   }, []);
 
+  // Ouvrir automatiquement toutes les spécialités par défaut
+  useEffect(() => {
+    if (appointments.length > 0) {
+      const specialties = [...new Set(appointments.map(apt => apt.specialty || 'Non spécifié'))];
+      const initialExpanded = {};
+      specialties.forEach(specialty => {
+        initialExpanded[specialty] = true;
+      });
+      setExpandedSpecialties(initialExpanded);
+    }
+  }, [appointments]);
+
   const fetchAppointments = async (hospitalId) => {
     try {
       setLoading(true);
@@ -166,62 +178,91 @@ const HospitalDashboard = () => {
   };
 
   return (
-    <div className="hospital-dashboard">
-      <aside className="sidebar">
+    <div className="dashboard-wrapper">
+      <div className="dashboard-container">
+        <aside className="medical-sidebar">
         <div className="sidebar-header">
-          <div className="user-info">
-            <FaUserCircle size={32} style={{ marginRight: 8, color: "#038A91" }} />
-            <span className="user-role" style={{ fontSize: "1rem", fontWeight: 500, color: "#038A91" }}>Interface Hôpital</span>
+            <div className="medical-logo">
+              <div className="logo-text">
+                <h2>PatientPath</h2>
+                <span>Hôpital</span>
+              </div>
+            </div>
           </div>
-        </div>
-        <nav className="sidebar-menu">
+          
+          <nav className="sidebar-navigation">
+            <div className="nav-section">
+              <span className="nav-section-title">Gestion</span>
           <button 
-            className={activeFilter === 'all' ? 'active' : ''} 
+                className={`nav-item ${activeFilter === 'all' ? 'active' : ''}`}
             onClick={() => setActiveFilter('all')}
           >
-            <FaCalendarAlt className="icon" />
-            <span>Tous les rendez-vous</span>
+                <FaCalendarAlt className="nav-icon" />
+                <span className="nav-text">Tous les RDV</span>
           </button>
           <button 
-            className={activeFilter === 'pending' ? 'active' : ''} 
+                className={`nav-item ${activeFilter === 'pending' ? 'active' : ''}`}
             onClick={() => setActiveFilter('pending')}
           >
-            <FaCalendarAlt className="icon" />
-            <span>En attente</span>
+                <FaCalendarAlt className="nav-icon" />
+                <span className="nav-text">En attente</span>
           </button>
           <button 
-            className={activeFilter === 'confirmed' ? 'active' : ''} 
+                className={`nav-item ${activeFilter === 'confirmed' ? 'active' : ''}`}
             onClick={() => setActiveFilter('confirmed')}
           >
-            <FaCalendarAlt className="icon" />
-            <span>Confirmés</span>
+                <FaCalendarAlt className="nav-icon" />
+                <span className="nav-text">Confirmés</span>
           </button>
           <button 
-            className={activeFilter === 'cancelled' ? 'active' : ''} 
+                className={`nav-item ${activeFilter === 'cancelled' ? 'active' : ''}`}
             onClick={() => setActiveFilter('cancelled')}
           >
-            <FaCalendarAlt className="icon" />
-            <span>Annulés</span>
+                <FaCalendarAlt className="nav-icon" />
+                <span className="nav-text">Annulés</span>
           </button>
+            </div>
         </nav>
+          
+          <div className="sidebar-footer">
         <button className="logout-button" onClick={handleLogout}>
-          <FaSignOutAlt className="icon" />
-          <span>Se déconnecter</span>
+              <FaSignOutAlt className="nav-icon" />
+              <span className="nav-text">Se déconnecter</span>
         </button>
+          </div>
       </aside>
 
-      <main className="hospital-main">
+        <main className="main-content">
         {message && (
           <div className="alert" onClick={() => setMessage('')}>
             {message.includes('✅') ? '✅' : '❌'} {message}
           </div>
         )}
 
-        <div className="appointments-header">
-          <h1>🏥 Gestion des Rendez-vous</h1>
-          <div className="search-bar">
+        <div className="profile-header-content">
+          <div className="profile-title">
+            <h1>
+              <FaHospital style={{ color: '#0f766e' }} />
+              Gestion des Rendez-vous
+            </h1>
+            {!loading && appointments.length > 0 && (
+              <div className="stats-summary">
+                <span className="stat-item pending">
+                  ⏳ {appointments.filter(apt => apt.status === 'pending').length} en attente
+                </span>
+                <span className="stat-item confirmed">
+                  ✅ {appointments.filter(apt => apt.status === 'confirmed').length} confirmés
+                </span>
+                <span className="stat-item cancelled">
+                  ❌ {appointments.filter(apt => apt.status === 'cancelled').length} annulés
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="search-container">
             <input
               type="text"
+              className="search-input"
               placeholder="🔍 Rechercher un patient ou une spécialité..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -278,67 +319,91 @@ const HospitalDashboard = () => {
         )}
 
         {loading ? (
-          <div className="loading">⌛ Chargement des rendez-vous...</div>
+          <div className="loading">
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⌛</div>
+            <div>Chargement des rendez-vous...</div>
+          </div>
         ) : (
           <div className="appointments-container">
             {Object.keys(groupedAppointments).length === 0 ? (
               <div className="no-appointments">
-                📭 Aucun rendez-vous {activeFilter !== 'all' ? `${getStatusText(activeFilter).toLowerCase()}` : ''} trouvé.
+                <h3>📭 Aucun rendez-vous trouvé</h3>
+                <p>
+                  {activeFilter !== 'all' 
+                    ? `Aucun rendez-vous ${getStatusText(activeFilter).toLowerCase()} pour le moment.`
+                    : searchTerm 
+                      ? `Aucun rendez-vous trouvé pour "${searchTerm}".`
+                      : 'Aucun rendez-vous disponible pour le moment.'
+                  }
+                </p>
               </div>
             ) : (
-              Object.entries(groupedAppointments).map(([specialty, specialtyAppointments]) => (
-                <div key={specialty} className="specialty-group">
+              Object.entries(groupedAppointments)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([specialty, specialtyAppointments]) => (
+                <div key={specialty} className="appointment-category">
                   <div 
-                    className="specialty-header"
+                    className="category-header"
                     onClick={() => toggleSpecialty(specialty)}
                   >
-                    <h2>
-                      {expandedSpecialties[specialty] ? '▼' : '▶'} {getSpecialtyIcon(specialty)} {specialty}
-                      <span className="appointment-count">
-                        {specialtyAppointments.length}
+                    <div className="category-title">
+                      <h2>
+                        {getSpecialtyIcon(specialty)} {specialty}
+                      </h2>
+                      <span className="toggle-icon">
+                        {expandedSpecialties[specialty] ? '−' : '+'}
                       </span>
-                    </h2>
+                    </div>
+                    <div className="appointment-count">
+                      {specialtyAppointments.length} rendez-vous
+                    </div>
                   </div>
                   {expandedSpecialties[specialty] && (
                     <div className="appointments-grid">
-                      {specialtyAppointments.map((appointment) => (
-                        <div key={appointment._id} className="appointment-card">
-                          <div className="appointment-header">
-                            <h3>{getSpecialtyIcon(appointment.specialty)} {appointment.specialty}</h3>
-                            <span 
-                              className="status-badge"
-                              style={{ backgroundColor: getStatusColor(appointment.status) }}
-                            >
-                              {getStatusIcon(appointment.status)} {getStatusText(appointment.status)}
-                            </span>
-                          </div>
+                      {specialtyAppointments
+                        .sort((a, b) => {
+                          // Trier par statut (pending en premier) puis par date
+                          if (a.status === 'pending' && b.status !== 'pending') return -1;
+                          if (a.status !== 'pending' && b.status === 'pending') return 1;
+                          return new Date(b.createdAt) - new Date(a.createdAt);
+                        })
+                        .map((appointment) => {
+                          const isRecent = new Date() - new Date(appointment.createdAt) < 24 * 60 * 60 * 1000; // 24h
+                          const isUrgent = appointment.status === 'pending' && isRecent;
                           
-                          <div className="patient-info">
-                            <p>
-                              <strong>👤 Patient :</strong> {appointment.patientId?.nom} {appointment.patientId?.prenom}
-                            </p>
-                            <p>
-                              <strong>📧 Email :</strong> {appointment.patientId?.email}
-                            </p>
-                            <p>
-                              <strong>📞 Téléphone :</strong> {appointment.patientId?.telephone}
-                            </p>
-                            <p>
-                              <strong>📅 Date de demande :</strong>{' '}
-                              {new Date(appointment.createdAt).toLocaleString('fr-FR')}
-                            </p>
-                            {appointment.appointmentDate && (
+                          return (
+                        <div 
+                          key={appointment._id} 
+                          className={`appointment-card ${isUrgent ? 'urgent' : isRecent ? 'recent' : ''}`}
+                        >
+                          <div className="appointment-info">
+                            <h3>
+                              {getSpecialtyIcon(appointment.specialty)} {appointment.specialty}
+                            </h3>
+                            <div className="patient-details">
                               <p>
-                                <strong>🗓️ Date du rendez-vous :</strong>{' '}
-                                {new Date(appointment.appointmentDate).toLocaleString('fr-FR')}
+                                <strong>👤</strong>
+                                <span>{appointment.patientId?.nom || 'N/A'} {appointment.patientId?.prenom || ''}</span>
+                              </p>
+                              <p>
+                                <strong>📧</strong>
+                                <span>{appointment.patientId?.email || 'Non renseigné'}</span>
+                              </p>
+                              <p>
+                                <strong>📞</strong>
+                                <span>{appointment.patientId?.telephone || 'Non renseigné'}</span>
+                              </p>
+                              <p className="appointment-date">
+                                <strong>📅</strong>
+                                <span>{new Date(appointment.createdAt).toLocaleDateString('fr-FR')}</span>
+                              </p>
+                              {appointment.appointmentDate && (
+                                <p className="appointment-date">
+                                  <strong>🗓️</strong>
+                                  <span>{new Date(appointment.appointmentDate).toLocaleDateString('fr-FR')} à {new Date(appointment.appointmentDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
                               </p>
                             )}
-                            {appointment.requiredDocuments && (
-                              <p>
-                                <strong>📄 Documents requis :</strong>{' '}
-                                {appointment.requiredDocuments}
-                              </p>
-                            )}
+                            </div>
                           </div>
 
                           {appointment.status === 'pending' && (
@@ -346,19 +411,30 @@ const HospitalDashboard = () => {
                               <button
                                 className="confirm-btn"
                                 onClick={() => handleStatusChange(appointment._id, 'confirmed')}
+                                title="Confirmer et planifier le rendez-vous"
                               >
                                 ✅ Confirmer
                               </button>
                               <button
                                 className="cancel-btn"
                                 onClick={() => handleStatusChange(appointment._id, 'cancelled')}
+                                title="Refuser le rendez-vous"
                               >
                                 ❌ Refuser
                               </button>
                             </div>
                           )}
+
+                          <div className="appointment-status">
+                            <span 
+                              className={`status-badge ${appointment.status}`}
+                            >
+                              {getStatusIcon(appointment.status)} {getStatusText(appointment.status)}
+                            </span>
+                          </div>
                         </div>
-                      ))}
+                          );
+                        })}
                     </div>
                   )}
                 </div>
@@ -367,6 +443,7 @@ const HospitalDashboard = () => {
           </div>
         )}
       </main>
+      </div>
     </div>
   );
 };

@@ -5,86 +5,219 @@
     font-family: 'Segoe UI', sans-serif !important;
 }
 
-.sidebar {
-    width: 200px !important;
-    background: #feffff !important;
-    color: #fefeff !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: space-between !important;
-    padding: 1rem 1rem !important;
-    box-shadow: 3px 0 8px rgba(138, 37, 37, 0.05) !important;
-    border-top-right-radius: 10px !important;
-    border-bottom-right-radius: 10px !important;
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    height: 100vh !important;
-    z-index: 100 !important;
+/* Medical Sidebar */
+.medical-sidebar {
+    width: 240px;
+    background: #ffffff;
+    border-right: 1px solid #e5e7eb;
+    position: fixed;
+    height: 100vh;
+    overflow-y: auto;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.08);
+    z-index: 100;
 }
 
-.sidebar-title {
-    font-size: 1.5rem !important;
-    font-weight: bold !important;
-    margin-bottom: 0.8rem !important;
-    text-align: center !important;
-    color: #091227 !important;
+.sidebar-header {
+    padding: 1.5rem 1.25rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: #ffffff;
+    position: relative;
 }
 
-.sidebar-menu {
-    list-style: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 0.8rem !important;
+.medical-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
 }
 
-.sidebar-menu li {
-    font-size: 0.9rem !important;
-    padding: 1rem 1rem !important;
-    border-radius: 15px !important;
-    cursor: pointer !important;
-    transition: all 0.2s !important;
-    color: #000000 !important;
-    -webkit-border-radius: 15px !important;
-    -moz-border-radius: 15px !important;
-    -ms-border-radius: 15px !important;
-    -o-border-radius: 15px !important;
+.logo-text h2 {
+    color: #0f766e;
+    font-size: 1.5rem;
+    font-weight: 900;
+    margin: 0;
+    letter-spacing: -0.5px;
+    text-shadow: 0 1px 2px rgba(15, 118, 110, 0.1);
+    background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
-.sidebar-menu li:hover {
-    background-color: rgba(175, 246, 255, 0.07) !important;
+.logo-text span {
+    color: #6b7280;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 0.25rem;
+    display: block;
 }
 
-.sidebar-menu li.active {
-    background-color: #0f5ec5 !important;
-    color: white !important;
-    font-weight: 4000 !important;
+.sidebar-navigation {
+    padding: 0.75rem 0;
+    flex: 1;
 }
 
-.logout-btn {
-    margin-top: 1rem !important;
-    padding: 0.6rem 0.8rem !important;
-    border: none !important;
-    background-color: #579cb8 !important;
-    color: white !important;
-    border-radius: 3px !important;
-    cursor: pointer !important;
-    font-weight: bold !important;
-    transition: background-color 0.1s !important;
-    -webkit-border-radius: 2px !important;
-    -moz-border-radius: 2px !important;
-    -ms-border-radius: 2px !important;
-    -o-border-radius: 2px !important;
-    -webkit-transition: background-color 0.1s !important;
-    -moz-transition: background-color 0.1s !important;
-    -ms-transition: background-color 0.1s !important;
-    -o-transition: background-color 0.1s !important;
+.nav-section {
+    margin-bottom: 1rem;
 }
 
-.logout-btn:hover {
-    background-color: #587f99 !important;
+.nav-section-title {
+    color: #6b7280;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 0 1.25rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 0.75rem 1.25rem;
+    background: transparent;
+    border: none;
+    color: #374151;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: left;
+    gap: 0.875rem;
+    position: relative;
+    border-radius: 0;
+}
+
+.nav-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: #14b8a6;
+    transform: scaleY(0);
+    transition: transform 0.3s ease;
+}
+
+.nav-item:hover {
+    background: #f0fdfa;
+    color: #0f766e;
+    padding-left: 1.75rem;
+}
+
+.nav-item:hover::before {
+    transform: scaleY(1);
+}
+
+.nav-item.active {
+    background: #0f766e;
+    color: white;
+    font-weight: 600;
+    padding-left: 1.75rem;
+}
+
+.nav-item.active::before {
+    transform: scaleY(1);
+}
+
+.nav-item.active .nav-icon {
+    color: white;
+}
+
+.nav-icon {
+    font-size: 1.1rem;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.nav-text {
+    font-weight: inherit;
+    letter-spacing: 0.2px;
+}
+
+.sidebar-footer {
+    padding: 1.25rem;
+    border-top: 1px solid #e5e7eb;
+    margin-top: auto;
+    background: #ffffff;
+}
+
+.logout-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 1rem;
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    border: none;
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    gap: 0.75rem;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.logout-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.logout-button:hover::before {
+    left: 100%;
+}
+
+.logout-button:hover {
+    background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
+}
+
+.logout-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+}
+
+.logout-button .nav-icon {
+    color: inherit;
+}
+
+/* Scrollbar styling for sidebar */
+.medical-sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.medical-sidebar::-webkit-scrollbar-track {
+    background: #f9fafb;
+}
+
+.medical-sidebar::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 3px;
+}
+
+.medical-sidebar::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
 }
 
 .profile-section {
@@ -111,9 +244,11 @@
 
 .ambulance-dashboard {
     flex: 1 !important;
-    margin-left: 200px !important;
-    padding: 2.8rem !important;
-    max-width: calc(100% - 250px) !important;
+    margin-left: 240px !important;
+    padding: 1rem !important;
+    max-width: calc(100% - 240px) !important;
+    background: #ffffff;
+    transition: margin-left 0.3s ease;
 }
 
 .dashboard-header {
@@ -173,28 +308,171 @@
     margin: 0 !important;
     color: #0d0e0f !important;
 }
-.logout-btn {
-    margin-top: 2rem !important;
-    margin-bottom: 0.5rem !important;
-    width: 90% !important;
-    align-self: center !important;
-    padding: 0.8rem 1rem !important;
-    background: #fff0f0 !important;
-    color: #0f0d0d !important;
-    border: 1px solid #5bc096 !important;
-    border-radius: 8px !important;
-    font-weight: 700 !important;
-    font-size: 1rem !important;
-    box-shadow: none !important;
-    transition: background 0.2s, color 0.2s, box-shadow 0.2s !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 0.7rem !important;
-  }
-  
-  .logout-btn:hover {
-    background: #308383 !important;
-    color: #000000 !important;
-    box-shadow: 0 2px 8px rgba(198, 40, 40, 0.07) !important;
-  }
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .medical-sidebar {
+        width: 70px;
+        overflow: visible;
+    }
+    
+    .sidebar-header {
+        padding: 1.5rem 0.5rem;
+    }
+    
+    .logo-text {
+        display: none;
+    }
+    
+    .medical-logo {
+        justify-content: center;
+    }
+    
+    .nav-section-title {
+        display: none;
+    }
+    
+    .nav-item {
+        padding: 1rem 0.5rem;
+        justify-content: center;
+        position: relative;
+    }
+    
+    .nav-text {
+        display: none;
+    }
+    
+    .nav-item:hover .nav-text {
+        display: block;
+        position: absolute;
+        left: 100%;
+        top: 50%;
+        transform: translateY(-50%);
+        background: #0d9488;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        white-space: nowrap;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        margin-left: 0.5rem;
+    }
+    
+    .nav-item:hover .nav-text::before {
+        content: '';
+        position: absolute;
+        left: -6px;
+        top: 50%;
+        transform: translateY(-50%);
+        border: 6px solid transparent;
+        border-right-color: #0d9488;
+    }
+
+    .ambulance-dashboard {
+        margin-left: 70px !important;
+        padding: 1.5rem !important;
+    }
+    
+    .logout-button {
+        justify-content: center;
+        padding: 1rem 0.5rem;
+    }
+    
+    .logout-button .nav-text {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-wrapper {
+        flex-direction: column;
+    }
+    
+    .medical-sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        background: linear-gradient(90deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%);
+    }
+    
+    .sidebar-header {
+        padding: 1rem 1.5rem;
+    }
+    
+    .logo-text {
+        display: block;
+    }
+    
+    .logo-text h2 {
+        color: white;
+    }
+    
+    .logo-text span {
+        color: rgba(255, 255, 255, 0.8);
+    }
+    
+    .medical-logo {
+        justify-content: flex-start;
+    }
+    
+    .sidebar-navigation {
+        padding: 1rem 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .nav-section {
+        margin-bottom: 0;
+        display: contents;
+    }
+    
+    .nav-section-title {
+        display: none;
+    }
+    
+    .nav-item {
+        flex: 1;
+        min-width: calc(50% - 0.25rem);
+        padding: 0.75rem;
+        justify-content: center;
+        text-align: center;
+        border-radius: 8px;
+        margin: 0 0.5rem;
+        color: white;
+    }
+    
+    .nav-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        padding-left: 0.75rem;
+    }
+    
+    .nav-item.active {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        padding-left: 0.75rem;
+    }
+    
+    .nav-text {
+        display: block;
+        font-size: 0.8rem;
+        margin-top: 0.25rem;
+    }
+    
+    .sidebar-footer {
+        padding: 1rem 1.5rem;
+    }
+    
+    .logout-button {
+        justify-content: center;
+    }
+    
+    .logout-button .nav-text {
+        display: block;
+    }
+    
+    .ambulance-dashboard {
+        margin-left: 0 !important;
+        padding: 1rem !important;
+    }
+}

@@ -155,7 +155,7 @@ body {
 }
 
 .hero-text h1 span {
-  color: #038A91;
+  color: #0f7769;
 }
 
 .hero-subtitle {
@@ -676,7 +676,7 @@ body {
 
 .benefit-circle i {
   font-size: 1.3rem;
-  color: var(--primary-color);
+  color: rgb(24, 107, 86) !important;
   transition: all 0.3s ease;
 }
 
@@ -861,7 +861,7 @@ body {
 
 .stat-card i {
   font-size: 2rem;
-  color: #038A91;
+  color: #136450;
 }
 
 .stat-content {
