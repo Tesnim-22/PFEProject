@@ -207,24 +207,33 @@ const userSchema = new mongoose.Schema({
             'Kasserine',
             'Sidi Bouzid',
             'Gabès',
-            'Medenine',
+            'Médenine',
             'Tataouine',
             'Gafsa',
             'Tozeur',
-            'Kebili'
-        ],
-        required: true
+            'Kébili'
+        ]
     },
-    // 🔥 ➡️ AJOUTE ICI et BIEN fermer l'accolade !
     resetPasswordToken: { type: String },
     resetPasswordExpires: { type: Date }
+}, {
+    timestamps: true
 });
 
+// Schéma pour tracker les notifications administratives lues
+const adminNotificationReadSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    adminNotificationId: { type: mongoose.Schema.Types.ObjectId, ref: 'AdminNotification', required: true },
+    readAt: { type: Date, default: Date.now }
+}, {
+    timestamps: true
+});
 
-
-
+// Index composé pour éviter les doublons
+adminNotificationReadSchema.index({ userId: 1, adminNotificationId: 1 }, { unique: true });
 
 const User = mongoose.model('User', userSchema);
+const AdminNotificationRead = mongoose.model('AdminNotificationRead', adminNotificationReadSchema);
 
 const notificationSchema = new mongoose.Schema({
     message: { type: String, required: true },
@@ -1461,17 +1470,134 @@ app.put('/api/appointments/:appointmentId/status', async(req, res) => {
 app.get('/api/notifications/:userId', async(req, res) => {
     try {
         const { userId } = req.params;
-        const notifications = await Notification.find({ userId })
-            .sort({ createdAt: -1 }) // Utiliser createdAt pour le tri
-            .lean(); // Pour une meilleure performance
+        
+        // Récupérer l'utilisateur pour vérifier son rôle
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "Utilisateur non trouvé." });
+        }
 
-        res.status(200).json(notifications);
+        // Si l'utilisateur est un docteur, filtrer les notifications
+        if (user.roles.includes('Doctor')) {
+            // Récupérer les AdminNotifications destinées aux docteurs ou à tous
+            const adminNotifications = await AdminNotification.find({
+                $or: [
+                    { recipientType: 'doctors' },
+                    { recipientType: 'all' },
+                    { 
+                        recipientType: 'specific',
+                        recipients: userId 
+                    }
+                ]
+            }).sort({ createdAt: -1 });
+
+            // Récupérer les notifications administratives lues par cet utilisateur
+            const readAdminNotifications = await AdminNotificationRead.find({ userId });
+            const readAdminNotificationIds = readAdminNotifications.map(read => read.adminNotificationId.toString());
+
+            // Convertir les AdminNotifications au format des notifications individuelles
+            const formattedNotifications = adminNotifications.map(adminNotif => ({
+                _id: adminNotif._id,
+                userId: userId,
+                title: adminNotif.title,
+                message: adminNotif.message,
+                type: adminNotif.type,
+                priority: adminNotif.priority,
+                read: readAdminNotificationIds.includes(adminNotif._id.toString()),
+                createdAt: adminNotif.createdAt,
+                updatedAt: adminNotif.updatedAt,
+                isAdminNotification: true // Flag pour identifier les notifications admin
+            }));
+
+            // Récupérer aussi les notifications individuelles (messages, etc.)
+            const individualNotifications = await Notification.find({ userId })
+                .sort({ createdAt: -1 })
+                .lean();
+
+            // Ajouter le flag pour les notifications individuelles
+            const formattedIndividualNotifications = individualNotifications.map(notif => ({
+                ...notif,
+                isAdminNotification: false
+            }));
+
+            // Combiner et trier toutes les notifications
+            const allNotifications = [...formattedNotifications, ...formattedIndividualNotifications]
+                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+            res.status(200).json(allNotifications);
+        } else {
+            // Pour les autres rôles, retourner seulement leurs notifications individuelles
+            const notifications = await Notification.find({ userId })
+                .sort({ createdAt: -1 })
+                .lean();
+
+            // Ajouter le flag pour les notifications individuelles
+            const formattedNotifications = notifications.map(notif => ({
+                ...notif,
+                isAdminNotification: false
+            }));
+
+            res.status(200).json(formattedNotifications);
+        }
     } catch (error) {
         console.error("❌ Erreur notifications:", error);
         res.status(500).json({ message: "Erreur serveur" });
     }
 });
 
+// Route pour marquer une notification comme lue
+app.put('/api/notifications/:notificationId/read', async(req, res) => {
+    try {
+        const { notificationId } = req.params;
+        const { userId, isAdminNotification } = req.body;
+
+        if (!userId) {
+            return res.status(400).json({ message: "userId requis." });
+        }
+
+        if (isAdminNotification) {
+            // Pour les notifications administratives, créer un enregistrement de lecture
+            try {
+                await AdminNotificationRead.create({
+                    userId,
+                    adminNotificationId: notificationId
+                });
+                
+                res.status(200).json({ 
+                    message: "Notification administrative marquée comme lue"
+                });
+            } catch (error) {
+                if (error.code === 11000) {
+                    // Déjà marquée comme lue
+                    res.status(200).json({ 
+                        message: "Notification déjà marquée comme lue"
+                    });
+                } else {
+                    throw error;
+                }
+            }
+        } else {
+            // Pour les notifications individuelles, mettre à jour le champ read
+            const notification = await Notification.findByIdAndUpdate(
+                notificationId,
+                { read: true },
+                { new: true }
+            );
+
+            if (!notification) {
+                return res.status(404).json({ message: "Notification non trouvée." });
+            }
+
+            res.status(200).json({ 
+                message: "Notification marquée comme lue",
+                notification 
+            });
+        }
+    } catch (error) {
+        console.error("❌ Erreur marquage notification comme lue:", error);
+        res.status(500).json({ message: "Erreur serveur" });
+    }
+});
 
 // 🆕 Route pour créer un rendez-vous patient
 app.post('/api/appointments', async(req, res) => {

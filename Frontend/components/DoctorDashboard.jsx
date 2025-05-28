@@ -3,7 +3,7 @@ import { Link, Routes, Route, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Calendar from 'react-calendar';
 import '../styles/DoctorDashboard.css';
-import { FaUserMd, FaCalendarAlt, FaHistory, FaComments, FaFileMedical, FaBook, FaSignOutAlt, FaUserCircle } from 'react-icons/fa';
+import { FaUserMd, FaCalendarAlt, FaHistory, FaComments, FaFileMedical, FaBook, FaSignOutAlt, FaUserCircle, FaBell } from 'react-icons/fa';
 
 const UnifiedMessagesView = () => {
   const [conversations, setConversations] = useState([]);
@@ -1401,14 +1401,25 @@ const PastAppointmentsView = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [sortOrder, setSortOrder] = useState('desc');
-  const [currentPage, setCurrentPage] = useState(1); // Pagination
-  const [selectedAppointment, setSelectedAppointment] = useState(null); // Pour afficher les détails
-  const appointmentsPerPage = 12; // Augmenté pour une meilleure utilisation de l'espace
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const appointmentsPerPage = 10;
   const doctorId = localStorage.getItem('userId');
 
   useEffect(() => {
     fetchAppointments();
   }, []);
+
+  useEffect(() => {
+    if (appointments.length > 0) {
+      const sortedAppointments = [...appointments].sort((a, b) => 
+        sortOrder === 'desc' 
+          ? new Date(b.date) - new Date(a.date)
+          : new Date(a.date) - new Date(b.date)
+      );
+      setAppointments(sortedAppointments);
+    }
+  }, [sortOrder]);
 
   const fetchAppointments = async () => {
     try {
@@ -1419,10 +1430,6 @@ const PastAppointmentsView = () => {
           new Date(apt.date) < new Date() ||
           apt.status === 'cancelled' ||
           apt.status === 'completed'
-        )
-        .sort((a, b) => sortOrder === 'desc' 
-          ? new Date(b.date) - new Date(a.date)
-          : new Date(a.date) - new Date(b.date)
         );
       setAppointments(pastAppointments);
     } catch (err) {
@@ -1470,7 +1477,6 @@ const PastAppointmentsView = () => {
       return matchesSearch && apt.status === filterStatus;
     });
 
-  // Pagination logic
   const totalPages = Math.ceil(filteredAppointments.length / appointmentsPerPage);
   const paginatedAppointments = filteredAppointments.slice(
     (currentPage - 1) * appointmentsPerPage,
@@ -1482,124 +1488,105 @@ const PastAppointmentsView = () => {
   };
 
   return (
-    <div className="dashboard-content" style={{ 
-      padding: '24px', 
-      color: '#000000',
-      maxWidth: '1400px',
-      margin: '0 auto'
+    <div style={{
+      padding: '20px',
+      maxWidth: '1200px',
+      margin: '0 auto',
+      backgroundColor: '#f8f9fa',
+      minHeight: '100vh'
     }}>
-      {/* Header optimisé */}
+      {/* Header simple */}
       <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: '24px',
-        flexWrap: 'wrap',
-        gap: '16px'
+        marginBottom: '30px',
+        textAlign: 'center'
       }}>
-        <div>
-          <h2 style={{ 
-            margin: '0 0 8px 0', 
-            fontSize: '2rem',
-            color: '#1e293b',
-            fontWeight: '700'
-          }}>
-            Historique des rendez-vous
-          </h2>
-          <p style={{
-            margin: 0,
-            color: '#64748b',
-            fontSize: '0.95rem'
-          }}>
-            Consultez et gérez vos rendez-vous passés
-          </p>
-        </div>
-        
-        {/* Filtres compacts */}
-        <div style={{ 
-          display: 'flex', 
-          gap: '8px',
-        alignItems: 'center',
+        <h1 style={{
+          fontSize: '28px',
+          color: '#333',
+          margin: '0 0 10px 0',
+          fontWeight: '600'
+        }}>
+          Historique des rendez-vous
+        </h1>
+        <p style={{
+          color: '#666',
+          margin: 0,
+          fontSize: '16px'
+        }}>
+          {filteredAppointments.length} rendez-vous
+        </p>
+      </div>
+
+      {/* Barre de recherche et filtres simples */}
+      <div style={{
+        backgroundColor: 'white',
+        padding: '20px',
+        borderRadius: '8px',
+        marginBottom: '20px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+      }}>
+        <div style={{
+          display: 'flex',
+          gap: '15px',
+          alignItems: 'center',
           flexWrap: 'wrap'
-      }}>
-          <select 
+        }}>
+          <input
+            type="text"
+            placeholder="Rechercher..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              flex: 1,
+              padding: '10px 15px',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              fontSize: '14px',
+              minWidth: '200px'
+            }}
+          />
+          
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            style={{
+              padding: '10px 15px',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              fontSize: '14px',
+              backgroundColor: 'white'
+            }}
+          >
+            <option value="all">Tous</option>
+            <option value="completed">Terminés</option>
+            <option value="cancelled">Annulés</option>
+          </select>
+          
+          <select
             value={sortOrder}
             onChange={(e) => setSortOrder(e.target.value)}
             style={{
-              padding: '8px 12px',
-              borderRadius: '6px',
-              border: '1px solid #d1d5db',
-              backgroundColor: '#ffffff',
-              fontSize: '0.875rem',
-              color: '#374151',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              outline: 'none',
-              minWidth: '120px'
+              padding: '10px 15px',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              fontSize: '14px',
+              backgroundColor: 'white'
             }}
           >
             <option value="desc">Plus récent</option>
             <option value="asc">Plus ancien</option>
           </select>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            style={{
-              padding: '8px 12px',
-              borderRadius: '6px',
-              border: '1px solid #d1d5db',
-              backgroundColor: '#ffffff',
-              fontSize: '0.875rem',
-              color: '#374151',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              outline: 'none',
-              minWidth: '140px'
-            }}
-          >
-            <option value="all">Tous les statuts</option>
-            <option value="completed">Terminés</option>
-            <option value="cancelled">Annulés</option>
-          </select>
         </div>
-      </div>
-
-      {/* Barre de recherche optimisée */}
-      <div style={{
-        backgroundColor: 'white',
-        padding: '16px',
-        borderRadius: '8px',
-        marginBottom: '20px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        border: '1px solid #e5e7eb'
-      }}>
-        <input
-          type="text"
-          placeholder="Rechercher par nom de patient ou motif de consultation..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '12px 16px',
-            borderRadius: '6px',
-            border: '1px solid #d1d5db',
-            fontSize: '0.95rem',
-            backgroundColor: '#ffffff',
-            transition: 'border-color 0.2s ease',
-            outline: 'none'
-          }}
-          onFocus={(e) => e.target.style.borderColor = '#10b981'}
-          onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
-        />
       </div>
 
       {error && (
         <div style={{
+          backgroundColor: '#f8d7da',
+          color: '#721c24',
           padding: '15px',
-          backgroundColor: '#fee',
-          color: '#c00',
           borderRadius: '4px',
-          marginBottom: '20px'
+          marginBottom: '20px',
+          border: '1px solid #f5c6cb'
         }}>
           {error}
         </div>
@@ -1607,239 +1594,203 @@ const PastAppointmentsView = () => {
 
       {loading ? (
         <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          padding: '40px',
-          color: '#000000'  // Ajout de la couleur noire pour le texte
+          textAlign: 'center',
+          padding: '50px',
+          backgroundColor: 'white',
+          borderRadius: '8px'
         }}>
-          <div className="loading-spinner">Chargement de l'historique...</div>
+          <div style={{
+            fontSize: '16px',
+            color: '#666'
+          }}>
+            Chargement...
+          </div>
         </div>
       ) : filteredAppointments.length === 0 ? (
         <div style={{
           textAlign: 'center',
-          padding: '40px',
+          padding: '50px',
           backgroundColor: 'white',
           borderRadius: '8px',
-          color: '#000000'  // Changement de la couleur grise en noir
+          color: '#666'
         }}>
-          {searchTerm ? 'Aucun rendez-vous ne correspond à votre recherche' : 'Aucun rendez-vous passé'}
+          {searchTerm ? 'Aucun résultat trouvé' : 'Aucun rendez-vous passé'}
         </div>
       ) : (
         <>
-        {/* Indication pour l'utilisateur */}
-        <div style={{
-          backgroundColor: '#f8f9fa',
-          borderLeft: '3px solid #10b981',
-          borderRadius: '4px',
-          padding: '8px 12px',
-          marginBottom: '16px',
-          fontSize: '13px',
-          color: '#6b7280',
-          fontStyle: 'italic'
-        }}>
-          Cliquez sur un rendez-vous pour afficher les informations détaillées
-        </div>
-
-        <div style={{
-          display: 'grid',
-          gap: '16px',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          marginBottom: '24px'
-        }}>
-          {paginatedAppointments.map(apt => (
-            <div
-              key={apt._id}
-              onClick={() => setSelectedAppointment(selectedAppointment?._id === apt._id ? null : apt)}
-              onMouseEnter={(e) => {
-                if (selectedAppointment?._id !== apt._id) {
-                  e.target.style.borderColor = '#10b981';
-                  e.target.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.15)';
-                  e.target.style.transform = 'translateY(-1px)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (selectedAppointment?._id !== apt._id) {
-                  e.target.style.borderColor = '#e5e7eb';
-                  e.target.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
-                  e.target.style.transform = 'translateY(0)';
-                }
-              }}
-              style={{
-                backgroundColor: 'white',
-                borderRadius: '8px',
-                padding: '16px',
-                boxShadow: selectedAppointment?._id === apt._id ? '0 4px 12px rgba(15, 118, 110, 0.15)' : '0 1px 3px rgba(0,0,0,0.1)',
-                border: selectedAppointment?._id === apt._id ? '2px solid #0f766e' : '1px solid #e5e7eb',
-                transition: 'all 0.2s ease',
-                cursor: 'pointer',
-                position: 'relative'
-              }}
-            >
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '10px'
-              }}>
-                <h4 style={{ 
-                  margin: '0', 
-                  color: '#1f2937',
-                  fontSize: '1.1rem',
-                  fontWeight: '600'
-                }}>
-                  {apt.patient?.prenom} {apt.patient?.nom}
-                </h4>
-                <span className={`status ${getStatusClass(apt.status)}`}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: '20px',
-                    fontSize: '0.75rem',
-                    fontWeight: '500',
-                    backgroundColor: apt.status === 'completed' ? '#dcfce7' :
-                                   apt.status === 'cancelled' ? '#fef2f2' :
-                                   '#f3f4f6',
-                    color: apt.status === 'completed' ? '#166534' :
-                           apt.status === 'cancelled' ? '#dc2626' :
-                           '#6b7280'
-                  }}>
-                  {getStatusText(apt.status)}
-                </span>
-              </div>
-
-                <div style={{
-                  display: 'flex',
-                justifyContent: 'space-between', 
-                  alignItems: 'center',
-                margin: '5px 0'
-              }}>
-                <p style={{ margin: '0', color: '#6b7280', fontSize: '0.875rem' }}>
-                  {formatDate(apt.date)}
-                </p>
-                {selectedAppointment?._id !== apt._id && (
-                  <span style={{
-                    fontSize: '0.75rem',
-                    color: '#10b981',
-                    fontWeight: '500',
-                    opacity: '0.8',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px'
-                  }}>
-                    Détails
-                  </span>
-                )}
-              </div>
-
-              {selectedAppointment?._id === apt._id && (
-                <div style={{
-                  marginTop: '15px',
-                  paddingTop: '15px',
-                  borderTop: '1px solid #eee'
-                }}>
-              <div style={{ marginBottom: '10px' }}>
-                    <p style={{ margin: '5px 0', color: '#666', fontSize: '0.9rem' }}>
-                      Email: {apt.patient?.email}
-                </p>
-                    <p style={{ margin: '5px 0', color: '#666', fontSize: '0.9rem' }}>
-                      Téléphone: {apt.patient?.telephone}
-                </p>
-              </div>
-                  {apt.reason && (
-              <div style={{
-                backgroundColor: '#f8f9fa',
-                padding: '10px',
-                borderRadius: '4px',
-                      marginTop: '10px'
-              }}>
-                      <p style={{ margin: '0', color: '#2c3e50', fontSize: '0.9rem' }}>
-                        Motif: {apt.reason}
-                </p>
-                    </div>
-                )}
-              </div>
-              )}
-            </div>
-          ))}
-        </div>
-        {/* Pagination */}
-        {totalPages > 1 && (
+          {/* Liste simple des rendez-vous */}
           <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: '4px',
-            margin: '40px 0 20px 0',
-            padding: '20px'
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
           }}>
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              style={{
-                padding: '12px 16px',
-                borderRadius: '8px',
-                border: 'none',
-                background: currentPage === 1 ? '#f8f9fa' : '#ffffff',
-                color: currentPage === 1 ? '#9ca3af' : '#374151',
-                cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                fontWeight: '500',
-                fontSize: '14px',
-                boxShadow: currentPage === 1 ? 'none' : '0 1px 3px rgba(0,0,0,0.1)',
-                transition: 'all 0.2s ease',
-                opacity: currentPage === 1 ? '0.5' : '1'
-              }}
-            >
-              ← Précédent
-            </button>
-            
-            <div style={{
-              display: 'flex',
-              gap: '2px',
-              margin: '0 8px'
-            }}>
-            {Array.from({ length: totalPages }, (_, i) => (
-              <button
-                key={i + 1}
-                onClick={() => handlePageChange(i + 1)}
+            {paginatedAppointments.map((apt, index) => (
+              <div
+                key={apt._id}
+                onClick={() => setSelectedAppointment(selectedAppointment?._id === apt._id ? null : apt)}
                 style={{
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    background: currentPage === i + 1 ? '#0f766e' : '#ffffff',
-                    color: currentPage === i + 1 ? '#ffffff' : '#374151',
-                    fontWeight: currentPage === i + 1 ? '600' : '500',
+                  padding: '20px',
+                  borderBottom: index < paginatedAppointments.length - 1 ? '1px solid #eee' : 'none',
                   cursor: 'pointer',
-                    minWidth: '44px',
-                    fontSize: '14px',
-                    boxShadow: currentPage === i + 1 ? '0 2px 8px rgba(15, 118, 110, 0.3)' : '0 1px 3px rgba(0,0,0,0.1)',
-                    transition: 'all 0.2s ease',
-                    transform: currentPage === i + 1 ? 'translateY(-1px)' : 'none'
+                  backgroundColor: selectedAppointment?._id === apt._id ? '#f0f8ff' : 'white',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  if (selectedAppointment?._id !== apt._id) {
+                    e.currentTarget.style.backgroundColor = '#f8f9fa';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (selectedAppointment?._id !== apt._id) {
+                    e.currentTarget.style.backgroundColor = 'white';
+                  }
                 }}
               >
-                {i + 1}
-              </button>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: selectedAppointment?._id === apt._id ? '15px' : '0'
+                }}>
+                  <div>
+                    <h3 style={{
+                      margin: '0 0 5px 0',
+                      fontSize: '18px',
+                      color: '#333',
+                      fontWeight: '500'
+                    }}>
+                      {apt.patient?.prenom} {apt.patient?.nom}
+                    </h3>
+                    <p style={{
+                      margin: 0,
+                      color: '#666',
+                      fontSize: '14px'
+                    }}>
+                      {formatDate(apt.date)}
+                    </p>
+                  </div>
+                  
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px'
+                  }}>
+                    <span style={{
+                      padding: '4px 12px',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      backgroundColor: apt.status === 'completed' ? '#d4edda' :
+                                     apt.status === 'cancelled' ? '#f8d7da' : '#e2e3e5',
+                      color: apt.status === 'completed' ? '#155724' :
+                             apt.status === 'cancelled' ? '#721c24' : '#6c757d'
+                    }}>
+                      {getStatusText(apt.status)}
+                    </span>
+                    
+                    {selectedAppointment?._id !== apt._id && (
+                      <span style={{
+                        fontSize: '12px',
+                        color: '#007bff',
+                        fontWeight: '500'
+                      }}>
+                        Voir détails
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Détails expandables */}
+                {selectedAppointment?._id === apt._id && (
+                  <div style={{
+                    paddingTop: '15px',
+                    borderTop: '1px solid #eee'
+                  }}>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                      gap: '15px',
+                      marginBottom: '15px'
+                    }}>
+                      <div>
+                        <strong style={{ fontSize: '14px', color: '#333' }}>Email:</strong>
+                        <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#666' }}>
+                          {apt.patient?.email}
+                        </p>
+                      </div>
+                      <div>
+                        <strong style={{ fontSize: '14px', color: '#333' }}>Téléphone:</strong>
+                        <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#666' }}>
+                          {apt.patient?.telephone}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {apt.reason && (
+                      <div>
+                        <strong style={{ fontSize: '14px', color: '#333' }}>Motif:</strong>
+                        <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#666' }}>
+                          {apt.reason}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             ))}
-            </div>
-            
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              style={{
-                padding: '12px 16px',
-                borderRadius: '8px',
-                border: 'none',
-                background: currentPage === totalPages ? '#f8f9fa' : '#ffffff',
-                color: currentPage === totalPages ? '#9ca3af' : '#374151',
-                cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                fontWeight: '500',
+          </div>
+
+          {/* Pagination simple */}
+          {totalPages > 1 && (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '10px',
+              marginTop: '30px'
+            }}>
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                style={{
+                  padding: '8px 16px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  backgroundColor: currentPage === 1 ? '#f8f9fa' : 'white',
+                  color: currentPage === 1 ? '#6c757d' : '#333',
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Précédent
+              </button>
+              
+              <span style={{
+                padding: '8px 16px',
                 fontSize: '14px',
-                boxShadow: currentPage === totalPages ? 'none' : '0 1px 3px rgba(0,0,0,0.1)',
-                transition: 'all 0.2s ease',
-                opacity: currentPage === totalPages ? '0.5' : '1'
-              }}
-            >
-              Suivant →
-            </button>
-        </div>
-        )}
+                color: '#666'
+              }}>
+                Page {currentPage} sur {totalPages}
+              </span>
+              
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                style={{
+                  padding: '8px 16px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  backgroundColor: currentPage === totalPages ? '#f8f9fa' : 'white',
+                  color: currentPage === totalPages ? '#6c757d' : '#333',
+                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Suivant
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>
@@ -4393,6 +4344,224 @@ const ProfileView = () => {
   );
 };
 
+const NotificationsView = () => {
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [notificationsPerPage] = useState(10);
+  const doctorId = localStorage.getItem('userId');
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await axios.get(`http://localhost:5001/api/notifications/${doctorId}`);
+      setNotifications(response.data);
+    } catch (error) {
+      console.error('Erreur récupération notifications:', error);
+      setError('Erreur lors du chargement des notifications');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const markAsRead = async (notificationId, isAdminNotification = false) => {
+    try {
+      await axios.put(`http://localhost:5001/api/notifications/${notificationId}/read`, {
+        userId: doctorId,
+        isAdminNotification: isAdminNotification
+      });
+      setNotifications(prev => 
+        prev.map(notif => 
+          notif._id === notificationId 
+            ? { ...notif, read: true }
+            : notif
+        )
+      );
+    } catch (error) {
+      console.error('Erreur marquage notification comme lue:', error);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 1) {
+      return "Aujourd'hui";
+    } else if (diffDays === 2) {
+      return "Hier";
+    } else if (diffDays <= 7) {
+      return `Il y a ${diffDays - 1} jours`;
+    } else {
+      return date.toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+  };
+
+  const getPriorityClass = (priority) => {
+    switch (priority) {
+      case 'high':
+        return 'notification-priority-high';
+      case 'medium':
+        return 'notification-priority-medium';
+      case 'low':
+        return 'notification-priority-low';
+      default:
+        return 'notification-priority-normal';
+    }
+  };
+
+  const getTypeIcon = (type) => {
+    switch (type) {
+      case 'info':
+        return '📢';
+      case 'warning':
+        return '⚠️';
+      case 'success':
+        return '✅';
+      case 'error':
+        return '❌';
+      default:
+        return '📢';
+    }
+  };
+
+  // Pagination
+  const indexOfLastNotification = currentPage * notificationsPerPage;
+  const indexOfFirstNotification = indexOfLastNotification - notificationsPerPage;
+  const currentNotifications = notifications.slice(indexOfFirstNotification, indexOfLastNotification);
+  const totalPages = Math.ceil(notifications.length / notificationsPerPage);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  if (loading) {
+    return (
+      <div className="notifications-container">
+        <div className="loading-spinner">
+          <div className="spinner"></div>
+          <p>Chargement des notifications...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="notifications-container">
+      <div className="notifications-header">
+        <h2>
+          <FaBell className="notifications-icon" />
+          Notifications
+        </h2>
+        <div className="notifications-stats">
+          <span className="total-notifications">
+            {notifications.length} notification{notifications.length > 1 ? 's' : ''}
+          </span>
+          <span className="unread-notifications">
+            {notifications.filter(n => !n.read).length} non lue{notifications.filter(n => !n.read).length > 1 ? 's' : ''}
+          </span>
+        </div>
+      </div>
+
+      {error && (
+        <div className="error-message">
+          <p>{error}</p>
+          <button onClick={fetchNotifications} className="retry-btn">
+            Réessayer
+          </button>
+        </div>
+      )}
+
+      {notifications.length === 0 && !loading && !error ? (
+        <div className="no-notifications">
+          <FaBell className="no-notifications-icon" />
+          <h3>Aucune notification</h3>
+          <p>Vous n'avez reçu aucune notification pour le moment.</p>
+        </div>
+      ) : (
+        <>
+          <div className="notifications-list">
+            {currentNotifications.map((notification) => (
+              <div
+                key={notification._id}
+                className={`notification-item ${!notification.read ? 'unread' : ''} ${getPriorityClass(notification.priority)}`}
+                onClick={() => !notification.read && markAsRead(notification._id, notification.isAdminNotification)}
+              >
+                <div className="notification-content">
+                  <div className="notification-header">
+                    <div className="notification-type">
+                      <span className="type-icon">{getTypeIcon(notification.type)}</span>
+                      <span className="notification-title">{notification.title}</span>
+                    </div>
+                    <div className="notification-meta">
+                      <span className="notification-date">{formatDate(notification.createdAt || notification.date)}</span>
+                      {!notification.read && <span className="unread-indicator">•</span>}
+                    </div>
+                  </div>
+                  <div className="notification-message">
+                    {notification.message}
+                  </div>
+                  {notification.priority && notification.priority !== 'normal' && (
+                    <div className="notification-priority">
+                      Priorité: {notification.priority === 'high' ? 'Haute' : notification.priority === 'medium' ? 'Moyenne' : 'Basse'}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="pagination">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="pagination-btn"
+              >
+                Précédent
+              </button>
+              
+              <div className="pagination-numbers">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => handlePageChange(page)}
+                    className={`pagination-number ${currentPage === page ? 'active' : ''}`}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
+              
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="pagination-btn"
+              >
+                Suivant
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+};
+
 const DoctorDashboard = () => {
   const navigate = useNavigate();
   const [activeRoute, setActiveRoute] = useState('');
@@ -4503,6 +4672,13 @@ const DoctorDashboard = () => {
                 </span>
               )}
             </button>
+            <button 
+              className={`nav-item ${activeRoute === 'notifications' ? 'active' : ''}`}
+              onClick={() => handleNavigation('notifications')}
+            >
+              <FaBell className="nav-icon" />
+              <span className="nav-text">Notifications</span>
+            </button>
           </div>
 
           <div className="nav-section">
@@ -4540,6 +4716,7 @@ const DoctorDashboard = () => {
           <Route path="upcoming-appointments" element={<UpcomingAppointmentsView />} />
           <Route path="past-appointments" element={<PastAppointmentsView />} />
           <Route path="messages" element={<UnifiedMessagesView />} />
+          <Route path="notifications" element={<NotificationsView />} />
           <Route path="medical-reports" element={<MedicalReportsView />} />
           <Route path="articles" element={<ArticlesView />} />
         </Routes>
