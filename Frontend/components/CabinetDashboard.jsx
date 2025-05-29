@@ -3,36 +3,106 @@ import { Link, Routes, Route, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import '../styles/CabinetDashboard.css';
 import Calendar from 'react-calendar';
-import { FaUserMd, FaCalendarAlt, FaClock, FaBook, FaSignOutAlt } from 'react-icons/fa';
+import { 
+  FaUserMd, 
+  FaCalendarAlt, 
+  FaClock, 
+  FaBook, 
+  FaSignOutAlt, 
+  FaHistory, 
+  FaFileMedical,
+  FaHospital,
+  FaMapMarkerAlt,
+  FaPhone,
+  FaEnvelope,
+  FaStethoscope,
+  FaCertificate,
+  FaChartLine,
+  FaEdit,
+  FaSave,
+  FaTimes,
+  FaCheck,
+  FaHourglassHalf,
+  FaBan
+} from 'react-icons/fa';
 
 const CabinetDashboard = () => {
   const navigate = useNavigate();
+  const [activeRoute, setActiveRoute] = useState('');
 
   const handleLogout = () => {
     localStorage.clear();
     window.location.href = '/login';
   };
 
+  const handleNavigation = (route) => {
+    setActiveRoute(route);
+    navigate(route);
+  };
+
   return (
     <div className="dashboard-container">
-      <aside className="sidebar">
+      <aside className="medical-sidebar">
         <div className="sidebar-header">
-          <div className="user-info">
-            <FaUserMd size={32} style={{ marginRight: 8, color: "#038A91" }} />
-            <span className="user-role" style={{ fontSize: "1rem", fontWeight: 500, color: "#038A91" }}>Interface Cabinet</span>
+          <div className="medical-logo">
+            <div className="logo-text">
+              <h2>PatientPath</h2>
+              <span>Interface Cabinet</span>
           </div>
         </div>
-        <nav className="sidebar-menu">
-          <button className="sidebar-btn" onClick={() => navigate("")}> <FaUserMd className="icon" /> <span>Mon Profil</span> </button>
-          <button className="sidebar-btn" onClick={() => navigate("calendar")}> <FaCalendarAlt className="icon" /> <span>Calendrier</span> </button>
-          <button className="sidebar-btn" onClick={() => navigate("upcoming-appointments")}> <FaClock className="icon" /> <span>Rendez-vous à venir</span> </button>
-          <button className="sidebar-btn" onClick={() => navigate("pending-appointments")}> <FaClock className="icon" /> <span>Demandes en attente</span> </button>
-          <button className="sidebar-btn" onClick={() => navigate("past-appointments")}> <FaBook className="icon" /> <span>Historique</span> </button>
+        </div>
+
+        <nav className="sidebar-navigation">
+          <div className="nav-section">
+            <span className="nav-section-title">TABLEAU DE BORD</span>
+            <button 
+              className={`nav-item ${activeRoute === '' ? 'active' : ''}`}
+              onClick={() => handleNavigation('')}
+            >
+              <FaUserMd className="nav-icon" />
+              <span className="nav-text">Mon Profil</span>
+            </button>
+          </div>
+
+          <div className="nav-section">
+            <span className="nav-section-title">RENDEZ-VOUS</span>
+            <button 
+              className={`nav-item ${activeRoute === 'calendar' ? 'active' : ''}`}
+              onClick={() => handleNavigation('calendar')}
+            >
+              <FaCalendarAlt className="nav-icon" />
+              <span className="nav-text">Calendrier</span>
+            </button>
+            <button 
+              className={`nav-item ${activeRoute === 'upcoming-appointments' ? 'active' : ''}`}
+              onClick={() => handleNavigation('upcoming-appointments')}
+            >
+              <FaClock className="nav-icon" />
+              <span className="nav-text">Rendez-vous à venir</span>
+            </button>
+            <button 
+              className={`nav-item ${activeRoute === 'pending-appointments' ? 'active' : ''}`}
+              onClick={() => handleNavigation('pending-appointments')}
+            >
+              <FaFileMedical className="nav-icon" />
+              <span className="nav-text">Demandes en attente</span>
+            </button>
+            <button 
+              className={`nav-item ${activeRoute === 'past-appointments' ? 'active' : ''}`}
+              onClick={() => handleNavigation('past-appointments')}
+            >
+              <FaHistory className="nav-icon" />
+              <span className="nav-text">Historique</span>
+            </button>
+          </div>
         </nav>
+
+        <div className="sidebar-footer">
         <button className="logout-button" onClick={handleLogout}>
-          <FaSignOutAlt className="icon" />
-          <span>Se déconnecter</span>
+            <FaSignOutAlt className="nav-icon" />
+            <span className="nav-text">Déconnexion</span>
         </button>
+        </div>
       </aside>
       <main className="main-content">
         <Routes>
@@ -75,7 +145,6 @@ const CabinetMainView = () => {
       setStats(response.data);
     } catch (error) {
       console.error('❌ Erreur récupération statistiques:', error);
-      // Ne pas afficher d'erreur à l'utilisateur, juste utiliser les valeurs par défaut
     }
   };
 
@@ -84,7 +153,6 @@ const CabinetMainView = () => {
       const response = await axios.get(`http://localhost:5001/api/users/${cabinetId}`);
       const cabinetData = response.data;
       
-      // Si le cabinet a un médecin associé, récupérer ses informations
       if (cabinetData.linkedDoctorId) {
         const doctorResponse = await axios.get(`http://localhost:5001/api/users/${cabinetData.linkedDoctorId}`);
         cabinetData.linkedDoctor = doctorResponse.data;
@@ -128,128 +196,254 @@ const CabinetMainView = () => {
   };
 
   if (loading) {
-    return <div className="cabinet-loading">Chargement...</div>;
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Chargement des informations...</p>
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="cabinet-error">{error}</div>;
+    return (
+      <div className="error-container">
+        <FaBan className="error-icon" />
+        <h3>Erreur</h3>
+        <p>{error}</p>
+      </div>
+    );
   }
 
   return (
-    <div className="section-container">
-      <div className="profile-section">
-        <div className="profile-header">
-          <div className="profile-avatar">
-            {cabinetInfo?.nom?.charAt(0).toUpperCase()}
+    <div className="profile-container">
+      {/* Header Principal */}
+      <div className="profile-hero">
+        <div className="hero-content">
+          <div className="profile-avatar-large">
+            <FaHospital className="avatar-icon" />
           </div>
-          <div className="profile-info">
-            <h3>{cabinetInfo?.nom}</h3>
-            <p>Cabinet Médical</p>
+          <div className="profile-header-info">
+            <h1 className="cabinet-name">{cabinetInfo?.nom}</h1>
+            <p className="cabinet-type">Cabinet Médical</p>
+            <div className="profile-status">
+              <span className="status-indicator active"></span>
+              <span className="status-text">En service</span>
+            </div>
+          </div>
+          <div className="profile-actions">
             <button 
               onClick={() => setIsEditing(!isEditing)}
-              className="edit-button"
+              className={`edit-toggle-btn ${isEditing ? 'editing' : ''}`}
             >
-              {isEditing ? '❌ Annuler' : '✏️ Modifier le profil'}
+              {isEditing ? (
+                <>
+                  <FaTimes className="btn-icon" />
+                  Annuler
+                </>
+              ) : (
+                <>
+                  <FaEdit className="btn-icon" />
+                  Modifier
+                </>
+              )}
             </button>
+          </div>
           </div>
         </div>
 
-        <div className="profile-details">
+      {/* Contenu Principal */}
+      <div className="profile-content">
           {isEditing ? (
-            <form onSubmit={handleSubmit} className="edit-form">
-              <div className="profile-card">
-                <h4>🏥 Informations du Cabinet</h4>
-                <div className="form-group">
-                  <label>Nom du cabinet:</label>
+          // Mode Édition
+          <form onSubmit={handleSubmit} className="edit-form-modern">
+            <div className="form-card">
+              <div className="form-card-header">
+                <FaHospital className="card-icon" />
+                <h3>Informations du Cabinet</h3>
+              </div>
+              <div className="form-grid">
+                <div className="form-field">
+                  <label>
+                    <FaHospital className="field-icon" />
+                    Nom du cabinet
+                  </label>
                   <input
                     type="text"
                     name="nom"
-                    value={editedInfo.nom}
+                    value={editedInfo?.nom || ''}
                     onChange={handleInputChange}
+                    placeholder="Nom du cabinet médical"
                     required
                   />
                 </div>
-                <div className="form-group">
-                  <label>Adresse:</label>
+                <div className="form-field">
+                  <label>
+                    <FaMapMarkerAlt className="field-icon" />
+                    Adresse
+                  </label>
                   <input
                     type="text"
                     name="adresse"
-                    value={editedInfo.adresse}
+                    value={editedInfo?.adresse || ''}
                     onChange={handleInputChange}
+                    placeholder="Adresse complète"
                     required
                   />
                 </div>
-                <div className="form-group">
-                  <label>Téléphone:</label>
+                <div className="form-field">
+                  <label>
+                    <FaPhone className="field-icon" />
+                    Téléphone
+                  </label>
                   <input
                     type="tel"
                     name="telephone"
-                    value={editedInfo.telephone}
+                    value={editedInfo?.telephone || ''}
                     onChange={handleInputChange}
+                    placeholder="+216 XX XXX XXX"
                     required
                   />
                 </div>
-                <div className="form-group">
-                  <label>Email:</label>
+                <div className="form-field">
+                  <label>
+                    <FaEnvelope className="field-icon" />
+                    Email
+                  </label>
                   <input
                     type="email"
                     name="email"
-                    value={editedInfo.email}
+                    value={editedInfo?.email || ''}
                     onChange={handleInputChange}
+                    placeholder="cabinet@email.com"
                     required
                   />
                 </div>
-                <button type="submit" className="save-button">
-                  💾 Enregistrer les modifications
+              </div>
+              <div className="form-actions">
+                <button type="submit" className="save-btn">
+                  <FaSave className="btn-icon" />
+                  Enregistrer les modifications
                 </button>
+              </div>
               </div>
             </form>
           ) : (
-            <>
-              <div className="profile-card">
-                <h4>🏥 Informations du Cabinet</h4>
-                <p>📍 Adresse: {cabinetInfo?.adresse}</p>
-                <p>📞 Téléphone: {cabinetInfo?.telephone}</p>
-                <p>📧 Email: {cabinetInfo?.email}</p>
+          // Mode Affichage
+          <div className="profile-grid">
+            {/* Informations du Cabinet */}
+            <div className="info-card compact">
+              <div className="card-header">
+                <FaHospital className="card-icon" />
+                <h3>Informations du Cabinet</h3>
+              </div>
+              <div className="card-content">
+                <div className="info-item">
+                  <FaMapMarkerAlt className="info-icon" />
+                  <div className="info-details">
+                    <span className="info-label">Adresse</span>
+                    <span className="info-value">{cabinetInfo?.adresse}</span>
+                  </div>
+                </div>
+                <div className="info-item">
+                  <FaPhone className="info-icon" />
+                  <div className="info-details">
+                    <span className="info-label">Téléphone</span>
+                    <span className="info-value">{cabinetInfo?.telephone}</span>
+                  </div>
+                </div>
+                <div className="info-item">
+                  <FaEnvelope className="info-icon" />
+                  <div className="info-details">
+                    <span className="info-label">Email</span>
+                    <span className="info-value">{cabinetInfo?.email}</span>
+                  </div>
+                </div>
+                {cabinetInfo?.linkedDoctor && (
+                  <div className="info-item">
+                    <FaStethoscope className="info-icon" />
+                    <div className="info-details">
+                      <span className="info-label">Médecin Associé</span>
+                      <span className="info-value">Dr. {cabinetInfo.linkedDoctor.nom} {cabinetInfo.linkedDoctor.prenom}</span>
+                      <span className="info-specialty">{cabinetInfo.linkedDoctor.specialty}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
               </div>
 
-              <div className="profile-card">
-                <h4>👨‍⚕️ Médecin Associé</h4>
-                <p>Dr. {cabinetInfo?.linkedDoctor?.nom} {cabinetInfo?.linkedDoctor?.prenom}</p>
-                <p>Spécialité: {cabinetInfo?.linkedDoctor?.specialty}</p>
+            {/* Horaires d'ouverture */}
+            <div className="info-card">
+              <div className="card-header">
+                <FaClock className="card-icon" />
+                <h3>Horaires d'ouverture</h3>
               </div>
-
-              <div className="profile-card">
-                <h4>⏰ Horaires d'ouverture</h4>
-                <p>Lundi - Vendredi: 9h00 - 18h00</p>
-                <p>Samedi: 9h00 - 12h00</p>
-                <p>Dimanche: Fermé</p>
-              </div>
-
-              <div className="profile-card stats-card">
-                <h4>📊 Statistiques</h4>
-                <div className="stats-grid">
-                  <div className="stat-item">
-                    <div className="stat-value">{stats.totalAppointments || 0}</div>
-                    <div className="stat-label">Total Rendez-vous</div>
+              <div className="card-content">
+                <div className="schedule-list">
+                  <div className="schedule-item">
+                    <span className="schedule-day">Lundi - Vendredi</span>
+                    <span className="schedule-time">9h00 - 18h00</span>
                   </div>
-                  <div className="stat-item">
-                    <div className="stat-value">{stats.pendingAppointments || 0}</div>
-                    <div className="stat-label">En attente</div>
+                  <div className="schedule-item">
+                    <span className="schedule-day">Samedi</span>
+                    <span className="schedule-time">9h00 - 12h00</span>
                   </div>
-                  <div className="stat-item">
-                    <div className="stat-value">{stats.completedAppointments || 0}</div>
-                    <div className="stat-label">Terminés</div>
-                  </div>
-                  <div className="stat-item">
-                    <div className="stat-value">{stats.cancelledAppointments || 0}</div>
-                    <div className="stat-label">Annulés</div>
+                  <div className="schedule-item closed">
+                    <span className="schedule-day">Dimanche</span>
+                    <span className="schedule-time">-Fermé</span>
                   </div>
                 </div>
               </div>
-            </>
-          )}
+              </div>
+
+            {/* Statistiques */}
+            <div className="info-card stats-card-modern">
+              <div className="card-header">
+                <FaChartLine className="card-icon" />
+                <h3>Statistiques des rendez-vous</h3>
+                  </div>
+              <div className="card-content">
+                <div className="stats-grid-modern">
+                  <div className="stat-item-modern total">
+                    <div className="stat-icon">
+                      <FaCalendarAlt />
+                  </div>
+                    <div className="stat-content">
+                      <span className="stat-number">{stats.totalAppointments || 0}</span>
+                      <span className="stat-label">Total</span>
+                  </div>
+                  </div>
+                  <div className="stat-item-modern pending">
+                    <div className="stat-icon">
+                      <FaHourglassHalf />
+                </div>
+                    <div className="stat-content">
+                      <span className="stat-number">{stats.pendingAppointments || 0}</span>
+                      <span className="stat-label">En attente</span>
+              </div>
         </div>
+                  <div className="stat-item-modern completed">
+                    <div className="stat-icon">
+                      <FaCheck />
+                    </div>
+                    <div className="stat-content">
+                      <span className="stat-number">{stats.completedAppointments || 0}</span>
+                      <span className="stat-label">Terminés</span>
+                    </div>
+                  </div>
+                  <div className="stat-item-modern cancelled">
+                    <div className="stat-icon">
+                      <FaBan />
+                    </div>
+                    <div className="stat-content">
+                      <span className="stat-number">{stats.cancelledAppointments || 0}</span>
+                      <span className="stat-label">Annulés</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -264,6 +458,7 @@ const PendingAppointmentsView = () => {
   const [appointmentDate, setAppointmentDate] = useState('');
   const [requiredDocuments, setRequiredDocuments] = useState('');
   const [cabinetInfo, setCabinetInfo] = useState(null);
+  const [expandedCards, setExpandedCards] = useState(new Set());
 
   useEffect(() => {
     const cabinetId = localStorage.getItem('userId');
@@ -305,6 +500,18 @@ const PendingAppointmentsView = () => {
       setError('Impossible de charger les rendez-vous');
       setLoading(false);
     }
+  };
+
+  const toggleCardExpansion = (appointmentId) => {
+    setExpandedCards(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(appointmentId)) {
+        newSet.delete(appointmentId);
+      } else {
+        newSet.add(appointmentId);
+      }
+      return newSet;
+    });
   };
 
   const handleStatusChange = async (appointmentId, newStatus) => {
@@ -365,32 +572,105 @@ const PendingAppointmentsView = () => {
   }
 
   return (
-    <div className="section-container">
       <div className="pending-appointments-view">
-        <div className="section-header">
-          <h2>⏳ Demandes en attente</h2>
+      {/* Header moderne avec statistiques */}
+      <div className="pending-header">
+        <div className="pending-header-content">
+          <div className="pending-header-title">
+            <FaHourglassHalf className="pending-header-icon" />
+            <div>
+              <h1>Demandes en attente</h1>
+              <p>Gestion des demandes de rendez-vous</p>
+            </div>
+          </div>
+          <div className="pending-header-stats">
+            <div className="pending-stat-badge">
+              <FaClock className="pending-stat-icon" />
+              <span className="pending-stat-number">{appointments.length}</span>
+              <span className="pending-stat-label">En attente</span>
+            </div>
+          </div>
+        </div>
       </div>
 
+      {/* Contenu principal */}
+      <div className="pending-content">
         {appointments.length === 0 ? (
-          <div className="no-appointments">
-            <p>Aucune demande en attente</p>
+          <div className="empty-state">
+            <div className="empty-icon">
+              <FaHourglassHalf />
+            </div>
+            <h3>Aucune demande en attente</h3>
+            <p>Toutes les demandes de rendez-vous apparaîtront ici</p>
           </div>
         ) : (
           <div className="pending-appointments-grid">
-            {appointments.map(appointment => (
-              <div key={appointment._id} className="appointment-card pending">
-                <div className="appointment-header">
-                  <h3>👤 {appointment.patient?.prenom} {appointment.patient?.nom}</h3>
-                  <span className="appointment-date">
-                    🗓️ Demande reçue le: {formatDate(appointment.date)}
-                  </span>
+            {appointments.map(appointment => {
+              const isExpanded = expandedCards.has(appointment._id);
+              return (
+                <div 
+                  key={appointment._id} 
+                  className={`appointment-card-pending ${isExpanded ? 'expanded' : ''}`}
+                  onClick={(e) => {
+                    // Ne pas déclencher l'expansion si on clique sur un bouton
+                    if (!e.target.closest('.appointment-actions')) {
+                      toggleCardExpansion(appointment._id);
+                    }
+                  }}
+                >
+                  <div className="pending-card-header">
+                    <div className="pending-time-badge">
+                      <span className="pending-label">Demande reçue</span>
+                      <span className="pending-date">{formatDate(appointment.date)}</span>
                 </div>
-                <div className="appointment-details">
-                  <p>📧 {appointment.patient?.email}</p>
-                  <p>📞 {appointment.patient?.telephone}</p>
-                  {appointment.reason && <p>📝 {appointment.reason}</p>}
+                    <div className="pending-status-badge">
+                      En attente
                 </div>
-                <div className="appointment-actions">
+                  </div>
+
+                  <div className="pending-card-body">
+                    <div className="patient-section-compact">
+                      <div className="patient-avatar pending">
+                        <FaUserMd />
+                      </div>
+                      <div className="patient-info-compact">
+                        <h3 className="patient-name">
+                          {appointment.patient?.prenom} {appointment.patient?.nom}
+                        </h3>
+                        <div className="expand-indicator">
+                          {isExpanded ? 'Cliquez pour réduire' : 'Cliquez pour voir les détails'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {isExpanded && (
+                      <div className="expanded-details">
+                        <div className="contact-info">
+                          <div className="contact-item">
+                            <FaPhone className="contact-icon" />
+                            <span>{appointment.patient?.telephone}</span>
+                          </div>
+                          <div className="contact-item">
+                            <FaEnvelope className="contact-icon" />
+                            <span>{appointment.patient?.email}</span>
+                          </div>
+                        </div>
+
+                        {appointment.reason && (
+                          <div className="reason-section">
+                            <div className="reason-header">
+                              <FaStethoscope className="reason-icon" />
+                              <span className="reason-label">Motif de consultation</span>
+                            </div>
+                            <p className="reason-text">{appointment.reason}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pending-card-footer">
+                    <div className="appointment-actions" onClick={e => e.stopPropagation()}>
                   <button
                     className="action-button accept-button"
                     onClick={() => {
@@ -408,9 +688,12 @@ const PendingAppointmentsView = () => {
                   </button>
                 </div>
               </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         )}
+      </div>
 
       {showPlanningForm && selectedAppointment && (
         <div className="planning-modal">
@@ -455,7 +738,6 @@ const PendingAppointmentsView = () => {
           </div>
         </div>
       )}
-      </div>
     </div>
   );
 };
@@ -467,6 +749,8 @@ const CalendarView = () => {
   const [linkedDoctorId, setLinkedDoctorId] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [dayAppointments, setDayAppointments] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const appointmentsPerPage = 2;
 
   useEffect(() => {
     const cabinetId = localStorage.getItem('userId');
@@ -509,6 +793,11 @@ const CalendarView = () => {
     }
   }, [selectedDate, appointments]);
 
+  useEffect(() => {
+    // Reset la pagination quand on change de date
+    setCurrentPage(1);
+  }, [selectedDate]);
+
   const filterAppointmentsByDate = (date) => {
     const filtered = appointments.filter(apt => {
       const aptDate = new Date(apt.date);
@@ -527,19 +816,55 @@ const CalendarView = () => {
     });
   };
 
+  const formatTime = (date) => {
+    return new Date(date).toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'confirmed': return '✅ Confirmé';
+      case 'pending': return '⏳ En attente';
+      case 'cancelled': return '❌ Annulé';
+      case 'completed': return '✅ Terminé';
+      default: return status;
+    }
+  };
+
+  const getStatusClass = (status) => {
+    switch (status) {
+      case 'confirmed': return 'status-confirmed';
+      case 'pending': return 'status-pending';
+      case 'cancelled': return 'status-cancelled';
+      case 'completed': return 'status-confirmed';
+      default: return '';
+    }
+  };
+
+  // Pagination logic
+  const totalPages = Math.ceil(dayAppointments.length / appointmentsPerPage);
+  const indexOfFirstAppointment = (currentPage - 1) * appointmentsPerPage;
+  const indexOfLastAppointment = indexOfFirstAppointment + appointmentsPerPage;
+  const currentAppointments = dayAppointments.slice(indexOfFirstAppointment, indexOfLastAppointment);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+
   if (loading) return <div className="loading">Chargement...</div>;
   if (error) return <div className="error" style={{ color: 'red' }}>{error}</div>;
 
   return (
-    <div className="calendar-view">
-      <h2>📅 Calendrier des rendez-vous</h2>
+    <div className="calendar-view" style={{ color: '#000000' }}>
       <div className="calendar-container">
         <div className="calendar-wrapper">
           <Calendar
             onChange={setSelectedDate}
             value={selectedDate}
             locale="fr-FR"
-            className="custom-calendar"
+            className="react-calendar"
             navigationLabel={({ date }) => {
               return date.toLocaleString('fr-FR', { month: 'long', year: 'numeric' });
             }}
@@ -571,11 +896,12 @@ const CalendarView = () => {
               <p>Aucun rendez-vous prévu pour cette date</p>
             </div>
           ) : (
+            <>
             <div className="appointment-list">
-              {dayAppointments.map(apt => (
+                {currentAppointments.map(apt => (
                 <div key={apt._id} className="appointment-item">
                   <div className="appointment-time">
-                    {formatDate(apt.date)}
+                      {formatTime(apt.date)}
                   </div>
                   <div className="appointment-patient">
                     <strong>{apt.patient?.prenom} {apt.patient?.nom}</strong>
@@ -587,13 +913,64 @@ const CalendarView = () => {
                       📝 {apt.reason}
                     </div>
                   )}
-                  <span className={`appointment-status ${apt.status}`}>
-                    {apt.status === 'confirmed' ? '✅ Confirmé' : 
-                     apt.status === 'pending' ? '⏳ En attente' : '❌ Annulé'}
+                    <span className={`appointment-status ${getStatusClass(apt.status)}`}>
+                      {getStatusText(apt.status)}
                   </span>
                 </div>
               ))}
-            </div>
+              </div>
+
+              {totalPages > 1 && (
+                <div className="pagination-controls" style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  marginTop: '1rem',
+                  padding: '1rem'
+                }}>
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      border: '1px solid #e0e0e0',
+                      borderRadius: '6px',
+                      background: currentPage === 1 ? '#f5f5f5' : '#ffffff',
+                      color: currentPage === 1 ? '#999' : '#333',
+                      cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                      fontSize: '0.9rem'
+                    }}
+                  >
+                    ← Précédent
+                  </button>
+                  
+                  <span style={{
+                    padding: '0.5rem 1rem',
+                    color: '#666',
+                    fontSize: '0.9rem'
+                  }}>
+                    Page {currentPage} sur {totalPages}
+                  </span>
+                  
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      border: '1px solid #e0e0e0',
+                      borderRadius: '6px',
+                      background: currentPage === totalPages ? '#f5f5f5' : '#ffffff',
+                      color: currentPage === totalPages ? '#999' : '#333',
+                      cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                      fontSize: '0.9rem'
+                    }}
+                  >
+                    Suivant →
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -606,6 +983,10 @@ const UpcomingAppointmentsView = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [cabinetInfo, setCabinetInfo] = useState(null);
+  const [sortBy, setSortBy] = useState('date'); // 'date', 'patient'
+  const [currentPage, setCurrentPage] = useState(1);
+  const [expandedCards, setExpandedCards] = useState(new Set());
+  const appointmentsPerPage = 5;
 
   useEffect(() => {
     const cabinetId = localStorage.getItem('userId');
@@ -651,6 +1032,18 @@ const UpcomingAppointmentsView = () => {
     }
   };
 
+  const toggleCardExpansion = (appointmentId) => {
+    setExpandedCards(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(appointmentId)) {
+        newSet.delete(appointmentId);
+      } else {
+        newSet.add(appointmentId);
+      }
+      return newSet;
+    });
+  };
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleString('fr-FR', {
       day: '2-digit',
@@ -661,49 +1054,270 @@ const UpcomingAppointmentsView = () => {
     });
   };
 
+  const formatTimeOnly = (dateString) => {
+    return new Date(dateString).toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const formatDateOnly = (dateString) => {
+    return new Date(dateString).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
+  const getTimeUntilAppointment = (dateString) => {
+    const appointmentDate = new Date(dateString);
+    const now = new Date();
+    const diffMs = appointmentDate - now;
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      return "Aujourd'hui";
+    } else if (diffDays === 1) {
+      return "Demain";
+    } else if (diffDays <= 7) {
+      return `Dans ${diffDays} jours`;
+    } else {
+      return `Dans ${diffDays} jours`;
+    }
+  };
+
+  const sortedAppointments = [...appointments].sort((a, b) => {
+    if (sortBy === 'date') {
+      return new Date(a.date) - new Date(b.date);
+    } else {
+      return `${a.patient?.nom} ${a.patient?.prenom}`.localeCompare(`${b.patient?.nom} ${b.patient?.prenom}`);
+    }
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(sortedAppointments.length / appointmentsPerPage);
+  const indexOfFirstAppointment = (currentPage - 1) * appointmentsPerPage;
+  const indexOfLastAppointment = indexOfFirstAppointment + appointmentsPerPage;
+  const currentAppointments = sortedAppointments.slice(indexOfFirstAppointment, indexOfLastAppointment);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+
   if (loading) {
-    return <div className="cabinet-loading">Chargement...</div>;
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Chargement des rendez-vous...</p>
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="cabinet-error">{error}</div>;
+    return (
+      <div className="error-container">
+        <FaBan className="error-icon" />
+        <h3>Erreur</h3>
+        <p>{error}</p>
+      </div>
+    );
   }
 
   return (
-    <div className="section-container">
-      <div className="upcoming-appointments-view">
-        <div className="section-header">
-          <h2>📅 Rendez-vous à venir</h2>
+    <div className="upcoming-appointments-container">
+      {/* Header moderne avec statistiques */}
+      <div className="upcoming-header">
+        <div className="header-content">
+          <div className="header-title">
+            <FaCalendarAlt className="header-icon" />
+            <div>
+              <h1>Rendez-vous à venir</h1>
+              <p>Gestion des consultations confirmées</p>
+            </div>
+          </div>
+          <div className="header-stats">
+            <div className="stat-badge">
+              <FaCheck className="stat-icon" />
+              <span className="stat-number">{appointments.length}</span>
+              <span className="stat-label">Confirmés</span>
+            </div>
+          </div>
         </div>
 
+        {/* Contrôles de tri et filtres */}
+        {appointments.length > 0 && (
+          <div className="controls-bar">
+            <div className="sort-controls">
+              <label>Trier par :</label>
+              <select 
+                value={sortBy} 
+                onChange={(e) => setSortBy(e.target.value)}
+                className="sort-select"
+              >
+                <option value="date">Date</option>
+                <option value="patient">Patient</option>
+              </select>
+            </div>
+            <div className="view-info">
+              <span>{appointments.length} rendez-vous au total</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Contenu principal */}
+      <div className="upcoming-content">
         {appointments.length === 0 ? (
-          <div className="no-appointments">
-            <p>Aucun rendez-vous confirmé pour le moment</p>
+          <div className="empty-state">
+            <div className="empty-icon">
+              <FaCalendarAlt />
+            </div>
+            <h3>Aucun rendez-vous à venir</h3>
+            <p>Tous les rendez-vous confirmés apparaîtront ici</p>
           </div>
         ) : (
-          <div className="upcoming-appointments-grid">
-            {appointments.map(appointment => (
-              <div key={appointment._id} className="appointment-card upcoming">
-                <div className="appointment-header">
-                  <h3>👤 {appointment.patient?.prenom} {appointment.patient?.nom}</h3>
-                  <span className="appointment-date">
-                    🗓️ {formatDate(appointment.date)}
-                  </span>
+          <>
+            <div className="appointments-grid-modern">
+              {currentAppointments.map(appointment => {
+                const isExpanded = expandedCards.has(appointment._id);
+                return (
+                  <div 
+                    key={appointment._id} 
+                    className={`appointment-card-modern upcoming ${isExpanded ? 'expanded' : ''}`}
+                    onClick={() => toggleCardExpansion(appointment._id)}
+                  >
+                    <div className="card-header-modern">
+                      <div className="appointment-time-badge">
+                        <FaClock className="time-icon" />
+                        <div className="time-details">
+                          <span className="time">{formatTimeOnly(appointment.date)}</span>
+                          <span className="date">{formatDateOnly(appointment.date)}</span>
                 </div>
-                <div className="appointment-details">
-                  <p>📧 {appointment.patient?.email}</p>
-                  <p>📞 {appointment.patient?.telephone}</p>
-                  {appointment.reason && <p>📝 {appointment.reason}</p>}
+                      </div>
+                      <div className="urgency-badge">
+                        {getTimeUntilAppointment(appointment.date)}
+                      </div>
+                    </div>
+
+                    <div className="card-body-modern">
+                      <div className="patient-section-compact">
+                        <div className="patient-avatar">
+                          <FaUserMd />
+                        </div>
+                        <div className="patient-info-compact">
+                          <h3 className="patient-name">
+                            {appointment.patient?.prenom} {appointment.patient?.nom}
+                          </h3>
+                          <div className="expand-indicator">
+                            {isExpanded ? 'Cliquez pour réduire' : 'Cliquez pour voir les détails'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {isExpanded && (
+                        <div className="expanded-details">
+                          <div className="contact-info">
+                            <div className="contact-item">
+                              <FaPhone className="contact-icon" />
+                              <span>{appointment.patient?.telephone}</span>
+                            </div>
+                            <div className="contact-item">
+                              <FaEnvelope className="contact-icon" />
+                              <span>{appointment.patient?.email}</span>
+                            </div>
+                          </div>
+
+                          {appointment.reason && (
+                            <div className="reason-section">
+                              <div className="reason-header">
+                                <FaStethoscope className="reason-icon" />
+                                <span className="reason-label">Motif de consultation</span>
+                              </div>
+                              <p className="reason-text">{appointment.reason}</p>
+                            </div>
+                          )}
+
                   {appointment.requiredDocuments && (
-                    <p>📄 Documents requis: {appointment.requiredDocuments}</p>
+                            <div className="documents-section">
+                              <div className="documents-header">
+                                <FaFileMedical className="documents-icon" />
+                                <span className="documents-label">Documents requis</span>
+                              </div>
+                              <p className="documents-text">{appointment.requiredDocuments}</p>
+                            </div>
                   )}
                 </div>
-                <div className="appointment-status status-confirmed">
-                  ✅ Rendez-vous confirmé
-                </div>
+                      )}
+                    </div>
+
+                    <div className="card-footer-modern">
+                      <div className="status-section">
+                        <div className="status-badge-modern confirmed">
+                          <FaCheck className="status-icon" />
+                          <span>Confirmé</span>
               </div>
-            ))}
-          </div>
+                      </div>
+                      <div className="appointment-id">
+                        <span>#{appointment._id.slice(-6)}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="pagination-controls" style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '0.5rem',
+                marginTop: '1rem',
+                padding: '1rem'
+              }}>
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '6px',
+                    background: currentPage === 1 ? '#f5f5f5' : '#ffffff',
+                    color: currentPage === 1 ? '#999' : '#333',
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    fontSize: '0.9rem'
+                  }}
+                >
+                  ← Précédent
+                </button>
+                
+                <span style={{
+                  padding: '0.5rem 1rem',
+                  color: '#666',
+                  fontSize: '0.9rem'
+                }}>
+                  Page {currentPage} sur {totalPages}
+                </span>
+                
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '6px',
+                    background: currentPage === totalPages ? '#f5f5f5' : '#ffffff',
+                    color: currentPage === totalPages ? '#999' : '#333',
+                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                    fontSize: '0.9rem'
+                  }}
+                >
+                  Suivant →
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -715,12 +1329,11 @@ const PastAppointmentsView = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [cabinetInfo, setCabinetInfo] = useState(null);
-  const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'completed', 'cancelled'
+  const [filterStatus, setFilterStatus] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [dateRange, setDateRange] = useState({
-    start: '',
-    end: ''
-  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [expandedCards, setExpandedCards] = useState(new Set());
+  const appointmentsPerPage = 5;
 
   useEffect(() => {
     const cabinetId = localStorage.getItem('userId');
@@ -734,11 +1347,9 @@ const PastAppointmentsView = () => {
       const response = await axios.get(`http://localhost:5001/api/users/${cabinetId}`);
       const cabinetData = response.data;
       
-      // Si le cabinet a un médecin associé, récupérer ses informations
       if (cabinetData.linkedDoctorId) {
         const doctorResponse = await axios.get(`http://localhost:5001/api/users/${cabinetData.linkedDoctorId}`);
         cabinetData.linkedDoctor = doctorResponse.data;
-        // Récupérer les rendez-vous du médecin
         await fetchDoctorAppointments(cabinetData.linkedDoctorId);
       }
       
@@ -754,11 +1365,10 @@ const PastAppointmentsView = () => {
   const fetchDoctorAppointments = async (doctorId) => {
     try {
       const response = await axios.get(`http://localhost:5001/api/doctor/appointments/${doctorId}`);
-      // Filtrer les rendez-vous passés
       const pastAppointments = response.data.filter(apt => {
         const appointmentDate = new Date(apt.date);
         return appointmentDate < new Date();
-      });
+      }).sort((a, b) => new Date(b.date) - new Date(a.date)); // Tri du plus récent au plus ancien
       setAppointments(pastAppointments);
       setLoading(false);
     } catch (error) {
@@ -768,11 +1378,28 @@ const PastAppointmentsView = () => {
     }
   };
 
+  const toggleCardExpansion = (appointmentId) => {
+    setExpandedCards(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(appointmentId)) {
+        newSet.delete(appointmentId);
+      } else {
+        newSet.add(appointmentId);
+      }
+      return newSet;
+    });
+  };
+
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString('fr-FR', {
+    return new Date(dateString).toLocaleDateString('fr-FR', {
       day: '2-digit',
       month: '2-digit',
-      year: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const formatTime = (dateString) => {
+    return new Date(dateString).toLocaleTimeString('fr-FR', {
       hour: '2-digit',
       minute: '2-digit'
     });
@@ -781,13 +1408,13 @@ const PastAppointmentsView = () => {
   const getStatusBadge = (status) => {
     switch (status) {
       case 'completed':
-        return <span className="status-badge completed">✅ Terminé</span>;
+        return { text: 'Terminé', class: 'status-completed', icon: '✅' };
       case 'cancelled':
-        return <span className="status-badge cancelled">❌ Annulé</span>;
+        return { text: 'Annulé', class: 'status-cancelled', icon: '❌' };
       case 'no-show':
-        return <span className="status-badge no-show">⏰ Non présenté</span>;
+        return { text: 'Non présenté', class: 'status-no-show', icon: '⚠️' };
       default:
-        return <span className="status-badge unknown">❓ Inconnu</span>;
+        return { text: 'Inconnu', class: 'status-unknown', icon: '❓' };
     }
   };
 
@@ -795,104 +1422,221 @@ const PastAppointmentsView = () => {
     const matchesStatus = filterStatus === 'all' || apt.status === filterStatus;
     const matchesSearch = searchTerm === '' || 
       apt.patient?.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      apt.patient?.prenom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      apt.patient?.email?.toLowerCase().includes(searchTerm.toLowerCase());
+      apt.patient?.prenom?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const appointmentDate = new Date(apt.date);
-    const matchesDateRange = (!dateRange.start || appointmentDate >= new Date(dateRange.start)) &&
-                            (!dateRange.end || appointmentDate <= new Date(dateRange.end));
-
-    return matchesStatus && matchesSearch && matchesDateRange;
+    return matchesStatus && matchesSearch;
   });
 
+  // Pagination
+  const totalPages = Math.ceil(filteredAppointments.length / appointmentsPerPage);
+  const indexOfFirstAppointment = (currentPage - 1) * appointmentsPerPage;
+  const indexOfLastAppointment = indexOfFirstAppointment + appointmentsPerPage;
+  const currentAppointments = filteredAppointments.slice(indexOfFirstAppointment, indexOfLastAppointment);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+    // Scroll vers le haut lors du changement de page
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus, searchTerm]);
+
   if (loading) {
-    return <div className="cabinet-loading">Chargement...</div>;
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Chargement...</p>
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="cabinet-error">{error}</div>;
+    return (
+      <div className="error-container">
+        <FaBan className="error-icon" />
+        <h3>Erreur</h3>
+        <p>{error}</p>
+      </div>
+    );
   }
 
   return (
-    <div className="past-appointments-view">
-      <div className="history-header">
-        <h2>📚 Historique des rendez-vous</h2>
-        
-        <div className="filters-container">
-          <div className="search-box">
+    <div className="history-table-view">
+      {/* Header moderne */}
+      <div className="table-header">
+        <div className="header-title">
+          <FaHistory className="header-icon" />
+          <div>
+            <h1>Historique des rendez-vous <span style={{fontSize: '0.875rem', color: '#6b7280', fontWeight: 400, marginLeft: '1rem'}}>{appointments.length} consultations au total</span></h1>
+          </div>
+        </div>
+      </div>
+
+      {/* Contrôles de filtrage */}
+      <div className="table-controls">
+        <div className="search-group">
+          <FaUserMd className="search-icon" />
             <input
               type="text"
               placeholder="Rechercher un patient..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="search-input"
+            className="table-search"
             />
           </div>
-
-          <div className="filter-group">
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="status-filter"
+          className="table-filter"
             >
               <option value="all">Tous les statuts</option>
               <option value="completed">Terminés</option>
               <option value="cancelled">Annulés</option>
               <option value="no-show">Non présentés</option>
             </select>
-
-            <div className="date-range">
-              <input
-                type="date"
-                value={dateRange.start}
-                onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                className="date-input"
-              />
-              <span>à</span>
-              <input
-                type="date"
-                value={dateRange.end}
-                onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                className="date-input"
-              />
+        <div className="results-count">
+          {filteredAppointments.length} résultat(s)
             </div>
           </div>
-        </div>
-      </div>
 
-      {filteredAppointments.length === 0 ? (
-        <div className="no-appointments">
-          <p>Aucun rendez-vous trouvé dans l'historique</p>
+      {/* Tableau moderne */}
+      <div className="table-container">
+        {filteredAppointments.length === 0 ? (
+          <div className="table-empty">
+            <FaHistory className="empty-icon" />
+            <h3>Aucun rendez-vous trouvé</h3>
+            <p>Essayez de modifier vos critères de recherche</p>
         </div>
-      ) : (
-        <div className="appointments-grid">
-          {filteredAppointments.map(appointment => (
-            <div key={appointment._id} className="appointment-card past">
-              <div className="appointment-header">
-                <h3>👤 Patient: {appointment.patient?.prenom} {appointment.patient?.nom}</h3>
-                <span className="appointment-date">
-                  🗓️ {formatDate(appointment.date)}
-                </span>
-              </div>
-              <div className="appointment-details">
-                <p>📧 Email: {appointment.patient?.email}</p>
-                <p>📞 Téléphone: {appointment.patient?.telephone}</p>
-                {appointment.reason && <p>📝 Motif: {appointment.reason}</p>}
-                {appointment.notes && <p>📋 Notes: {appointment.notes}</p>}
-              </div>
-              <div className="appointment-footer">
-                {getStatusBadge(appointment.status)}
-                {appointment.requiredDocuments && (
-                  <div className="documents-list">
-                    <p>📄 Documents requis:</p>
-                    <p>{appointment.requiredDocuments}</p>
+        ) : (
+          <>
+            {/* Liste simple des cartes d'historique */}
+            <div className="history-cards-grid">
+              {currentAppointments.map((appointment, index) => {
+                const status = getStatusBadge(appointment.status);
+                const isExpanded = expandedCards.has(appointment._id);
+                return (
+                  <div 
+                    key={appointment._id} 
+                    className={`history-appointment-card ${status.class.replace('status-', '')} ${isExpanded ? 'expanded' : ''}`}
+                    onClick={() => toggleCardExpansion(appointment._id)}
+                  >
+                    {/* Contenu simple en une ligne */}
+                    <div className="history-card-content">
+                      {/* Date et heure */}
+                      <div className="history-datetime">
+                        <div className="history-time-simple">{formatTime(appointment.date)}</div>
+                        <div className="history-date-simple">{formatDate(appointment.date)}</div>
+                      </div>
+
+                      {/* Informations patient */}
+                      <div className="history-patient-simple">
+                        <div className="history-patient-name-simple">
+                          {appointment.patient?.prenom} {appointment.patient?.nom}
+                        </div>
+                        <div className="history-patient-contact-simple">
+                          📞 {appointment.patient?.telephone}
+                        </div>
+                      </div>
+
+                      {/* Motif de consultation */}
+                      <div className="history-reason-simple">
+                        {appointment.reason ? (
+                          <span>{appointment.reason}</span>
+                        ) : (
+                          <span className="history-reason-empty-simple">Non spécifié</span>
+                        )}
+                      </div>
+
+                      {/* Statut */}
+                      <div className={`history-status-simple ${status.class.replace('status-', '')}`}>
+                        {status.text}
+                      </div>
+                    </div>
+
+                    {/* Détails expandus */}
+                    {isExpanded && (
+                      <div className="history-expanded-simple">
+                        <div className="history-contact-row">
+                          <div className="history-contact-item-simple">
+                            <FaPhone className="history-contact-icon-simple" />
+                            <span>{appointment.patient?.telephone}</span>
+                          </div>
+                          <div className="history-contact-item-simple">
+                            <FaEnvelope className="history-contact-icon-simple" />
+                            <span>{appointment.patient?.email}</span>
+                          </div>
+                        </div>
+
+                        {appointment.reason && (
+                          <div className="history-reason-expanded">
+                            <div className="history-reason-label-simple">Motif de consultation</div>
+                            <div className="history-reason-text-simple">{appointment.reason}</div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                );
+              })}
             </div>
-          ))}
-        </div>
+
+            {/* Pagination moderne complète */}
+            {totalPages > 1 && (
+              <div className="pagination-controls" style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '0.5rem',
+                marginTop: '1rem',
+                padding: '1rem'
+              }}>
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '6px',
+                    background: currentPage === 1 ? '#f5f5f5' : '#ffffff',
+                    color: currentPage === 1 ? '#999' : '#333',
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    fontSize: '0.9rem'
+                  }}
+                >
+                  ← Précédent
+                </button>
+                
+                <span style={{
+                  padding: '0.5rem 1rem',
+                  color: '#666',
+                  fontSize: '0.9rem'
+                }}>
+                  Page {currentPage} sur {totalPages}
+                </span>
+                
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '6px',
+                    background: currentPage === totalPages ? '#f5f5f5' : '#ffffff',
+                    color: currentPage === totalPages ? '#999' : '#333',
+                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                    fontSize: '0.9rem'
+                  }}
+                >
+                  Suivant →
+                </button>
+              </div>
+            )}
+          </>
       )}
+      </div>
     </div>
   );
 };

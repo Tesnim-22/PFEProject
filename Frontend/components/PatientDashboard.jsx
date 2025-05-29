@@ -391,6 +391,13 @@ const PatientDashboard = () => {
     useEffect(() => {
     const storedId = localStorage.getItem('userId');
     console.log('📱 Stored userId:', storedId);
+    
+    // Debug: Afficher l'état du localStorage pour les notifications
+    const readNotifications = JSON.parse(localStorage.getItem(`readNotifications_${storedId}`) || '[]');
+    console.log('🔍 État initial du localStorage pour les notifications lues:', readNotifications);
+    console.log('🗂️ Toutes les clés du localStorage:', Object.keys(localStorage));
+    console.log('📦 Taille du localStorage:', JSON.stringify(localStorage).length);
+    
     if (!storedId) {
       setMessage("ID utilisateur non trouvé.");
       setIsLoading(false);
@@ -539,16 +546,29 @@ const PatientDashboard = () => {
       
       // Récupérer les notifications lues depuis localStorage
       const readNotifications = JSON.parse(localStorage.getItem(`readNotifications_${id}`) || '[]');
+      console.log("🔍 Notifications lues depuis localStorage:", readNotifications);
       
       // S'assurer que chaque notification a un ID unique et un statut isRead
       const formattedNotifications = res.data.map((notif, index) => {
         const notificationId = notif.id || notif._id || `notification-${index}`;
+        const isReadFromStorage = readNotifications.includes(notificationId);
+        const isReadFromServer = notif.isRead || notif.read || false;
+        
+        console.log(`📋 Notification ${notificationId}:`, {
+          isReadFromStorage,
+          isReadFromServer,
+          finalIsRead: isReadFromStorage || isReadFromServer
+        });
+        
         return {
           ...notif,
           id: notificationId,
-          isRead: readNotifications.includes(notificationId) || (notif.isRead !== undefined ? notif.isRead : false)
+          isRead: isReadFromStorage || isReadFromServer,
+          read: isReadFromStorage || isReadFromServer // Assurer la cohérence
         };
       });
+      
+      console.log("✅ Notifications formatées:", formattedNotifications);
       setNotifications(formattedNotifications);
     } catch (error) {
       // Si l'erreur est 404, l'utilisateur n'a pas encore de notifications
@@ -557,38 +577,49 @@ const PatientDashboard = () => {
         
         // Récupérer les notifications lues depuis localStorage
         const readNotifications = JSON.parse(localStorage.getItem(`readNotifications_${id}`) || '[]');
+        console.log("🔍 Notifications lues depuis localStorage (démo):", readNotifications);
         
         // Ajouter quelques notifications de démonstration
         const demoNotifications = [
           {
             id: 'demo-1',
+            title: 'Confirmation de rendez-vous',
             message: 'Votre rendez-vous avec Dr. Martin est confirmé pour demain à 14h30',
             type: 'appointment',
             isRead: readNotifications.includes('demo-1'),
+            read: readNotifications.includes('demo-1'),
             createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000) // Il y a 2 heures
           },
           {
             id: 'demo-2',
+            title: 'Résultats disponibles',
             message: 'Vos résultats de laboratoire sont disponibles',
             type: 'result',
             isRead: readNotifications.includes('demo-2'),
+            read: readNotifications.includes('demo-2'),
             createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000) // Il y a 1 jour
           },
           {
             id: 'demo-3',
+            title: 'Nouveau message médical',
             message: 'Nouveau message de Dr. Dubois concernant votre traitement',
             type: 'message',
-            isRead: readNotifications.includes('demo-3') || true, // Par défaut lu
+            isRead: readNotifications.includes('demo-3'),
+            read: readNotifications.includes('demo-3'),
             createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) // Il y a 3 jours
           },
           {
             id: 'demo-4',
+            title: 'Rappel médicament',
             message: 'Rappel: Prenez vos médicaments selon la prescription',
             type: 'appointment',
-            isRead: readNotifications.includes('demo-4') || true, // Par défaut lu
+            isRead: readNotifications.includes('demo-4'),
+            read: readNotifications.includes('demo-4'),
             createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // Il y a 1 semaine
           }
         ];
+        
+        console.log("✅ Notifications de démonstration créées:", demoNotifications);
         setNotifications(demoNotifications);
       } else {
         console.error("❌ Erreur notifications:", error);
@@ -1421,34 +1452,73 @@ const PatientDashboard = () => {
     }));
   };
 
+  // Fonction de test pour déboguer les notifications
+  const debugNotificationsState = () => {
+    console.log("🔍 === DEBUG NOTIFICATIONS ===");
+    console.log("👤 UserId:", userId);
+    console.log("📱 Notifications en mémoire:", notifications.map(n => ({
+      id: n.id,
+      title: n.title,
+      isRead: n.isRead,
+      read: n.read
+    })));
+    
+    const readNotifications = JSON.parse(localStorage.getItem(`readNotifications_${userId}`) || '[]');
+    console.log("💾 Notifications lues dans localStorage:", readNotifications);
+    
+    // Vérifier la cohérence
+    const inMemoryNonRead = notifications.filter(n => !n.isRead && !n.read).map(n => n.id);
+    const shouldBeRead = notifications.filter(n => readNotifications.includes(n.id)).map(n => n.id);
+    
+    console.log("❌ Non lues en mémoire:", inMemoryNonRead);
+    console.log("✅ Devraient être lues:", shouldBeRead);
+    console.log("🔥 Incohérences:", inMemoryNonRead.filter(id => shouldBeRead.includes(id)));
+    console.log("=== FIN DEBUG ===");
+  };
+
   // Fonction pour marquer une notification comme lue
   const markNotificationAsRead = async (notificationId) => {
     try {
-      // Ajouter une classe d'animation temporaire
-      const notificationElement = document.querySelector(`[data-notification-id="${notificationId}"]`);
-      if (notificationElement) {
-        notificationElement.classList.add('reading');
-        setTimeout(() => {
-          notificationElement.classList.remove('reading');
-        }, 500);
-      }
-
+      console.log("🔄 Marquage de la notification comme lue:", notificationId);
+      console.log("📂 UserId actuel:", userId);
+      
+      // Vérifier l'état actuel du localStorage avant modification
+      const currentReadNotifications = JSON.parse(localStorage.getItem(`readNotifications_${userId}`) || '[]');
+      console.log("📖 Notifications déjà lues avant modification:", currentReadNotifications);
+      
       // Mettre à jour localement en utilisant l'ID de la notification
       setNotifications(prev => 
-        prev.map(notif => 
-          notif.id === notificationId || notif._id === notificationId ? { ...notif, isRead: true } : notif
-        )
+        prev.map(notif => {
+          if (notif.id === notificationId || notif._id === notificationId) {
+            console.log("✅ Notification marquée comme lue:", notif);
+            return { ...notif, isRead: true, read: true };
+          }
+          return notif;
+        })
       );
       
       // Sauvegarder dans localStorage pour persister l'état
-      const readNotifications = JSON.parse(localStorage.getItem(`readNotifications_${userId}`) || '[]');
-      if (!readNotifications.includes(notificationId)) {
-        readNotifications.push(notificationId);
-        localStorage.setItem(`readNotifications_${userId}`, JSON.stringify(readNotifications));
+      const updatedReadNotifications = [...currentReadNotifications];
+      if (!updatedReadNotifications.includes(notificationId)) {
+        updatedReadNotifications.push(notificationId);
+        localStorage.setItem(`readNotifications_${userId}`, JSON.stringify(updatedReadNotifications));
+        console.log("💾 Notification sauvegardée dans localStorage:", {
+          notificationId,
+          allReadNotifications: updatedReadNotifications
+        });
+        
+        // Vérification immédiate de la sauvegarde
+        const verificationRead = JSON.parse(localStorage.getItem(`readNotifications_${userId}`) || '[]');
+        console.log("🔍 Vérification immédiate du localStorage:", verificationRead);
+        
+        if (verificationRead.includes(notificationId)) {
+          console.log("✅ Confirmation: Notification bien sauvegardée dans localStorage");
+        } else {
+          console.error("❌ Erreur: Notification non sauvegardée dans localStorage");
+        }
+      } else {
+        console.log("ℹ️ Notification déjà marquée comme lue dans localStorage");
       }
-      
-      // Ici, vous pouvez ajouter un appel API pour marquer la notification comme lue côté serveur
-      // await axios.put(`${API_BASE_URL}/api/notifications/${notificationId}/read`);
       
     } catch (error) {
       console.error("❌ Erreur lors du marquage de la notification comme lue:", error);
@@ -1458,15 +1528,18 @@ const PatientDashboard = () => {
   // Fonction pour marquer toutes les notifications comme lues
   const markAllNotificationsAsRead = async () => {
     try {
-      const unreadNotifications = notifications.filter(notif => !notif.isRead);
+      const unreadNotifications = notifications.filter(notif => !notif.isRead && !notif.read);
       
       if (unreadNotifications.length === 0) {
+        console.log("ℹ️ Aucune notification non lue à marquer");
         return;
       }
 
+      console.log("🔄 Marquage de toutes les notifications comme lues:", unreadNotifications.length);
+
       // Mettre à jour localement
       setNotifications(prev => 
-        prev.map(notif => ({ ...notif, isRead: true }))
+        prev.map(notif => ({ ...notif, isRead: true, read: true }))
       );
       
       // Sauvegarder dans localStorage
@@ -1481,18 +1554,7 @@ const PatientDashboard = () => {
       });
       
       localStorage.setItem(`readNotifications_${userId}`, JSON.stringify(newReadNotifications));
-      
-      // Animation pour toutes les cartes non lues
-      unreadNotifications.forEach(notif => {
-        const notificationId = notif.id || notif._id;
-        const element = document.querySelector(`[data-notification-id="${notificationId}"]`);
-        if (element) {
-          element.classList.add('reading');
-          setTimeout(() => {
-            element.classList.remove('reading');
-          }, 500);
-        }
-      });
+      console.log("💾 Toutes les notifications sauvegardées dans localStorage:", newReadNotifications);
       
     } catch (error) {
       console.error("❌ Erreur lors du marquage de toutes les notifications comme lues:", error);
@@ -2158,129 +2220,194 @@ const PatientDashboard = () => {
             {activeSection === 'notifications' && (
               <div className="notifications-container">
                 <div className="notifications-header">
-                  <h1>
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" style={{color: '#0f766e'}}>
-                      <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
-                    </svg>
-                    Mes Notifications
-                  </h1>
-                  <div className="notifications-actions">
-                    <div className="notifications-stats">
-                      <div className="stat-item">
-                        <span className="stat-number">{notifications.length}</span>
-                        <span className="stat-label">Total</span>
-                      </div>
-                      <div className="stat-item">
-                        <span className="stat-number">{notifications.filter(n => !n.isRead).length}</span>
-                        <span className="stat-label">Non lues</span>
-                      </div>
-                    </div>
-                    {notifications.filter(n => !n.isRead).length > 0 && (
+                  <h2>
+                    <FaBell className="notifications-icon" />
+                    Notifications
+                  </h2>
+                  <div className="notifications-stats">
+                    <span className="total-notifications">
+                      {notifications.length} notification{notifications.length > 1 ? 's' : ''}
+                    </span>
+                    <span className="unread-notifications">
+                      {notifications.filter(n => !n.isRead && !n.read).length} non lue{notifications.filter(n => !n.isRead && !n.read).length > 1 ? 's' : ''}
+                    </span>
+                    {notifications.filter(n => !n.isRead && !n.read).length > 0 && (
                       <button 
                         className="mark-all-read-btn"
                         onClick={markAllNotificationsAsRead}
-                        title="Marquer toutes les notifications comme lues"
+                        style={{
+                          marginLeft: '1rem',
+                          padding: '0.5rem 1rem',
+                          backgroundColor: '#2196f3',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '0.9rem'
+                        }}
                       >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                        </svg>
                         Tout marquer comme lu
                       </button>
                     )}
+                    <button 
+                      onClick={debugNotificationsState}
+                      style={{
+                        marginLeft: '0.5rem',
+                        padding: '0.25rem 0.5rem',
+                        backgroundColor: '#10b981',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '0.8rem'
+                      }}
+                    >
+                      🔍 Debug: État
+                    </button>
+                    <button 
+                      onClick={() => {
+                        console.log("🧹 Nettoyage du localStorage...");
+                        localStorage.removeItem(`readNotifications_${userId}`);
+                        console.log("✅ localStorage nettoyé, rechargement des notifications...");
+                        fetchNotifications(userId);
+                      }}
+                      style={{
+                        marginLeft: '0.5rem',
+                        padding: '0.25rem 0.5rem',
+                        backgroundColor: '#ff9800',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '0.8rem'
+                      }}
+                    >
+                      🧹 Debug: Reset
+                    </button>
                   </div>
                 </div>
 
-                {notifications.length === 0 ? (
-                  <div className="empty-notifications">
-                    <div className="empty-icon">
-                      <svg width="80" height="80" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
-                      </svg>
-                    </div>
+                {error && (
+                  <div className="error-message">
+                    <p>{error}</p>
+                    <button onClick={() => fetchNotifications(userId)} className="retry-btn">
+                      Réessayer
+                    </button>
+                  </div>
+                )}
+
+                {notifications.length === 0 && !isLoading && !error ? (
+                  <div className="no-notifications">
+                    <FaBell className="no-notifications-icon" />
                     <h3>Aucune notification</h3>
                     <p>Vous n'avez reçu aucune notification pour le moment.</p>
-                    <small>Les notifications de vos rendez-vous et messages apparaîtront ici.</small>
                   </div>
                 ) : (
                   <>
                     <div className="notifications-list">
                       {(() => {
                         const sortedNotifications = notifications
-                      .sort((a, b) => {
-                        const dateA = a.createdAt || a.date || new Date();
-                        const dateB = b.createdAt || b.date || new Date();
-                        return new Date(dateB) - new Date(dateA);
+                          .sort((a, b) => {
+                            const dateA = a.createdAt || a.date || new Date();
+                            const dateB = b.createdAt || b.date || new Date();
+                            return new Date(dateB) - new Date(dateA);
                           });
                         
-                        return getPaginatedData(sortedNotifications, 'notifications').map((notif, idx) => {
-                          const notificationId = notif.id || notif._id || `notification-${idx}`;
+                        return getPaginatedData(sortedNotifications, 'notifications').map((notification) => {
+                          const notificationId = notification.id || notification._id;
                           return (
-                          <div 
-                            key={notificationId} 
-                            data-notification-id={notificationId}
-                            className={`notification-card ${!notif.isRead ? 'unread' : ''}`}
-                            onClick={() => !notif.isRead && markNotificationAsRead(notificationId)}
-                            style={{ cursor: !notif.isRead ? 'pointer' : 'default' }}
-                          >
-                            <div className="notification-icon">
-                              {notif.type === 'appointment' && (
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                                  <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
-                                </svg>
-                              )}
-                              {notif.type === 'message' && (
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                                  <path d="M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4C22,2.89 21.1,2 20,2Z"/>
-                                </svg>
-                              )}
-                              {notif.type === 'result' && (
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                                  <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                                </svg>
-                              )}
-                              {!notif.type && (
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                                  <path d="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/>
-                                </svg>
-                              )}
-                            </div>
-                            <div className="notification-content">
-                              <div className="notification-message">
-                            {notif.message}
-                          </div>
-                              <div className="notification-meta">
-                                <span className="notification-date">
-                            {(notif.createdAt || notif.date) ? 
-                                    new Date(notif.createdAt || notif.date).toLocaleString('fr-FR', {
-                                      weekday: 'short',
-                                      year: 'numeric',
-                                      month: 'short',
-                                      day: 'numeric',
-                                      hour: '2-digit',
-                                      minute: '2-digit'
-                                    }) : 
-                              'Date non disponible'}
-                                </span>
-                                {notif.type && (
-                                  <span className={`notification-type ${notif.type}`}>
-                                    {notif.type === 'appointment' && 'Rendez-vous'}
-                                    {notif.type === 'message' && 'Message'}
-                                    {notif.type === 'result' && 'Résultat'}
-                                  </span>
+                            <div
+                              key={notificationId}
+                              className={`notification-item ${!notification.isRead ? 'unread' : ''}`}
+                              onClick={() => !notification.isRead && markNotificationAsRead(notificationId)}
+                            >
+                              <div className="notification-content">
+                                <div className="notification-header">
+                                  <div className="notification-type">
+                                    <span className="type-icon">
+                                      {notification.type === 'appointment' && '📅'}
+                                      {notification.type === 'message' && '💬'}
+                                      {notification.type === 'result' && '📄'}
+                                      {!notification.type && '📢'}
+                                    </span>
+                                    <span className="notification-title">
+                                      {notification.title || 'Notification'}
+                                    </span>
+                                  </div>
+                                  <div className="notification-meta">
+                                    <span className="notification-date">
+                                      {(() => {
+                                        const date = new Date(notification.createdAt || notification.date);
+                                        const now = new Date();
+                                        const diffTime = Math.abs(now - date);
+                                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                                        if (diffDays === 1) {
+                                          return "Aujourd'hui";
+                                        } else if (diffDays === 2) {
+                                          return "Hier";
+                                        } else if (diffDays <= 7) {
+                                          return `Il y a ${diffDays - 1} jours`;
+                                        } else {
+                                          return date.toLocaleDateString('fr-FR', {
+                                            day: '2-digit',
+                                            month: '2-digit',
+                                            year: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                          });
+                                        }
+                                      })()}
+                                    </span>
+                                    {!notification.isRead && <span className="unread-indicator">•</span>}
+                                  </div>
+                                </div>
+                                <div className="notification-message">
+                                  {notification.message}
+                                </div>
+                                {notification.priority && notification.priority !== 'normal' && (
+                                  <div className="notification-priority">
+                                    Priorité: {notification.priority === 'high' ? 'Haute' : notification.priority === 'medium' ? 'Moyenne' : 'Basse'}
+                                  </div>
                                 )}
-                          </div>
-                            </div>
-                            {!notif.isRead && (
-                              <div className="notification-status">
-                                <span className="unread-indicator"></span>
                               </div>
-                            )}
-                          </div>
+                            </div>
                           );
                         });
                       })()}
                     </div>
-                    {renderPagination(notifications, 'notifications')}
+
+                    {getTotalPages(notifications, 'notifications') > 1 && (
+                      <div className="pagination">
+                        <button
+                          onClick={() => handlePageChange('notifications', currentPages.notifications - 1)}
+                          disabled={currentPages.notifications === 1}
+                          className="pagination-btn"
+                        >
+                          Précédent
+                        </button>
+                        
+                        <div className="pagination-numbers">
+                          {Array.from({ length: getTotalPages(notifications, 'notifications') }, (_, i) => i + 1).map(page => (
+                            <button
+                              key={page}
+                              onClick={() => handlePageChange('notifications', page)}
+                              className={`pagination-number ${currentPages.notifications === page ? 'active' : ''}`}
+                            >
+                              {page}
+                            </button>
+                          ))}
+                        </div>
+                        
+                        <button
+                          onClick={() => handlePageChange('notifications', currentPages.notifications + 1)}
+                          disabled={currentPages.notifications === getTotalPages(notifications, 'notifications')}
+                          className="pagination-btn"
+                        >
+                          Suivant
+                        </button>
+                      </div>
+                    )}
                   </>
                 )}
               </div>

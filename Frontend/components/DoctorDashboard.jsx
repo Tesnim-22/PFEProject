@@ -2587,7 +2587,7 @@ const CalendarView = () => {
                 </div>
                 
                 {totalPages > 1 && (
-                  <div className="pagination-controls" style={{
+                  <div style={{
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
@@ -4025,11 +4025,10 @@ const ProfileView = () => {
     const file = e.target.files[0];
     if (file) {
       setAvatar(file);
-      // Créer une URL temporaire pour l'aperçu
       const previewUrl = URL.createObjectURL(file);
       setEditedInfo(prev => ({
         ...prev,
-        tempPhotoUrl: previewUrl // Utiliser une URL temporaire pour l'aperçu
+        tempPhotoUrl: previewUrl
       }));
     }
   };
@@ -4040,7 +4039,6 @@ const ProfileView = () => {
       setLoading(true);
       setError(null);
       
-      // Si un nouvel avatar a été sélectionné, l'uploader d'abord
       if (avatar) {
         const formData = new FormData();
         formData.append('avatar', avatar);
@@ -4056,7 +4054,6 @@ const ProfileView = () => {
             }
           );
           
-          // Mettre à jour le champ photo avec le chemin retourné par le serveur
           editedInfo.photo = uploadResponse.data.photo;
         } catch (uploadError) {
           console.error('Erreur upload avatar:', uploadError);
@@ -4066,7 +4063,6 @@ const ProfileView = () => {
         }
       }
 
-      // Supprimer l'URL temporaire avant d'envoyer les données
       const dataToSend = { ...editedInfo };
       delete dataToSend.tempPhotoUrl;
 
@@ -4085,8 +4081,23 @@ const ProfileView = () => {
 
   if (loading) {
     return (
-      <div className="doctor-loading">
-        <div className="loading-spinner"></div>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '400px',
+        flexDirection: 'column',
+        gap: '1rem',
+        color: '#64748b'
+      }}>
+        <div style={{
+          width: '40px',
+          height: '40px',
+          border: '3px solid #e2e8f0',
+          borderTop: '3px solid #0f766e',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite'
+        }}></div>
         <p>Chargement du profil...</p>
       </div>
     );
@@ -4094,17 +4105,28 @@ const ProfileView = () => {
 
   if (error) {
     return (
-      <div className="doctor-error">
-        <div className="error-icon">
-          <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48" style={{color: '#ef4444'}}>
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-          </svg>
-        </div>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '400px',
+        flexDirection: 'column',
+        gap: '1rem',
+        color: '#ef4444'
+      }}>
+        <div style={{ fontSize: '3rem' }}>⚠️</div>
         <p>{error}</p>
-        <button onClick={fetchDoctorInfo} className="retry-btn">
-          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style={{marginRight: '0.5rem'}}>
-            <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
-          </svg>
+        <button 
+          onClick={fetchDoctorInfo}
+          style={{
+            padding: '0.75rem 1.5rem',
+            backgroundColor: '#0f766e',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer'
+          }}
+        >
           Réessayer
         </button>
       </div>
@@ -4112,233 +4134,635 @@ const ProfileView = () => {
   }
 
   return (
-    <div className="doctor-profile" style={{ color: '#000000' }}>
+    <div style={{
+      maxWidth: '800px',
+      margin: '0 auto',
+      padding: '2rem',
+      backgroundColor: '#ffffff',
+      minHeight: '100vh'
+    }}>
       {success && (
-        <div className="success-message">
-          <span className="success-icon">✅</span>
-          {success}
-          </div>
+        <div style={{
+          padding: '1rem',
+          backgroundColor: '#dcfce7',
+          color: '#166534',
+          borderRadius: '8px',
+          marginBottom: '2rem',
+          border: '1px solid #bbf7d0'
+        }}>
+          ✅ {success}
+        </div>
       )}
 
-      <div className="profile-header">
-        <div className="profile-avatar">
-          {isEditing ? (
-            <div className="avatar-upload">
-              <img 
-                src={editedInfo.tempPhotoUrl || (editedInfo.photo ? `http://localhost:5001${editedInfo.photo}` : '../assets/images/default-avatar.png')}
-                alt="Avatar"
-                className="avatar-preview"
-                onError={(e) => { e.target.src = '../assets/images/default-avatar.png'; console.error('Failed to load avatar:', e.target.src); }}
-                style={{
-                  width: '80px',
-                  height: '80px',
-                  borderRadius: '50%',
-                  objectFit: 'cover'
-                }}
+      {error && (
+        <div style={{
+          padding: '1rem',
+          backgroundColor: '#fef2f2',
+          color: '#dc2626',
+          borderRadius: '8px',
+          marginBottom: '2rem',
+          border: '1px solid #fecaca'
+        }}>
+          ⚠️ {error}
+        </div>
+      )}
+
+      {/* Header avec avatar et titre */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '1.5rem',
+        marginBottom: '2rem',
+        paddingBottom: '1.5rem',
+        borderBottom: '2px solid #e2e8f0'
+      }}>
+        <div style={{ position: 'relative' }}>
+          <img 
+            src={
+              isEditing && editedInfo?.tempPhotoUrl 
+                ? editedInfo.tempPhotoUrl 
+                : doctorInfo?.photo 
+                  ? `http://localhost:5001${doctorInfo.photo}` 
+                  : '../assets/images/default-avatar.png'
+            }
+            alt="Avatar"
+            style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              objectFit: 'cover',
+              border: '4px solid #e2e8f0'
+            }}
+            onError={(e) => { 
+              e.target.src = '../assets/images/default-avatar.png'; 
+            }}
+          />
+          {isEditing && (
+            <label style={{
+              position: 'absolute',
+              bottom: '-8px',
+              right: '-8px',
+              backgroundColor: '#0f766e',
+              color: 'white',
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+            }}>
+              ✏️
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                style={{ display: 'none' }}
               />
-              <label className="avatar-upload-btn">
-                <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" style={{marginRight: '0.5rem'}}>
-                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-                </svg>
-                Changer
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarChange}
-                  style={{ display: 'none' }}
-                />
-              </label>
-            </div>
-          ) : (
-            <img 
-              src={doctorInfo.photo ? `http://localhost:5001${doctorInfo.photo}` : '../assets/images/default-avatar.png'}
-              alt="Avatar"
-              className="avatar-image"
-              onError={(e) => { e.target.src = '../assets/images/default-avatar.png'; console.error('Failed to load avatar:', e.target.src); }}
-              style={{
-                width: '80px',
-                height: '80px',
-                borderRadius: '50%',
-                objectFit: 'cover'
-              }}
-            />
+            </label>
           )}
         </div>
-        <div className="profile-title">
-          <h1>Mon Profil</h1>
+        <div>
+          <h1 style={{
+            fontSize: '2rem',
+            fontWeight: '600',
+            color: '#1f2937',
+            margin: '0'
+          }}>
+            Mon Profil
+          </h1>
         </div>
       </div>
 
-      {!isEditing ? (
-        <div className="profile-info-simple">
-          <div className="info-section-simple">
-            <h3>Informations personnelles</h3>
-            <div className="info-grid-simple">
-              <div className="info-item-simple">
-                <span className="label">Nom :</span>
-                <span className="value">{doctorInfo.nom}</span>
+      {isEditing ? (
+        /* Mode édition */
+        <form onSubmit={handleSubmit}>
+          {/* Informations personnelles */}
+          <div style={{
+            backgroundColor: '#f8fafc',
+            padding: '1.5rem',
+            borderRadius: '12px',
+            marginBottom: '1.5rem',
+            border: '1px solid #e2e8f0'
+          }}>
+            <h3 style={{
+              fontSize: '1.25rem',
+              fontWeight: '600',
+              color: '#374151',
+              marginBottom: '1.5rem',
+              margin: '0 0 1.5rem 0'
+            }}>
+              Informations personnelles
+            </h3>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+              gap: '1rem'
+            }}>
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#374151',
+                  marginBottom: '0.5rem'
+                }}>
+                  Nom
+                </label>
+                <input
+                  type="text"
+                  name="nom"
+                  value={editedInfo?.nom || ''}
+                  onChange={handleInputChange}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '1rem',
+                    color: '#374151',
+                    backgroundColor: 'white',
+                    boxSizing: 'border-box'
+                  }}
+                />
               </div>
-              <div className="info-item-simple">
-                <span className="label">Prénom :</span>
-                <span className="value">{doctorInfo.prenom}</span>
-                </div>
-              <div className="info-item-simple">
-                <span className="label">Email :</span>
-                <span className="value">{doctorInfo.email}</span>
-                </div>
-              <div className="info-item-simple">
-                <span className="label">Téléphone :</span>
-                <span className="value">{doctorInfo.telephone}</span>
-                </div>
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#374151',
+                  marginBottom: '0.5rem'
+                }}>
+                  Prénom
+                </label>
+                <input
+                  type="text"
+                  name="prenom"
+                  value={editedInfo?.prenom || ''}
+                  onChange={handleInputChange}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '1rem',
+                    color: '#374151',
+                    backgroundColor: 'white',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#374151',
+                  marginBottom: '0.5rem'
+                }}>
+                  Email
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={editedInfo?.email || ''}
+                  onChange={handleInputChange}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '1rem',
+                    color: '#374151',
+                    backgroundColor: 'white',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#374151',
+                  marginBottom: '0.5rem'
+                }}>
+                  Téléphone
+                </label>
+                <input
+                  type="tel"
+                  name="telephone"
+                  value={editedInfo?.telephone || ''}
+                  onChange={handleInputChange}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '1rem',
+                    color: '#374151',
+                    backgroundColor: 'white',
+                    boxSizing: 'border-box'
+                  }}
+                />
               </div>
             </div>
-
-          <div className="info-section-simple">
-            <h3>Informations professionnelles</h3>
-            <div className="info-grid-simple">
-              <div className="info-item-simple">
-                <span className="label">Spécialité :</span>
-                <span className="value">{doctorInfo.specialty}</span>
-              </div>
-              <div className="info-item-simple">
-                <span className="label">Région :</span>
-                <span className="value">{doctorInfo.region}</span>
-                </div>
-              <div className="info-item-simple">
-                <span className="label">Adresse :</span>
-                <span className="value">{doctorInfo.adresse}</span>
-                </div>
-                </div>
-              </div>
-          
-          <button 
-            className="edit-profile-btn-simple"
-            onClick={() => setIsEditing(true)}
-          >
-            Modifier le profil
-          </button>
           </div>
-        ) : (
-        <form onSubmit={handleSubmit} className="edit-form-simple">
-          <div className="form-section-simple">
-            <h3>Informations personnelles</h3>
-                  <div className="form-group">
-                    <label>Nom</label>
-                    <input
-                      type="text"
-                      name="nom"
-                      value={editedInfo.nom || ''}
-                      onChange={handleInputChange}
-                      required
-                    />
-                </div>
-                  <div className="form-group">
-                    <label>Prénom</label>
-                    <input
-                      type="text"
-                      name="prenom"
-                      value={editedInfo.prenom || ''}
-                      onChange={handleInputChange}
-                      required
-                    />
-                </div>
-                  <div className="form-group">
-                    <label>Email</label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={editedInfo.email || ''}
-                      onChange={handleInputChange}
-                      required
-                    />
+
+          {/* Informations professionnelles */}
+          <div style={{
+            backgroundColor: '#f8fafc',
+            padding: '1.5rem',
+            borderRadius: '12px',
+            marginBottom: '2rem',
+            border: '1px solid #e2e8f0'
+          }}>
+            <h3 style={{
+              fontSize: '1.25rem',
+              fontWeight: '600',
+              color: '#374151',
+              marginBottom: '1.5rem',
+              margin: '0 0 1.5rem 0'
+            }}>
+              Informations professionnelles
+            </h3>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+              gap: '1rem'
+            }}>
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#374151',
+                  marginBottom: '0.5rem'
+                }}>
+                  Spécialité
+                </label>
+                <input
+                  type="text"
+                  name="specialty"
+                  value={editedInfo?.specialty || ''}
+                  onChange={handleInputChange}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '1rem',
+                    color: '#374151',
+                    backgroundColor: 'white',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#374151',
+                  marginBottom: '0.5rem'
+                }}>
+                  Région
+                </label>
+                <select
+                  name="region"
+                  value={editedInfo?.region || ''}
+                  onChange={handleInputChange}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '1rem',
+                    color: '#374151',
+                    backgroundColor: 'white',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  <option value="">Sélectionnez une région</option>
+                  <option value="Tunis">Tunis</option>
+                  <option value="Ariana">Ariana</option>
+                  <option value="Ben Arous">Ben Arous</option>
+                  <option value="Manouba">Manouba</option>
+                  <option value="Nabeul">Nabeul</option>
+                  <option value="Zaghouan">Zaghouan</option>
+                  <option value="Bizerte">Bizerte</option>
+                  <option value="Béja">Béja</option>
+                  <option value="Jendouba">Jendouba</option>
+                  <option value="Le Kef">Le Kef</option>
+                  <option value="Siliana">Siliana</option>
+                  <option value="Sousse">Sousse</option>
+                  <option value="Monastir">Monastir</option>
+                  <option value="Mahdia">Mahdia</option>
+                  <option value="Sfax">Sfax</option>
+                  <option value="Kairouan">Kairouan</option>
+                  <option value="Kasserine">Kasserine</option>
+                  <option value="Sidi Bouzid">Sidi Bouzid</option>
+                  <option value="Gabès">Gabès</option>
+                  <option value="Médenine">Médenine</option>
+                  <option value="Tataouine">Tataouine</option>
+                  <option value="Gafsa">Gafsa</option>
+                  <option value="Tozeur">Tozeur</option>
+                  <option value="Kébili">Kébili</option>
+                </select>
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#374151',
+                  marginBottom: '0.5rem'
+                }}>
+                  Adresse du cabinet
+                </label>
+                <input
+                  type="text"
+                  name="adresse"
+                  value={editedInfo?.adresse || ''}
+                  onChange={handleInputChange}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '1rem',
+                    color: '#374151',
+                    backgroundColor: 'white',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+            </div>
           </div>
-                  <div className="form-group">
-                    <label>Téléphone</label>
-                    <input
-                      type="tel"
-                      name="telephone"
-                      value={editedInfo.telephone || ''}
-                      onChange={handleInputChange}
-                      required
-                    />
-              </div>
-            </div>
 
-          <div className="form-section-simple">
-            <h3>Informations professionnelles</h3>
-                  <div className="form-group">
-                    <label>Spécialité</label>
-                    <input
-                      type="text"
-                      name="specialty"
-                      value={editedInfo.specialty || ''}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Région</label>
-                    <select
-                      name="region"
-                      value={editedInfo.region || ''}
-                      onChange={handleInputChange}
-                      required
-                    >
-                      <option value="">Sélectionnez une région</option>
-                      <option value="Tunis">Tunis</option>
-                      <option value="Ariana">Ariana</option>
-                      <option value="Ben Arous">Ben Arous</option>
-                      <option value="Manouba">Manouba</option>
-                      <option value="Nabeul">Nabeul</option>
-                      <option value="Zaghouan">Zaghouan</option>
-                      <option value="Bizerte">Bizerte</option>
-                      <option value="Béja">Béja</option>
-                      <option value="Jendouba">Jendouba</option>
-                      <option value="Le Kef">Le Kef</option>
-                      <option value="Siliana">Siliana</option>
-                      <option value="Sousse">Sousse</option>
-                      <option value="Monastir">Monastir</option>
-                      <option value="Mahdia">Mahdia</option>
-                      <option value="Sfax">Sfax</option>
-                      <option value="Kairouan">Kairouan</option>
-                      <option value="Kasserine">Kasserine</option>
-                      <option value="Sidi Bouzid">Sidi Bouzid</option>
-                      <option value="Gabès">Gabès</option>
-                      <option value="Médenine">Médenine</option>
-                      <option value="Tataouine">Tataouine</option>
-                      <option value="Gafsa">Gafsa</option>
-                      <option value="Tozeur">Tozeur</option>
-                      <option value="Kébili">Kébili</option>
-                    </select>
-                  </div>
-            <div className="form-group">
-                    <label>Adresse du cabinet</label>
-                    <input
-                      type="text"
-                      name="adresse"
-                      value={editedInfo.adresse || ''}
-                      onChange={handleInputChange}
-                      required
-                    />
-              </div>
-            </div>
-
-          <div className="form-actions-simple">
-            <button type="submit" className="save-btn-simple" disabled={loading}>
-              {loading ? 'Enregistrement...' : 'Enregistrer'}
-              </button>
-              <button 
-                type="button" 
-              className="cancel-btn-simple"
-                onClick={() => {
-                  setIsEditing(false);
-                  setEditedInfo(doctorInfo);
-                }}
-              >
+          {/* Boutons d'action */}
+          <div style={{
+            display: 'flex',
+            gap: '1rem',
+            justifyContent: 'flex-end'
+          }}>
+            <button 
+              type="button"
+              onClick={() => {
+                setIsEditing(false);
+                setEditedInfo(doctorInfo);
+              }}
+              style={{
+                padding: '0.75rem 2rem',
+                backgroundColor: '#6b7280',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '1rem',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s'
+              }}
+            >
               Annuler
-              </button>
+            </button>
+            <button 
+              type="submit"
+              disabled={loading}
+              style={{
+                padding: '0.75rem 2rem',
+                backgroundColor: loading ? '#9ca3af' : '#0f766e',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '1rem',
+                fontWeight: '500',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                transition: 'background-color 0.2s'
+              }}
+            >
+              {loading ? 'Enregistrement...' : 'Enregistrer'}
+            </button>
           </div>
         </form>
+      ) : (
+        /* Mode affichage */
+        <div>
+          {/* Informations personnelles */}
+          <div style={{
+            backgroundColor: '#f8fafc',
+            padding: '1.5rem',
+            borderRadius: '12px',
+            marginBottom: '1.5rem',
+            border: '1px solid #e2e8f0'
+          }}>
+            <h3 style={{
+              fontSize: '1.25rem',
+              fontWeight: '600',
+              color: '#374151',
+              marginBottom: '1.5rem',
+              margin: '0 0 1.5rem 0'
+            }}>
+              Informations personnelles
+            </h3>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+              gap: '1rem'
+            }}>
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#6b7280',
+                  marginBottom: '0.25rem'
+                }}>
+                  Nom
+                </label>
+                <p style={{
+                  margin: '0',
+                  fontSize: '1rem',
+                  color: '#374151',
+                  fontWeight: '500'
+                }}>
+                  {doctorInfo?.nom}
+                </p>
+              </div>
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#6b7280',
+                  marginBottom: '0.25rem'
+                }}>
+                  Prénom
+                </label>
+                <p style={{
+                  margin: '0',
+                  fontSize: '1rem',
+                  color: '#374151',
+                  fontWeight: '500'
+                }}>
+                  {doctorInfo?.prenom}
+                </p>
+              </div>
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#6b7280',
+                  marginBottom: '0.25rem'
+                }}>
+                  Email
+                </label>
+                <p style={{
+                  margin: '0',
+                  fontSize: '1rem',
+                  color: '#374151',
+                  fontWeight: '500'
+                }}>
+                  {doctorInfo?.email}
+                </p>
+              </div>
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#6b7280',
+                  marginBottom: '0.25rem'
+                }}>
+                  Téléphone
+                </label>
+                <p style={{
+                  margin: '0',
+                  fontSize: '1rem',
+                  color: '#374151',
+                  fontWeight: '500'
+                }}>
+                  {doctorInfo?.telephone}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Informations professionnelles */}
+          <div style={{
+            backgroundColor: '#f8fafc',
+            padding: '1.5rem',
+            borderRadius: '12px',
+            marginBottom: '2rem',
+            border: '1px solid #e2e8f0'
+          }}>
+            <h3 style={{
+              fontSize: '1.25rem',
+              fontWeight: '600',
+              color: '#374151',
+              marginBottom: '1.5rem',
+              margin: '0 0 1.5rem 0'
+            }}>
+              Informations professionnelles
+            </h3>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+              gap: '1rem'
+            }}>
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#6b7280',
+                  marginBottom: '0.25rem'
+                }}>
+                  Spécialité
+                </label>
+                <p style={{
+                  margin: '0',
+                  fontSize: '1rem',
+                  color: '#374151',
+                  fontWeight: '500'
+                }}>
+                  {doctorInfo?.specialty}
+                </p>
+              </div>
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#6b7280',
+                  marginBottom: '0.25rem'
+                }}>
+                  Région
+                </label>
+                <p style={{
+                  margin: '0',
+                  fontSize: '1rem',
+                  color: '#374151',
+                  fontWeight: '500'
+                }}>
+                  {doctorInfo?.region}
+                </p>
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#6b7280',
+                  marginBottom: '0.25rem'
+                }}>
+                  Adresse du cabinet
+                </label>
+                <p style={{
+                  margin: '0',
+                  fontSize: '1rem',
+                  color: '#374151',
+                  fontWeight: '500'
+                }}>
+                  {doctorInfo?.adresse}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Bouton modifier */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center'
+          }}>
+            <button 
+              onClick={() => setIsEditing(true)}
+              style={{
+                padding: '0.75rem 2rem',
+                backgroundColor: '#0f766e',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '1rem',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s'
+              }}
+            >
+              Modifier
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -4526,33 +4950,52 @@ const NotificationsView = () => {
           </div>
 
           {totalPages > 1 && (
-            <div className="pagination">
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '0.5rem',
+              marginTop: '1rem',
+              padding: '1rem'
+            }}>
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="pagination-btn"
+                style={{
+                  padding: '0.5rem 1rem',
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '6px',
+                  background: currentPage === 1 ? '#f5f5f5' : '#ffffff',
+                  color: currentPage === 1 ? '#999' : '#333',
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                  fontSize: '0.9rem'
+                }}
               >
-                Précédent
+                ← Précédent
               </button>
               
-              <div className="pagination-numbers">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <button
-                    key={page}
-                    onClick={() => handlePageChange(page)}
-                    className={`pagination-number ${currentPage === page ? 'active' : ''}`}
-                  >
-                    {page}
-                  </button>
-                ))}
-              </div>
+              <span style={{
+                padding: '0.5rem 1rem',
+                color: '#666',
+                fontSize: '0.9rem'
+              }}>
+                Page {currentPage} sur {totalPages}
+              </span>
               
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="pagination-btn"
+                style={{
+                  padding: '0.5rem 1rem',
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '6px',
+                  background: currentPage === totalPages ? '#f5f5f5' : '#ffffff',
+                  color: currentPage === totalPages ? '#999' : '#333',
+                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                  fontSize: '0.9rem'
+                }}
               >
-                Suivant
+                Suivant →
               </button>
             </div>
           )}
