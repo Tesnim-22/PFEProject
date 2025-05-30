@@ -8,6 +8,20 @@ const DoctorSignupForm= () => {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Liste des spécialités (identique à PatientDashboard.jsx)
+  const specialties = [
+    'Cardiologie',
+    'Dermatologie',
+    'Gastro-entérologie',
+    'Neurologie',
+    'Ophtalmologie',
+    'Orthopédie',
+    'Pédiatrie',
+    'Psychiatrie',
+    'Radiologie',
+    'Urologie'
+  ];
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -43,7 +57,7 @@ const DoctorSignupForm= () => {
         setMessage(data.message || "❌ Erreur serveur.");
       }
     } catch (err) {
-      setMessage("❌ Erreur lors de l’envoi.");
+      setMessage("❌ Erreur lors de l'envoi.");
     } finally {
       setLoading(false);
     }
@@ -56,13 +70,18 @@ const DoctorSignupForm= () => {
       <form onSubmit={handleSubmit} className="doctor-form" encType="multipart/form-data">
         <label>
           Spécialité :
-          <input
-            type="text"
+          <select
             value={specialty}
             onChange={(e) => setSpecialty(e.target.value)}
-            placeholder="Ex: Cardiologue"
             required
-          />
+          >
+            <option value="">Sélectionnez une spécialité</option>
+            {specialties.map(specialtyOption => (
+              <option key={specialtyOption} value={specialtyOption}>
+                {specialtyOption}
+              </option>
+            ))}
+          </select>
         </label>
 
         <label className="file-upload">

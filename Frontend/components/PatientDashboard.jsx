@@ -228,6 +228,111 @@ const additionalStyles = `
       padding: 1rem;
     }
   }
+
+  /* Animation pour la mise à jour du profil */
+  @keyframes profileUpdateSuccess {
+    0% {
+      transform: scale(1);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    50% {
+      transform: scale(1.02);
+      box-shadow: 0 8px 25px rgba(34, 197, 94, 0.2);
+      border: 2px solid #22c55e;
+    }
+    100% {
+      transform: scale(1);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+  }
+
+  /* Style pour l'indicateur de chargement lors de la mise à jour */
+  .profile-updating {
+    opacity: 0.7;
+    pointer-events: none;
+    position: relative;
+  }
+
+  .profile-updating::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+
+  /* Animation pour le message de succès */
+  .alert {
+    animation: slideInFromTop 0.5s ease-out;
+  }
+
+  @keyframes slideInFromTop {
+    0% {
+      transform: translateY(-20px);
+      opacity: 0;
+    }
+    100% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  /* Animation pour l'indicateur de messages non lus */
+  @keyframes pulse {
+    0% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.1);
+      opacity: 0.8;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  /* Style pour les messages non lus */
+  .unread-badge {
+    animation: pulse 2s infinite;
+  }
+
+  .unread-indicator {
+    animation: pulse 2s infinite;
+  }
+
+  /* Animation pour la suppression des badges */
+  .fade-out {
+    animation: fadeOut 0.3s ease forwards;
+  }
+
+  @keyframes fadeOut {
+    0% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+  }
+
+  /* Style pour les messages non lus dans la liste */
+  .message.unread {
+    border-left: 3px solid #ef4444;
+    background-color: #fef2f2;
+  }
+
+  .message-bubble.unread {
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
+  }
 `;
 
 const sidebarIconStyle = {
@@ -276,40 +381,27 @@ const PatientDashboard = () => {
 
   // Fonction pour marquer les messages comme lus dans l'interface
   const markMessagesAsReadInUI = (contactId, isLab = false) => {
-    // Ajouter une classe d'animation aux badges avant de les supprimer
-    const badgeElements = document.querySelectorAll('.unread-badge');
+    // NE PAS mettre à jour immédiatement le compteur dans l'interface
+    // Seulement ajouter l'animation fade-out aux éléments visuels
+    const badgeElements = document.querySelectorAll(`[data-contact-id="${contactId}"] .unread-badge`);
+    const indicatorElements = document.querySelectorAll(`[data-contact-id="${contactId}"] .unread-indicator`);
+    
     badgeElements.forEach(badge => {
       badge.classList.add('fade-out');
     });
-
-    // Ajouter une classe d'animation aux indicateurs de messages
-    const indicatorElements = document.querySelectorAll('.unread-indicator');
+    
     indicatorElements.forEach(indicator => {
       indicator.classList.add('fade-out');
     });
 
-    // Mettre à jour les messages affichés avec un délai pour l'animation
+    // Attendre que les messages soient vraiment marqués comme lus côté serveur
+    // avant de mettre à jour l'interface
     setTimeout(() => {
-      setChatMessages(prevMessages => 
-        prevMessages.map(msg => ({
-          ...msg,
-          isRead: msg.receiverId === userId ? true : msg.isRead
-        }))
-      );
-    }, 100);
-
-    // Mettre à jour les compteurs avec un délai pour l'animation
-    setTimeout(() => {
-      setUnreadMessages(prev => {
-        const updated = {
-          ...prev,
-          [contactId]: 0
-        };
-        updateTotalUnreadMessages(updated);
-        return updated;
-      });
-    }, 300);
+      // Vérifier à nouveau les messages non lus après le marquage
+      fetchTotalUnreadMessages();
+    }, 1000);
   };
+
   const [hasNewMessages, setHasNewMessages] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedProfile, setEditedProfile] = useState({});
@@ -685,127 +777,76 @@ const PatientDashboard = () => {
         return;
       }
 
-      console.log("Appointment trouvé:", appointment);
-
       let messages = [];
+      let contactId = null;
+
       if (appointment.lab) {
         // Messages de laboratoire
         const labId = appointment.lab._id;
+        contactId = labId;
         console.log("Chargement des messages de laboratoire pour:", labId);
-        try {
-          const response = await axios.get(`${API_BASE_URL}/api/lab-patient-messages/${labId}/${userId}`);
-          console.log("✅ Messages de laboratoire reçus:", response.data);
-          messages = response.data;
-          
-          // Marquer les messages comme lus
-          const unreadMessageIds = messages
-            .filter(msg => msg.receiverId === userId && !msg.isRead)
-            .map(msg => msg._id);
-          
-          if (unreadMessageIds.length > 0) {
-            await axios.put(`${API_BASE_URL}/api/lab-patient-messages/read`, {
-              messageIds: unreadMessageIds
-            });
-            
-            // Mettre à jour le compteur local et forcer le re-render
-            setUnreadMessages(prev => {
-              const updated = {
-                ...prev,
-                [labId]: 0
-              };
-              updateTotalUnreadMessages(updated);
-              return updated;
-            });
-            
-            // Forcer la mise à jour des messages affichés
-            setChatMessages(prevMessages => 
-              prevMessages.map(msg => ({
-                ...msg,
-                isRead: msg.receiverId === userId ? true : msg.isRead
-              }))
-            );
-          }
-        } catch (error) {
-          console.error("❌ Erreur lors du chargement des messages de laboratoire:", error);
-          setError("Erreur lors du chargement des messages de laboratoire");
+        
+        const response = await axios.get(`${API_BASE_URL}/api/lab-patient-messages/${labId}/${userId}`);
+        messages = response.data;
+        
+        // Marquer les messages comme lus immédiatement
+        const unreadMessageIds = messages
+          .filter(msg => msg.receiverId === userId && !msg.isRead)
+          .map(msg => msg._id);
+        
+        if (unreadMessageIds.length > 0) {
+          await axios.put(`${API_BASE_URL}/api/lab-patient-messages/read`, {
+            messageIds: unreadMessageIds
+          });
         }
       } else {
-        // Messages de médecin - récupérer tous les messages avec ce médecin
+        // Messages de médecin
         const doctorId = appointment.doctorId?._id || appointment.doctorId;
+        contactId = doctorId;
+        
         if (!doctorId) {
-          console.error("ID du médecin non trouvé dans le rendez-vous:", appointment);
-          setError("Erreur: Impossible de charger les messages - ID du médecin manquant");
+          console.error("ID du médecin non trouvé");
           return;
         }
-        console.log("Chargement de tous les messages du médecin pour:", doctorId);
-        try {
-          // Récupérer tous les rendez-vous avec ce médecin (exclure les hôpitaux)
-          const doctorAppointments = appointments.filter(apt => {
-            const aptDoctorId = apt.doctorId?._id || apt.doctorId;
-            return aptDoctorId === doctorId && 
-                   apt.type !== 'hospital' &&
-                   !apt.hospitalId &&
-                   !apt.doctorName?.toLowerCase().includes('hôpital') &&
-                   !apt.doctorName?.toLowerCase().includes('hopital');
+
+        // Récupérer tous les rendez-vous avec ce médecin
+        const doctorAppointments = appointments.filter(apt => {
+          const aptDoctorId = apt.doctorId?._id || apt.doctorId;
+          return aptDoctorId === doctorId && 
+                 apt.type !== 'hospital' &&
+                 !apt.hospitalId;
+        });
+        
+        // Récupérer les messages pour tous les rendez-vous avec ce médecin
+        const messagesPromises = doctorAppointments.map(apt => 
+          axios.get(`${API_BASE_URL}/api/messages/${apt._id}?userId=${userId}`)
+        );
+        
+        const messagesResponses = await Promise.all(messagesPromises);
+        
+        // Fusionner tous les messages
+        let allMessages = [];
+        messagesResponses.forEach(response => {
+          allMessages = [...allMessages, ...response.data];
+        });
+        
+        // Trier les messages par date
+        allMessages.sort((a, b) => new Date(a.createdAt || a.sentAt) - new Date(b.createdAt || b.sentAt));
+        messages = allMessages;
+        
+        // Marquer les messages comme lus
+        const unreadMessageIds = messages
+          .filter(msg => msg.receiverId === userId && !msg.isRead)
+          .map(msg => msg._id);
+        
+        if (unreadMessageIds.length > 0) {
+          await axios.put(`${API_BASE_URL}/api/messages/read`, {
+            messageIds: unreadMessageIds
           });
-          
-          console.log("Rendez-vous trouvés pour ce médecin:", doctorAppointments);
-          
-          // Récupérer les messages pour tous les rendez-vous avec ce médecin
-          const messagesPromises = doctorAppointments.map(apt => 
-            axios.get(`${API_BASE_URL}/api/messages/${apt._id}?userId=${userId}`)
-          );
-          
-          const messagesResponses = await Promise.all(messagesPromises);
-          
-          // Fusionner tous les messages
-          let allMessages = [];
-          messagesResponses.forEach(response => {
-            allMessages = [...allMessages, ...response.data];
-          });
-          
-          // Trier les messages par date
-          allMessages.sort((a, b) => new Date(a.createdAt || a.sentAt) - new Date(b.createdAt || b.sentAt));
-          
-          messages = allMessages;
-          console.log("✅ Tous les messages du médecin reçus:", messages);
-          
-          // Marquer les messages comme lus
-          const unreadMessageIds = messages
-            .filter(msg => msg.receiverId === userId && !msg.isRead)
-            .map(msg => msg._id);
-          
-          if (unreadMessageIds.length > 0) {
-            await axios.put(`${API_BASE_URL}/api/messages/read`, {
-              messageIds: unreadMessageIds
-            });
-            
-            // Mettre à jour le compteur local et forcer le re-render
-            const doctorId = appointment.doctorId?._id || appointment.doctorId;
-            setUnreadMessages(prev => {
-              const updated = {
-                ...prev,
-                [doctorId]: 0
-              };
-              updateTotalUnreadMessages(updated);
-              return updated;
-            });
-            
-            // Forcer la mise à jour des messages affichés
-            setChatMessages(prevMessages => 
-              prevMessages.map(msg => ({
-                ...msg,
-                isRead: msg.receiverId === userId ? true : msg.isRead
-              }))
-            );
-          }
-        } catch (error) {
-          console.error("❌ Erreur lors du chargement des messages du médecin:", error);
-          setError("Erreur lors du chargement des messages du médecin");
         }
       }
 
-      // Marquer tous les messages comme lus dans l'état local immédiatement
+      // Mettre à jour les messages avec le statut lu
       const updatedMessages = messages.map(msg => ({
         ...msg,
         isRead: msg.receiverId === userId ? true : msg.isRead
@@ -813,12 +854,25 @@ const PatientDashboard = () => {
       
       setChatMessages(updatedMessages);
       
-      // Rafraîchir les compteurs de messages non lus après un délai
+      // Mettre à jour immédiatement les compteurs
+      if (contactId) {
+        setUnreadMessages(prev => {
+          const updated = {
+            ...prev,
+            [contactId]: 0
+          };
+          updateTotalUnreadMessages(updated);
+          return updated;
+        });
+      }
+      
+      // Rafraîchir le total après un délai
       setTimeout(() => {
-      checkUnreadMessages();
+        fetchTotalUnreadMessages();
       }, 500);
+      
     } catch (error) {
-      console.error("❌ Erreur générale lors du chargement des messages:", error);
+      console.error("❌ Erreur lors du chargement des messages:", error);
       setError("Une erreur est survenue lors du chargement des messages");
     } finally {
       setChatLoading(false);
@@ -1244,7 +1298,7 @@ const PatientDashboard = () => {
             const unreadCount = labMessagesResponse.data.filter(msg => !msg.isRead && msg.receiverId === userId).length;
             if (unreadCount > 0) {
               unreadByContact[labId] = unreadCount;
-            totalUnread += unreadCount;
+              totalUnread += unreadCount;
               console.log(`✅ Messages non lus du laboratoire ${lab.nom}:`, unreadCount);
             }
           }
@@ -1262,14 +1316,25 @@ const PatientDashboard = () => {
     updateTotalUnreadMessages(unreadByContact);
   };
 
-  // Modifier l'useEffect pour vérifier les messages non lus uniquement quand userId est disponible
+  // Remplacer l'useEffect existant par celui-ci
   useEffect(() => {
-    if (userId && appointments.length > 0) {
-      checkUnreadMessages();
-      const interval = setInterval(checkUnreadMessages, 900000);
+    if (userId) {
+      // Vérification initiale
+      fetchTotalUnreadMessages();
+      
+      // Vérification périodique toutes les 10 secondes
+      const interval = setInterval(fetchTotalUnreadMessages, 10000);
+      
       return () => clearInterval(interval);
     }
-  }, [userId, appointments, labAppointments]);
+  }, [userId]);
+
+  // Garder aussi cet useEffect pour les vérifications détaillées quand on accède aux messages
+  useEffect(() => {
+    if (userId && appointments.length > 0 && activeSection === 'messages') {
+      checkUnreadMessages();
+    }
+  }, [userId, appointments, labAppointments, activeSection]);
 
   // Mettre à jour le total quand les messages non lus changent
   useEffect(() => {
@@ -1310,6 +1375,10 @@ const PatientDashboard = () => {
 
     const handleUpdateProfile = async () => {
     try {
+      // Indicateur de chargement
+      setIsLoading(true);
+      setMessage("🔄 Mise à jour en cours...");
+      
       // Séparer les données utilisateur de base et les données patient
       const userFields = ['nom', 'prenom', 'email', 'telephone', 'adresse', 'cin', 'region'];
       const patientFields = ['emergencyPhone', 'bloodType', 'chronicDiseases'];
@@ -1335,16 +1404,49 @@ const PatientDashboard = () => {
       // Mettre à jour les données patient si nécessaire
       if (Object.keys(patientUpdateData).length > 0) {
         console.log("🔄 Mise à jour des données patient:", patientUpdateData);
-                 await axios.put(`${API_BASE_URL}/patient/profile/${userId}`, patientUpdateData);
+        await axios.put(`${API_BASE_URL}/patient/profile/${userId}`, patientUpdateData);
       }
       
-            // Recharger le profil complet pour afficher les changements      await fetchProfile(userId);
+      // Auto-reload : Recharger toutes les données dépendantes du profil
+      console.log("🔄 Auto-reload : Rechargement de toutes les données...");
+      
+      // 1. Recharger le profil
+      await fetchProfile(userId);
+      
+      // 2. Recharger les notifications (au cas où le profil affecte les notifications)
+      await fetchNotifications(userId);
+      
+      // 3. Recharger les documents médicaux (au cas où les données du profil affectent l'affichage)
+      await fetchMedicalDocuments(userId);
+      
+      // 4. Si on est dans la section messages ou rendez-vous, recharger les données
+      if (activeSection === 'messages' || activeSection === 'all-appointments') {
+        await fetchAllAppointments(userId);
+      }
+      
+      // 5. Marquer dans localStorage que le profil a été mis à jour
+      localStorage.setItem('profileUpdated', 'true');
+      localStorage.setItem('profileUpdateTime', new Date().toISOString());
       
       setIsEditing(false);
-      setMessage("✅ Profil mis à jour avec succès !");
+      setMessage("✅ Profil mis à jour avec succès ! Données rechargées automatiquement.");
+      
+      // Animation de succès
+      setTimeout(() => {
+        setMessage("🎉 Mise à jour terminée !");
+      }, 1000);
+      
+      // Auto-effacement du message après 3 secondes
+      setTimeout(() => {
+        setMessage("");
+      }, 4000);
+      
     } catch (error) {
-      console.error("Erreur lors de la mise à jour du profil:", error);
+      console.error("❌ Erreur lors de la mise à jour du profil:", error);
       setMessage("❌ Erreur lors de la mise à jour du profil.");
+      setIsEditing(false);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -1590,6 +1692,172 @@ const PatientDashboard = () => {
     );
   };
 
+  // Ajouter ce useEffect après les autres useEffect existants
+  useEffect(() => {
+    // Vérifier si le profil vient d'être mis à jour
+    const profileUpdated = localStorage.getItem('profileUpdated');
+    const profileUpdateTime = localStorage.getItem('profileUpdateTime');
+    
+    if (profileUpdated === 'true' && profileUpdateTime) {
+      const updateTime = new Date(profileUpdateTime);
+      const now = new Date();
+      const timeDiff = now - updateTime;
+      
+      // Si la mise à jour s'est faite il y a moins de 5 secondes
+      if (timeDiff < 5000) {
+        console.log("🎉 Profil récemment mis à jour, affichage de la notification de succès");
+        setMessage("🎉 Profil mis à jour avec succès ! Toutes les données ont été rechargées.");
+        
+        // Animation de l'élément profil
+        const profileCard = document.querySelector('.profile-card');
+        if (profileCard) {
+          profileCard.style.animation = 'profileUpdateSuccess 2s ease-in-out';
+        }
+        
+        // Nettoyer les flags du localStorage
+        setTimeout(() => {
+          localStorage.removeItem('profileUpdated');
+          localStorage.removeItem('profileUpdateTime');
+          setMessage("");
+        }, 3000);
+      }
+    }
+  }, [activeSection, userId]);
+
+  // Ajouter cette fonction après checkUnreadMessages
+  const fetchTotalUnreadMessages = async () => {
+    try {
+      if (!userId) return;
+      
+      console.log("🔍 Vérification des messages non lus...");
+      let totalUnread = 0;
+      const unreadByContact = {};
+
+      // Vérifier les messages des médecins
+      if (appointments.length > 0) {
+        const doctorGroups = appointments
+          .filter(apt => {
+            const doctorId = apt.doctorId?._id || apt.doctorId;
+            const doctorName = apt.doctorName || apt.doctorId?.nom || 'Médecin';
+            return doctorId && 
+                   apt.type !== 'hospital' &&
+                   !apt.hospitalId &&
+                   !doctorName.toLowerCase().includes('hôpital') &&
+                   !doctorName.toLowerCase().includes('hopital');
+          })
+          .reduce((groups, apt) => {
+            const doctorId = apt.doctorId?._id || apt.doctorId;
+            if (!groups[doctorId]) {
+              groups[doctorId] = [];
+            }
+            groups[doctorId].push(apt);
+            return groups;
+          }, {});
+
+        for (const [doctorId, doctorAppointments] of Object.entries(doctorGroups)) {
+          let doctorUnreadCount = 0;
+          
+          for (const apt of doctorAppointments) {
+            try {
+              const response = await axios.get(`${API_BASE_URL}/api/messages/${apt._id}?userId=${userId}`);
+              const messages = response.data || [];
+              const unreadCount = messages.filter(msg => msg.receiverId === userId && !msg.isRead).length;
+              doctorUnreadCount += unreadCount;
+            } catch (error) {
+              console.error(`❌ Erreur pour le rendez-vous ${apt._id}:`, error);
+            }
+          }
+          
+          if (doctorUnreadCount > 0) {
+            unreadByContact[doctorId] = doctorUnreadCount;
+            totalUnread += doctorUnreadCount;
+          }
+        }
+      }
+
+      // Vérifier les messages des laboratoires
+      if (labAppointments.length > 0) {
+        const labGroups = labAppointments
+          .filter(apt => apt.lab && apt.lab._id)
+          .reduce((groups, apt) => {
+            const labId = apt.lab._id;
+            if (!groups[labId]) {
+              groups[labId] = apt.lab;
+            }
+            return groups;
+          }, {});
+        
+        for (const [labId, lab] of Object.entries(labGroups)) {
+          try {
+            const labMessagesResponse = await axios.get(`${API_BASE_URL}/api/lab-patient-messages/${labId}/${userId}`);
+            if (labMessagesResponse.data && Array.isArray(labMessagesResponse.data)) {
+              const unreadCount = labMessagesResponse.data.filter(msg => !msg.isRead && msg.receiverId === userId).length;
+              if (unreadCount > 0) {
+                unreadByContact[labId] = unreadCount;
+                totalUnread += unreadCount;
+              }
+            }
+          } catch (labError) {
+            console.error(`❌ Erreur pour le laboratoire ${labId}:`, labError);
+          }
+        }
+      }
+
+      console.log("📊 Total messages non lus:", totalUnread);
+      console.log("📊 Messages non lus par contact:", unreadByContact);
+      
+      // Mettre à jour l'état seulement si les valeurs ont réellement changé
+      setUnreadMessages(prev => {
+        const hasChanged = JSON.stringify(prev) !== JSON.stringify(unreadByContact);
+        if (hasChanged) {
+          console.log("🔄 Mise à jour des messages non lus");
+          return unreadByContact;
+        }
+        return prev;
+      });
+      
+      setTotalUnreadMessages(totalUnread);
+      
+    } catch (error) {
+      console.error('❌ Erreur récupération total messages non lus:', error);
+    }
+  };
+
+  // 3. Améliorer les useEffect pour une meilleure gestion
+  useEffect(() => {
+    if (userId) {
+      // Vérification initiale
+      fetchTotalUnreadMessages();
+      
+      // Vérification périodique plus fréquente (toutes les 5 secondes)
+      const interval = setInterval(() => {
+        // Seulement si on n'est pas en train de lire des messages
+        if (activeSection !== 'messages' || !selectedAppointment) {
+          fetchTotalUnreadMessages();
+        }
+      }, 5000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [userId, appointments, labAppointments]);
+
+  // 4. UseEffect spécialisé pour la section messages
+  useEffect(() => {
+    if (activeSection === 'messages' && userId) {
+      console.log("📨 Entrée dans la section messages, vérification des messages...");
+      fetchTotalUnreadMessages();
+      
+      // Vérification moins fréquente quand on est dans les messages (toutes les 15 secondes)
+      const messagesInterval = setInterval(() => {
+        if (!selectedAppointment) {
+          fetchTotalUnreadMessages();
+        }
+      }, 15000);
+      
+      return () => clearInterval(messagesInterval);
+    }
+  }, [activeSection, userId]);
+
   return (
     <div className="dashboard-container">
       <aside className="medical-sidebar">
@@ -1658,7 +1926,9 @@ const PatientDashboard = () => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   lineHeight: '1',
-                  animation: 'pulse 2s infinite'
+                  animation: 'pulse 2s infinite',
+                  boxShadow: '0 2px 4px rgba(239, 68, 68, 0.3)',
+                  zIndex: 10
                 }}>
                   {totalUnreadMessages > 99 ? '99+' : totalUnreadMessages}
                 </span>
@@ -1708,9 +1978,7 @@ const PatientDashboard = () => {
           <>
             {activeSection === 'profile' && (
               <>
-              
-                
-                <div className="profile-card">
+                <div className={`profile-card ${isLoading ? 'profile-updating' : ''}`}>
                   <div style={styles.profileHeaderContent}>
                     <div style={styles.profilePhotoContainer}>
                       <img 
@@ -2414,355 +2682,715 @@ const PatientDashboard = () => {
             )}
 
             {activeSection === 'messages' && (
-              <div className="messagerie-container">
-                <div className="contacts-sidebar">
-                  <div className="contacts-header">
-                    <h2>💬 Messagerie</h2>
-                    <div className="search-container">
-                      <input
-                        type="text"
-                        placeholder="Rechercher une conversation..."
-                        className="search-input"
-                      />
+              <div className="messagerie-container" style={{
+                height: 'calc(100vh - 40px)',
+                display: 'flex',
+                backgroundColor: '#f8fafc',
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                margin: '20px',
+                borderRadius: '12px',
+                overflow: 'hidden',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
+              }}>
+                {/* Liste des conversations */}
+                <div className="contacts-list" style={{
+                  width: '320px',
+                  backgroundColor: '#ffffff',
+                  borderRight: '1px solid #e2e8f0',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  boxShadow: '2px 0 8px rgba(0,0,0,0.05)'
+                }}>
+                  <div style={{
+                    padding: '24px 20px',
+                    borderBottom: '1px solid #e2e8f0',
+                    backgroundColor: '#ffffff'
+                  }}>
+                    <h3 style={{ 
+                      margin: '0 0 20px 0',
+                      fontSize: '1.5rem',
+                      fontWeight: '700',
+                      color: '#1e293b',
+                      letterSpacing: '-0.025em'
+                    }}>
+                      Messagerie
+                    </h3>
+                    
+                    {/* Barre de recherche */}
+                    <input
+                      type="text"
+                      placeholder="Rechercher une conversation..."
+                      style={{
+                        width: '100%',
+                        marginBottom: '16px',
+                        padding: '12px 16px',
+                        borderRadius: '12px',
+                        border: '1px solid #e2e8f0',
+                        fontSize: '0.95rem',
+                        outline: 'none',
+                        background: '#f8fafc',
+                        color: '#374151',
+                        boxSizing: 'border-box',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#0f766e';
+                        e.target.style.backgroundColor = '#ffffff';
+                        e.target.style.boxShadow = '0 0 0 3px rgba(15, 118, 110, 0.1)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#e2e8f0';
+                        e.target.style.backgroundColor = '#f8fafc';
+                        e.target.style.boxShadow = 'none';
+                      }}
+                    />
+                    
+                    {/* Onglets de filtrage */}
+                    <div style={{
+                      display: 'flex',
+                      gap: '4px',
+                      backgroundColor: '#f1f5f9',
+                      padding: '4px',
+                      borderRadius: '12px'
+                    }}>
+                      <button
+                        onClick={() => toggleCategory('doctors')}
+                        style={{
+                          flex: 1,
+                          padding: '10px 14px',
+                          border: 'none',
+                          borderRadius: '8px',
+                          backgroundColor: expandedCategories.doctors ? '#0f766e' : 'transparent',
+                          color: expandedCategories.doctors ? 'white' : '#64748b',
+                          fontWeight: expandedCategories.doctors ? '600' : '500',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          fontSize: '0.875rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        👨‍⚕️ Médecins
+                      </button>
+                      <button
+                        onClick={() => toggleCategory('labs')}
+                        style={{
+                          flex: 1,
+                          padding: '10px 14px',
+                          border: 'none',
+                          borderRadius: '8px',
+                          backgroundColor: expandedCategories.labs ? '#0f766e' : 'transparent',
+                          color: expandedCategories.labs ? 'white' : '#64748b',
+                          fontWeight: expandedCategories.labs ? '600' : '500',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          fontSize: '0.875rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        🔬 Laboratoires
+                      </button>
                     </div>
-                  </div>
-
-                <div className="contacts-list">
-                    {/* Médecins groupés par docteur */}
-                  <div className="contact-category">
-                    <div 
-                        className="category-header clickable"
-                      onClick={() => toggleCategory('doctors')}
-                    >
-                      <div className="category-title">
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{color: '#0f766e'}}>
-                            <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 1H5C3.89 1 3 1.89 3 3V21C3 22.11 3.89 23 5 23H19C20.11 23 21 22.11 21 21V9M12 7C14.76 7 17 9.24 17 12S14.76 17 12 17 7 14.76 7 12 9.24 7 12 7Z"/>
-                          </svg>
-                        <h3>Médecins</h3>
-                      </div>
-                        <div className="toggle-icon">
-                          {expandedCategories.doctors ? '▼' : '▶'}
-                        </div>
-                    </div>
-                    {expandedCategories.doctors && (
-                      <div className="contacts-group">
-                        {(() => {
-                          // Fonction pour vérifier si c'est un vrai médecin
-                          const isRealDoctor = (apt) => {
-                            if (!apt.doctorId || !apt.doctorName) return false;
-                            
-                            const name = apt.doctorName.toLowerCase();
-                            const excludedKeywords = [
-                              'hôpital', 'hopital', 'clinique', 'centre', 'fatoum',
-                              'laboratoire', 'labo', 'lab', 'analyse', 'biologie',
-                              'imagerie', 'radio', 'scanner', 'irm', 'echo'
-                            ];
-                            
-                            return !excludedKeywords.some(keyword => name.includes(keyword)) &&
-                                   apt.type !== 'hospital' &&
-                                   !apt.hospitalId &&
-                                   !apt.labId &&
-                                   !apt.lab;
-                          };
-
-                          // Grouper les rendez-vous par docteur (seulement les vrais médecins)
-                          const doctorGroups = appointments
-                            .filter(isRealDoctor)
-                            .reduce((groups, apt) => {
-                              const doctorId = apt.doctorId?._id || apt.doctorId;
-                              if (!groups[doctorId]) {
-                                groups[doctorId] = {
-                                  doctorId,
-                                  doctorName: apt.doctorName,
-                                  appointments: [],
-                                  lastAppointment: apt
-                                };
-                              }
-                              groups[doctorId].appointments.push(apt);
-                              // Garder le rendez-vous le plus récent
-                              if (new Date(apt.date) > new Date(groups[doctorId].lastAppointment.date)) {
-                                groups[doctorId].lastAppointment = apt;
-                              }
-                              return groups;
-                            }, {});
-
-                          if (Object.keys(doctorGroups).length === 0) {
-                            return (
-                              <div className="empty-category">
-                                <div className="empty-icon">👨‍⚕️</div>
-                                <p>Aucun médecin disponible</p>
-                                <small>Les conversations apparaîtront après vos rendez-vous</small>
-                              </div>
-                            );
-                          }
-
-                          return Object.values(doctorGroups).map(group => (
-                            <div key={group.doctorId} className="contact-item-wrapper">
-                              <div 
-                                className={`contact-item ${selectedAppointment?.doctorId === group.doctorId ? 'active' : ''}`}
-                                onClick={() => {
-                                  setSelectedAppointment(group.lastAppointment);
-                                  fetchChatMessages(group.lastAppointment._id);
-                                  
-                                  // Marquer immédiatement comme lu dans l'interface
-                                  if (unreadMessages[group.doctorId] > 0) {
-                                    markMessagesAsReadInUI(group.doctorId, false);
-                                  }
-                                }}
-                              >
-                                <div className="contact-avatar doctor">
-                                  👨‍⚕️
-                                </div>
-                                <div className="contact-info">
-                                  <div className="contact-name">{group.doctorName}</div>
-                                  <div className="contact-meta">
-                                    <span className="appointment-count">{group.appointments.length} RDV</span>
-                                    <span className="last-date">{new Date(group.lastAppointment.date).toLocaleDateString('fr-FR')}</span>
-                                  </div>
-                                </div>
-                                <div className="contact-indicators">
-                                  {unreadMessages[group.doctorId] && unreadMessages[group.doctorId] > 0 && (
-                                    <span 
-                                      className="unread-badge"
-                                      key={`doctor-${group.doctorId}-${unreadMessages[group.doctorId]}`}
-                                    >
-                                      {unreadMessages[group.doctorId]}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                                  </div>
-                          ));
-                        })()}
-                      </div>
-                    )}
-                  </div>
-
-                    {/* Laboratoires groupés */}
-                  <div className="contact-category">
-                    <div 
-                        className="category-header clickable"
-                      onClick={() => toggleCategory('labs')}
-                    >
-                      <div className="category-title">
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{color: '#7c3aed'}}>
-                            <path d="M5,2H7V4H5V6H3V4C3,2.89 3.89,2 5,2M19,2C20.11,2 21,2.89 21,4V6H19V4H17V2H19M5,18V20H7V22H5C3.89,22 3,21.11 3,20V18H5M19,18H21V20C21,21.11 20.11,22 19,22H17V20H19V18M12,6A4,4 0 0,1 16,10C16,12 14,16 12,16C10,16 8,12 8,10A4,4 0 0,1 12,6M12,8A2,2 0 0,0 10,10C10,10.67 10.83,12 12,12C13.17,12 14,10.67 14,10A2,2 0 0,0 12,8Z"/>
-                          </svg>
-                        <h3>Laboratoires</h3>
-                      </div>
-                        <div className="toggle-icon">
-                          {expandedCategories.labs ? '▼' : '▶'}
-                        </div>
-                    </div>
-                    {expandedCategories.labs && (
-                      <div className="contacts-group">
-                        {(() => {
-                          // Fonction pour vérifier si c'est un vrai laboratoire
-                          const isRealLab = (apt) => {
-                            if (!apt.lab || !apt.lab._id || !apt.lab.nom) return false;
-                            
-                            const name = apt.lab.nom.toLowerCase();
-                            const excludedKeywords = [
-                              'hôpital', 'hopital', 'clinique', 'centre médical', 'fatoum'
-                            ];
-                            const labKeywords = [
-                              'laboratoire', 'labo', 'lab', 'analyse', 'biologie'
-                            ];
-                            
-                            return !excludedKeywords.some(keyword => name.includes(keyword)) &&
-                                   labKeywords.some(keyword => name.includes(keyword));
-                          };
-
-                          // Grouper les rendez-vous par laboratoire (seulement les vrais laboratoires)
-                          const labGroups = labAppointments
-                            .filter(isRealLab)
-                            .reduce((groups, apt) => {
-                              const labId = apt.lab?._id || apt.labId;
-                              const labName = apt.lab?.nom || 'Laboratoire';
-                              if (!groups[labId]) {
-                                groups[labId] = {
-                                  labId,
-                                  labName,
-                                  appointments: [],
-                                  lastAppointment: apt
-                                };
-                              }
-                              groups[labId].appointments.push(apt);
-                              // Garder le rendez-vous le plus récent
-                              if (new Date(apt.date) > new Date(groups[labId].lastAppointment.date)) {
-                                groups[labId].lastAppointment = apt;
-                              }
-                              return groups;
-                            }, {});
-
-                          if (Object.keys(labGroups).length === 0) {
-                            return (
-                              <div className="empty-category">
-                                <div className="empty-icon">🔬</div>
-                                <p>Aucun laboratoire disponible</p>
-                                <small>Les conversations apparaîtront après vos analyses</small>
-                              </div>
-                            );
-                          }
-
-                          return Object.values(labGroups).map(group => (
-                            <div key={group.labId} className="contact-item-wrapper">
-                              <div 
-                                className={`contact-item ${selectedAppointment?.labId === group.labId ? 'active' : ''}`}
-                                onClick={() => {
-                                  setSelectedAppointment(group.lastAppointment);
-                                  fetchChatMessages(group.lastAppointment._id);
-                                  
-                                  // Marquer immédiatement comme lu dans l'interface
-                                  if (unreadMessages[group.labId] > 0) {
-                                    markMessagesAsReadInUI(group.labId, true);
-                                  }
-                                }}
-                              >
-                                <div className="contact-avatar lab">
-                                  🔬
-                                </div>
-                              <div className="contact-info">
-                                  <div className="contact-name">{group.labName}</div>
-                                  <div className="contact-meta">
-                                    <span className="appointment-count">{group.appointments.length} analyses</span>
-                                    <span className="last-date">{new Date(group.lastAppointment.date).toLocaleDateString('fr-FR')}</span>
-                                </div>
-                              </div>
-                              <div className="contact-indicators">
-                                  {unreadMessages[group.labId] && unreadMessages[group.labId] > 0 && (
-                                    <span 
-                                      className="unread-badge"
-                                      key={`lab-${group.labId}-${unreadMessages[group.labId]}`}
-                                    >
-                                      {unreadMessages[group.labId]}
-                                    </span>
-                              )}
-                            </div>
-                            </div>
-                                </div>
-                          ));
-                        })()}
-                              </div>
-                            )}
-                          </div>
-                  </div>
                   </div>
                   
-                <div className="chat-container">
-                    {selectedAppointment ? (
-                      <>
-                        <div className="chat-header">
-                        <div className="contact-avatar">
-                          <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                          </svg>
-                        </div>
-                        <div className="contact-info">
-                        <div className="contact-name">
-                          {selectedAppointment.doctorName || selectedAppointment.lab?.nom}
-                        </div>
-                          <div className="contact-status">
-                            <span className="status-indicator"></span>
-                            Conversation unifiée • {selectedAppointment.doctorName ? 'Médecin' : 'Laboratoire'}
+                  {/* Liste des conversations */}
+                  <div className="contacts-group" style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    padding: '8px'
+                  }}>
+                    {/* Conversations avec les médecins */}
+                    {expandedCategories.doctors && (() => {
+                      const isRealDoctor = (apt) => {
+                        if (!apt.doctorId || !apt.doctorName) return false;
+                        const name = apt.doctorName.toLowerCase();
+                        const excludedKeywords = [
+                          'hôpital', 'hopital', 'clinique', 'centre', 'fatoum',
+                          'laboratoire', 'labo', 'lab', 'analyse', 'biologie',
+                          'imagerie', 'radio', 'scanner', 'irm', 'echo'
+                        ];
+                        return !excludedKeywords.some(keyword => name.includes(keyword)) &&
+                               apt.type !== 'hospital' &&
+                               !apt.hospitalId &&
+                               !apt.labId &&
+                               !apt.lab;
+                      };
+
+                      const doctorGroups = appointments
+                        .filter(isRealDoctor)
+                        .reduce((groups, apt) => {
+                          const doctorId = apt.doctorId?._id || apt.doctorId;
+                          if (!groups[doctorId]) {
+                            groups[doctorId] = {
+                              id: doctorId,
+                              type: 'Doctor',
+                              contact: {
+                                _id: doctorId,
+                                nom: apt.doctorName.split(' ').pop() || '',
+                                prenom: apt.doctorName.split(' ').slice(0, -1).join(' ') || apt.doctorName,
+                                specialty: 'Médecin'
+                              },
+                              appointments: [],
+                              lastAppointment: apt
+                            };
+                          }
+                          groups[doctorId].appointments.push(apt);
+                          if (new Date(apt.date) > new Date(groups[doctorId].lastAppointment.date)) {
+                            groups[doctorId].lastAppointment = apt;
+                          }
+                          return groups;
+                        }, {});
+
+                      if (Object.keys(doctorGroups).length === 0) {
+                        return (
+                          <div style={{
+                            padding: '40px 20px',
+                            textAlign: 'center',
+                            color: '#64748b',
+                            fontSize: '0.95rem'
+                          }}>
+                            <div style={{ fontSize: '2rem', marginBottom: '8px' }}>👨‍⚕️</div>
+                            <p>Aucun médecin disponible</p>
+                            <small>Les conversations apparaîtront après vos rendez-vous</small>
+                          </div>
+                        );
+                      }
+
+                      return Object.values(doctorGroups).map(conv => (
+                        <div
+                          key={`doctor-${conv.id}`}
+                          data-contact-id={conv.id}
+                          onClick={() => {
+                            setSelectedAppointment(conv.lastAppointment);
+                            fetchChatMessages(conv.lastAppointment._id);
+                            if (unreadMessages[conv.id] > 0) {
+                              markMessagesAsReadInUI(conv.id, false);
+                            }
+                          }}
+                          style={{
+                            padding: '16px',
+                            margin: '4px 0',
+                            borderRadius: '12px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            backgroundColor: selectedAppointment?.doctorId === conv.id ? '#f0f4ff' : 'transparent',
+                            border: selectedAppointment?.doctorId === conv.id ? '1px solid #c7d2fe' : '1px solid transparent',
+                            position: 'relative'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (selectedAppointment?.doctorId !== conv.id) {
+                              e.target.style.backgroundColor = '#f8fafc';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (selectedAppointment?.doctorId !== conv.id) {
+                              e.target.style.backgroundColor = 'transparent';
+                            }
+                          }}
+                        >
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px'
+                          }}>
+                            <div style={{
+                              width: '44px',
+                              height: '44px',
+                              borderRadius: '12px',
+                              backgroundColor: '#dcfce7',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '1.2rem',
+                              fontWeight: '600',
+                              color: '#059669'
+                            }}>
+                              👨‍⚕️
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{
+                                fontWeight: '600',
+                                fontSize: '0.95rem',
+                                color: '#1e293b',
+                                marginBottom: '2px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                              }}>
+                                {`${conv.contact?.prenom || ''} ${conv.contact?.nom || ''}`}
+                                {unreadMessages[conv.id] > 0 && (
+                                  <span style={{
+                                    backgroundColor: '#ef4444',
+                                    color: 'white',
+                                    fontSize: '0.7rem',
+                                    fontWeight: '600',
+                                    padding: '2px 6px',
+                                    borderRadius: '10px',
+                                    minWidth: '18px',
+                                    height: '18px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    lineHeight: '1'
+                                  }}>
+                                    {unreadMessages[conv.id]}
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{
+                                fontSize: '0.8rem',
+                                color: '#64748b',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                <span style={{
+                                  width: '6px',
+                                  height: '6px',
+                                  borderRadius: '50%',
+                                  backgroundColor: '#10b981'
+                                }}></span>
+                                Médecin • {conv.appointments.length} RDV
+                              </div>
+                            </div>
                           </div>
                         </div>
-                        <div className="chat-actions">
-                          <button className="action-btn">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                              <path d="M6.62,10.79C8.06,13.62 10.38,15.94 13.21,17.38L15.41,15.18C15.69,14.9 16.08,14.82 16.43,14.93C17.55,15.3 18.75,15.5 20,15.5A1,1 0 0,1 21,16.5V20A1,1 0 0,1 20,21A17,17 0 0,1 3,4A1,1 0 0,1 4,3H7.5A1,1 0 0,1 8.5,4C8.5,5.25 8.7,6.45 9.07,7.57C9.18,7.92 9.1,8.31 8.82,8.59L6.62,10.79Z"/>
-                            </svg>
-                          </button>
-                          <button className="action-btn">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                              <path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"/>
-                            </svg>
-                          </button>
+                      ));
+                    })()}
+
+                    {/* Conversations avec les laboratoires */}
+                    {expandedCategories.labs && (() => {
+                      const isRealLab = (apt) => {
+                        if (!apt.lab || !apt.lab._id || !apt.lab.nom) return false;
+                        const name = apt.lab.nom.toLowerCase();
+                        const excludedKeywords = ['hôpital', 'hopital', 'clinique', 'centre médical', 'fatoum'];
+                        const labKeywords = ['laboratoire', 'labo', 'lab', 'analyse', 'biologie'];
+                        return !excludedKeywords.some(keyword => name.includes(keyword)) &&
+                               labKeywords.some(keyword => name.includes(keyword));
+                      };
+
+                      const labGroups = labAppointments
+                        .filter(isRealLab)
+                        .reduce((groups, apt) => {
+                          const labId = apt.lab?._id || apt.labId;
+                          if (!groups[labId]) {
+                            groups[labId] = {
+                              id: labId,
+                              type: 'Lab',
+                              contact: {
+                                _id: labId,
+                                nom: apt.lab?.nom || 'Laboratoire',
+                                prenom: '',
+                                adresse: apt.lab?.adresse || ''
+                              },
+                              appointments: [],
+                              lastAppointment: apt
+                            };
+                          }
+                          groups[labId].appointments.push(apt);
+                          if (new Date(apt.date) > new Date(groups[labId].lastAppointment.date)) {
+                            groups[labId].lastAppointment = apt;
+                          }
+                          return groups;
+                        }, {});
+
+                      if (Object.keys(labGroups).length === 0) {
+                        return (
+                          <div style={{
+                            padding: '40px 20px',
+                            textAlign: 'center',
+                            color: '#64748b',
+                            fontSize: '0.95rem'
+                          }}>
+                            <div style={{ fontSize: '2rem', marginBottom: '8px' }}>🔬</div>
+                            <p>Aucun laboratoire disponible</p>
+                            <small>Les conversations apparaîtront après vos analyses</small>
+                          </div>
+                        );
+                      }
+
+                      return Object.values(labGroups).map(conv => (
+                        <div
+                          key={`lab-${conv.id}`}
+                          onClick={() => {
+                            setSelectedAppointment(conv.lastAppointment);
+                            fetchChatMessages(conv.lastAppointment._id);
+                            if (unreadMessages[conv.id] > 0) {
+                              markMessagesAsReadInUI(conv.id, true);
+                            }
+                          }}
+                          style={{
+                            padding: '16px',
+                            margin: '4px 0',
+                            borderRadius: '12px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            backgroundColor: selectedAppointment?.labId === conv.id ? '#f0f4ff' : 'transparent',
+                            border: selectedAppointment?.labId === conv.id ? '1px solid #c7d2fe' : '1px solid transparent'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (selectedAppointment?.labId !== conv.id) {
+                              e.target.style.backgroundColor = '#f8fafc';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (selectedAppointment?.labId !== conv.id) {
+                              e.target.style.backgroundColor = 'transparent';
+                            }
+                          }}
+                        >
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px'
+                          }}>
+                            <div style={{
+                              width: '44px',
+                              height: '44px',
+                              borderRadius: '12px',
+                              backgroundColor: '#f3e8ff',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '1.2rem',
+                              fontWeight: '600',
+                              color: '#7c3aed'
+                            }}>
+                              🔬
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{
+                                fontWeight: '600',
+                                fontSize: '0.95rem',
+                                color: '#1e293b',
+                                marginBottom: '2px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                              }}>
+                                {conv.contact?.nom || 'Laboratoire'}
+                                {unreadMessages[conv.id] > 0 && (
+                                  <span style={{
+                                    backgroundColor: '#ef4444',
+                                    color: 'white',
+                                    fontSize: '0.7rem',
+                                    fontWeight: '600',
+                                    padding: '2px 6px',
+                                    borderRadius: '10px',
+                                    minWidth: '18px',
+                                    height: '18px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    lineHeight: '1'
+                                  }}>
+                                    {unreadMessages[conv.id]}
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{
+                                fontSize: '0.8rem',
+                                color: '#64748b',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                <span style={{
+                                  width: '6px',
+                                  height: '6px',
+                                  borderRadius: '50%',
+                                  backgroundColor: '#7c3aed'
+                                }}></span>
+                                Laboratoire • {conv.appointments.length} analyses
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+
+                {/* Zone de chat */}
+                <div className="chat-container" style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  backgroundColor: '#ffffff'
+                }}>
+                  {selectedAppointment ? (
+                    <>
+                      {/* Header du chat */}
+                      <div className="chat-header" style={{
+                        padding: '20px 24px',
+                        borderBottom: '1px solid #e2e8f0',
+                        backgroundColor: '#ffffff',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                          <div style={{
+                            width: '48px',
+                            height: '48px',
+                            borderRadius: '12px',
+                            backgroundColor: selectedAppointment.lab ? '#f3e8ff' : '#dcfce7',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '1.4rem',
+                            fontWeight: '600',
+                            color: selectedAppointment.lab ? '#7c3aed' : '#059669'
+                          }}>
+                            {selectedAppointment.lab ? '🔬' : '👨‍⚕️'}
+                          </div>
+                          <div>
+                            <h3 style={{ 
+                              margin: '0',
+                              fontSize: '1.2rem',
+                              fontWeight: '700',
+                              color: '#1e293b',
+                              letterSpacing: '-0.025em'
+                            }}>
+                              {selectedAppointment.doctorName || selectedAppointment.lab?.nom}
+                            </h3>
+                            <p style={{ 
+                              margin: '4px 0 0 0', 
+                              color: '#64748b',
+                              fontSize: '0.9rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}>
+                              <span style={{
+                                width: '6px',
+                                height: '6px',
+                                borderRadius: '50%',
+                                backgroundColor: '#10b981'
+                              }}></span>
+                              {selectedAppointment.lab ? 'Laboratoire' : 'Médecin'} • En ligne
+                            </p>
+                          </div>
                         </div>
                       </div>
 
-                        <div className="chat-messages">
+                      {/* Messages */}
+                      <div className="chat-messages" style={{
+                        flex: 1,
+                        overflowY: 'auto',
+                        padding: '24px',
+                        backgroundColor: '#f8fafc',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '16px'
+                      }}>
                         {chatLoading ? (
-                          <div className="loading-messages">
-                            <div className="loading-spinner"></div>
-                            <p>Chargement des messages...</p>
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            height: '200px',
+                            color: '#64748b',
+                            fontSize: '0.95rem'
+                          }}>
+                            Chargement des messages...
                           </div>
                         ) : chatMessages.length === 0 ? (
-                          <div className="empty-messages">
-                            <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor">
-                              <path d="M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4C22,2.89 21.1,2 20,2Z"/>
-                            </svg>
-                            <h3>Aucun message</h3>
-                            <p>Commencez une conversation en envoyant un message</p>
+                          <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            height: '200px',
+                            color: '#64748b',
+                            fontSize: '0.95rem',
+                            gap: '8px'
+                          }}>
+                            <div style={{
+                              width: '64px',
+                              height: '64px',
+                              borderRadius: '50%',
+                              backgroundColor: '#e2e8f0',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '1.5rem',
+                              marginBottom: '8px'
+                            }}>
+                              💬
+                            </div>
+                            Aucun message dans cette conversation
                           </div>
                         ) : (
-                          <div className="messages-list">
-                              {chatMessages.map((msg) => (
-                              <div 
-                                key={msg._id} 
-                            className={`message ${msg.senderId === userId ? 'sent' : 'received'}`}
+                          <>
+                            {chatMessages.map((msg, index) => (
+                              <div
+                                key={msg._id || index}
+                                style={{
+                                  display: 'flex',
+                                  justifyContent: msg.senderId === userId ? 'flex-end' : 'flex-start',
+                                  marginBottom: '8px'
+                                }}
                               >
-                                <div className={`message-bubble ${!msg.isRead && msg.senderId !== userId ? 'unread' : ''}`}>
-                                <div className="message-content">{msg.content}</div>
-                                  <div className="message-time">
+                                <div style={{
+                                  maxWidth: '70%',
+                                  padding: '12px 16px',
+                                  borderRadius: '16px',
+                                  backgroundColor: msg.senderId === userId ? '#0f766e' : '#ffffff',
+                                  color: msg.senderId === userId ? '#ffffff' : '#1e293b',
+                                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                  position: 'relative'
+                                }}>
+                                  <div style={{
+                                    fontSize: '0.95rem',
+                                    lineHeight: '1.5',
+                                    marginBottom: '4px'
+                                  }}>
+                                    {msg.content}
+                                  </div>
+                                  <div style={{
+                                    fontSize: '0.75rem',
+                                    opacity: 0.7,
+                                    textAlign: msg.senderId === userId ? 'right' : 'left'
+                                  }}>
                                     {new Date(msg.sentAt || msg.createdAt).toLocaleString('fr-FR', {
                                       hour: '2-digit',
                                       minute: '2-digit'
                                     })}
-                                </div>
-                                </div>
-                                {!msg.isRead && msg.senderId !== userId && (
-                                  <div className="message-status">
-                                    <span 
-                                      className="unread-indicator"
-                                      key={`indicator-${msg._id}`}
-                                    ></span>
                                   </div>
-                                )}
+                                </div>
                               </div>
-                              ))}
-                          </div>
+                            ))}
+                          </>
                         )}
-                            </div>
-
-                      <div className="chat-input-container">
-                        <div className="chat-input">
-                          <button className="attachment-btn">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                              <path d="M16.5,6V17.5A4,4 0 0,1 12.5,21.5A4,4 0 0,1 8.5,17.5V5A2.5,2.5 0 0,1 11,2.5A2.5,2.5 0 0,1 13.5,5V15.5A1,1 0 0,1 12.5,16.5A1,1 0 0,1 11.5,15.5V6H10V15.5A2.5,2.5 0 0,0 12.5,18A2.5,2.5 0 0,0 15,15.5V5A4,4 0 0,0 11,1A4,4 0 0,0 7,5V17.5A5.5,5.5 0 0,0 12.5,23A5.5,5.5 0 0,0 18,17.5V6H16.5Z"/>
-                            </svg>
-                          </button>
-                          <input
-                            type="text"
-                            value={newChatMessage}
-                            onChange={(e) => setNewChatMessage(e.target.value)}
-                            placeholder="Écrivez votre message..."
-                            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                            className="message-input"
-                          />
-                        <button
-                          onClick={handleSendMessage}
-                          disabled={!newChatMessage.trim()}
-                          className="send-button"
-                        >
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                              <path d="M2,21L23,12L2,3V10L17,12L2,14V21Z"/>
-                            </svg>
-                          </button>
-                        </div>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="no-chat-selected">
-                        <div className="empty-state">
-                        <svg width="80" height="80" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4C22,2.89 21.1,2 20,2M6,9H18V11H6V9M6,12H16V14H6V12M6,6H18V8H6V6Z"/>
-                        </svg>
-                        <h3>Sélectionnez une conversation</h3>
-                        <p>Choisissez un médecin ou un laboratoire dans la liste pour commencer à échanger des messages</p>
-                        </div>
                       </div>
-                    )}
+
+                      {/* Zone de saisie */}
+                      <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} style={{
+                        padding: '20px 24px',
+                        borderTop: '1px solid #e2e8f0',
+                        backgroundColor: '#ffffff',
+                        display: 'flex',
+                        gap: '12px',
+                        alignItems: 'center'
+                      }}>
+                        <input
+                          type="text"
+                          value={newChatMessage}
+                          onChange={(e) => setNewChatMessage(e.target.value)}
+                          placeholder="Tapez votre message..."
+                          style={{
+                            flex: 1,
+                            padding: '12px 16px',
+                            borderRadius: '24px',
+                            border: '1px solid #e2e8f0',
+                            outline: 'none',
+                            fontSize: '0.95rem',
+                            backgroundColor: '#f8fafc',
+                            color: '#374151',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onFocus={(e) => {
+                            e.target.style.borderColor = '#0f766e';
+                            e.target.style.backgroundColor = '#ffffff';
+                            e.target.style.boxShadow = '0 0 0 3px rgba(15, 118, 110, 0.1)';
+                          }}
+                          onBlur={(e) => {
+                            e.target.style.borderColor = '#e2e8f0';
+                            e.target.style.backgroundColor = '#f8fafc';
+                            e.target.style.boxShadow = 'none';
+                          }}
+                        />
+                        <button
+                          type="submit"
+                          disabled={!newChatMessage.trim()}
+                          style={{
+                            padding: '12px 20px',
+                            borderRadius: '20px',
+                            border: 'none',
+                            backgroundColor: !newChatMessage.trim() ? '#e2e8f0' : '#0f766e',
+                            color: !newChatMessage.trim() ? '#9ca3af' : '#ffffff',
+                            cursor: !newChatMessage.trim() ? 'not-allowed' : 'pointer',
+                            fontSize: '0.9rem',
+                            fontWeight: '600',
+                            transition: 'all 0.2s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (newChatMessage.trim()) {
+                              e.target.style.backgroundColor = '#0d5c5c';
+                              e.target.style.transform = 'translateY(-1px)';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (newChatMessage.trim()) {
+                              e.target.style.backgroundColor = '#0f766e';
+                              e.target.style.transform = 'translateY(0)';
+                            }
+                          }}
+                        >
+                          <span>📤</span>
+                          Envoyer
+                        </button>
+                      </form>
+                    </>
+                  ) : (
+                    <div className="no-chat-selected" style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      height: '100%',
+                      color: '#64748b',
+                      fontSize: '1rem',
+                      gap: '16px'
+                    }}>
+                      <div style={{
+                        width: '80px',
+                        height: '80px',
+                        borderRadius: '50%',
+                        backgroundColor: '#f1f5f9',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '2rem',
+                        marginBottom: '8px'
+                      }}>
+                        💬
+                      </div>
+                      <div style={{
+                        textAlign: 'center',
+                        maxWidth: '300px'
+                      }}>
+                        <h3 style={{
+                          margin: '0 0 8px 0',
+                          fontSize: '1.2rem',
+                          fontWeight: '600',
+                          color: '#374151'
+                        }}>
+                          Sélectionnez une conversation
+                        </h3>
+                        <p style={{
+                          margin: 0,
+                          color: '#64748b',
+                          fontSize: '0.95rem'
+                        }}>
+                          Choisissez un médecin ou un laboratoire dans la liste pour commencer à échanger des messages
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

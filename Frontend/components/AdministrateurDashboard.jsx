@@ -23,8 +23,8 @@ const AdminDashboard = () => {
   const [userSearchTerm, setUserSearchTerm] = useState("");
   const [selectedRole, setSelectedRole] = useState("all");
   const [validationStatus, setValidationStatus] = useState("all");
-  const [sortBy, setSortBy] = useState("email");
-  const [sortOrder, setSortOrder] = useState("asc");
+  const [sortBy, setSortBy] = useState("createdAt");
+  const [sortOrder, setSortOrder] = useState("desc");
 
   useEffect(() => {
     const role = localStorage.getItem("userRole");
@@ -34,6 +34,11 @@ const AdminDashboard = () => {
     }
   }, []);
 
+  const showToast = (type, message) => {
+    setNotificationStatus({ type, message });
+    setTimeout(() => setNotificationStatus(null), 4000);
+  };
+
   const fetchUsers = async () => {
     try {
       const res = await fetch("http://localhost:5001/users");
@@ -42,6 +47,7 @@ const AdminDashboard = () => {
       setFilteredUsers(data);
     } catch (error) {
       console.error("Erreur récupération utilisateurs:", error);
+      showToast('error', 'Erreur lors de la récupération des utilisateurs');
     }
   };
 
@@ -78,7 +84,6 @@ const AdminDashboard = () => {
       }
       
       const data = await response.json();
-      // Trier les notifications par date (les plus récentes en premier)
       const sortedData = data.sort((a, b) => 
         new Date(b.timestamp) - new Date(a.timestamp)
       );
@@ -107,30 +112,54 @@ const AdminDashboard = () => {
         body: JSON.stringify({ role: newRole }),
       });
       fetchUsers();
+      showToast('success', 'Rôle de l\'utilisateur modifié avec succès');
     } catch (error) {
       console.error("Erreur update role:", error);
+      showToast('error', 'Erreur lors de la modification du rôle');
     }
   };
 
   const deleteUser = async (id) => {
-    try {
-      await fetch(`http://localhost:5001/admin/users/${id}`, {
-        method: "DELETE",
-      });
-      fetchUsers();
-    } catch (error) {
-      console.error("Erreur suppression utilisateur:", error);
+    const userToDelete = allUsers.find(user => user._id === id);
+    const userName = userToDelete ? 
+      (userToDelete.nom && userToDelete.prenom ? 
+        `${userToDelete.nom} ${userToDelete.prenom}` : 
+        userToDelete.email) : 
+      'l\'utilisateur';
+
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer ${userName} ?`)) {
+      try {
+        await fetch(`http://localhost:5001/admin/users/${id}`, {
+          method: "DELETE",
+        });
+        fetchUsers();
+        fetchOverview();
+        showToast('success', `${userName} a été supprimé avec succès`);
+      } catch (error) {
+        console.error("Erreur suppression utilisateur:", error);
+        showToast('error', 'Erreur lors de la suppression de l\'utilisateur');
+      }
     }
   };
 
   const validateUser = async (id) => {
+    const userToValidate = allUsers.find(user => user._id === id);
+    const userName = userToValidate ? 
+      (userToValidate.nom && userToValidate.prenom ? 
+        `${userToValidate.nom} ${userToValidate.prenom}` : 
+        userToValidate.email) : 
+      'l\'utilisateur';
+
     try {
       await fetch(`http://localhost:5001/admin/validate-user/${id}`, {
         method: "PUT",
       });
       fetchUsers();
+      fetchOverview();
+      showToast('success', `${userName} a été validé avec succès`);
     } catch (error) {
       console.error("Erreur validation utilisateur:", error);
+      showToast('error', 'Erreur lors de la validation de l\'utilisateur');
     }
   };
 
@@ -178,7 +207,6 @@ const AdminDashboard = () => {
 
       const responseData = await response.json();
       
-      // Ajouter la nouvelle notification à l'historique local
       const newNotification = {
         _id: responseData._id || Date.now(),
         title: notificationTitle,
@@ -192,7 +220,6 @@ const AdminDashboard = () => {
       setNotificationHistory(prev => [newNotification, ...prev]);
       setNotificationStatus({ type: 'success', message: 'Notification envoyée avec succès!' });
       
-      // Reset form
       setMessage("");
       setNotificationTitle("");
       setSelectedUsers([]);
@@ -200,7 +227,6 @@ const AdminDashboard = () => {
       setNotificationType("info");
       setNotificationPriority("normal");
 
-      // Rafraîchir l'historique des notifications
       await fetchNotificationHistory();
 
     } catch (error) {
@@ -221,21 +247,19 @@ const AdminDashboard = () => {
     (user.prenom && user.prenom.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Fonction de filtrage avancé et tri des utilisateurs
   const getFilteredAndSortedUsers = () => {
     let filtered = allUsers.filter(user => {
-      // Filtre par recherche textuelle
+      const isNotPatient = !user.roles || !user.roles.some(role => role.toLowerCase() === 'patient');
+      
       const searchMatch = userSearchTerm === "" || 
         user.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
         (user.nom && user.nom.toLowerCase().includes(userSearchTerm.toLowerCase())) ||
         (user.prenom && user.prenom.toLowerCase().includes(userSearchTerm.toLowerCase())) ||
         (user.roles && user.roles.some(role => role.toLowerCase().includes(userSearchTerm.toLowerCase())));
 
-      // Filtre par rôle
       const roleMatch = selectedRole === "all" || 
         (user.roles && user.roles.some(role => role.toLowerCase() === selectedRole.toLowerCase()));
 
-      // Filtre par statut de validation
       let validationMatch = true;
       if (validationStatus === "validated") {
         validationMatch = user.profileCompleted && user.isValidated;
@@ -245,10 +269,9 @@ const AdminDashboard = () => {
         validationMatch = user.isRejected || false;
       }
 
-      return searchMatch && roleMatch && validationMatch;
+      return isNotPatient && searchMatch && roleMatch && validationMatch;
     });
 
-    // Tri des résultats
     filtered.sort((a, b) => {
       let aValue, bValue;
       
@@ -266,8 +289,8 @@ const AdminDashboard = () => {
           bValue = b.roles ? b.roles[0] || "" : "";
           break;
         case "createdAt":
-          aValue = new Date(a.createdAt || 0);
-          bValue = new Date(b.createdAt || 0);
+          aValue = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          bValue = b.createdAt ? new Date(b.createdAt).getTime() : 0;
           break;
         default:
           aValue = a.email || "";
@@ -275,7 +298,11 @@ const AdminDashboard = () => {
       }
 
       if (sortBy === "createdAt") {
-        return sortOrder === "asc" ? aValue - bValue : bValue - aValue;
+        if (sortOrder === "desc") {
+          return bValue - aValue;
+        } else {
+          return aValue - bValue;
+        }
       } else {
         const comparison = aValue.toString().localeCompare(bValue.toString());
         return sortOrder === "asc" ? comparison : -comparison;
@@ -283,6 +310,24 @@ const AdminDashboard = () => {
     });
 
     return filtered;
+  };
+
+  const getCalculatedOverview = () => {
+    if (!overview || !allUsers.length) return overview;
+
+    const professionalUsers = allUsers.filter(user => 
+      user.roles && !user.roles.some(role => role.toLowerCase() === 'patient') &&
+      user.email !== 'admin2@healthapp.com'
+    );
+
+    const docsToValidate = professionalUsers.filter(user => 
+      !user.isValidated || !user.profileCompleted
+    ).length;
+
+    return {
+      ...overview,
+      docsToValidate
+    };
   };
 
   const filterUsers = (type) => {
@@ -302,13 +347,12 @@ const AdminDashboard = () => {
     setActiveSection("users");
   };
 
-  // Fonction pour réinitialiser tous les filtres
   const resetFilters = () => {
     setUserSearchTerm("");
     setSelectedRole("all");
     setValidationStatus("all");
-    setSortBy("email");
-    setSortOrder("asc");
+    setSortBy("createdAt");
+    setSortOrder("desc");
   };
 
   const handleLogout = () => {
@@ -320,11 +364,18 @@ const AdminDashboard = () => {
     <div className="admin-dashboard">
       {notificationStatus && (
         <div className={`notification-status ${notificationStatus.type}`}>
-          {notificationStatus.message}
+          <div className="notification-content">
+            <span>{notificationStatus.message}</span>
+            <button 
+              className="close-notification"
+              onClick={() => setNotificationStatus(null)}
+            >
+              ×
+            </button>
+          </div>
         </div>
       )}
       
-      {/* Medical Sidebar */}
       <aside className="medical-sidebar">
         <div className="sidebar-header">
           <div className="medical-logo">
@@ -350,7 +401,7 @@ const AdminDashboard = () => {
               className={`nav-item ${activeSection === "users" ? "active" : ""}`}
             >
               <span className="nav-icon">👥</span>
-              <span className="nav-text">Utilisateurs</span>
+              <span className="nav-text">Utilisateurs Professionnels</span>
             </button>
             <button 
               onClick={() => setActiveSection("alerts")}
@@ -370,13 +421,11 @@ const AdminDashboard = () => {
         </div>
       </aside>
 
-      {/* Main */}
       <main className="main-content">
         <header className="main-header">
           <h1>Interface Administrateur</h1>
         </header>
 
-        {/* Dynamic Sections */}
         <section className="content">
           {activeSection === "dashboard" && overview && (
             <>
@@ -398,7 +447,7 @@ const AdminDashboard = () => {
                 <div className="stat-card red" onClick={() => filterUsers("pending")}>
                   <div className="stat-icon">📄</div>
                   <div className="stat-info">
-                    <h3>{overview.docsToValidate}</h3>
+                    <h3>{getCalculatedOverview()?.docsToValidate || 0}</h3>
                     <p>Profils professionnels à valider</p>
                   </div>
                 </div>
@@ -431,13 +480,15 @@ const AdminDashboard = () => {
           {activeSection === "users" && (
             <div className="users-section">
               <div className="users-header">
-                <h2>Gestion des Utilisateurs</h2>
-                <button onClick={resetFilters} className="reset-filters-btn">
-                  🔄 Réinitialiser les filtres
-                </button>
+                <h2>Gestion des Utilisateurs Professionnels</h2>
+                <div className="users-info">
+                 
+                  <button onClick={resetFilters} className="reset-filters-btn">
+                    🔄 Réinitialiser les filtres
+                  </button>
+                </div>
               </div>
 
-              {/* Filtres avancés */}
               <div className="advanced-filters">
                 <div className="filters-row">
                   <div className="filter-group">
@@ -458,8 +509,7 @@ const AdminDashboard = () => {
                       onChange={(e) => setSelectedRole(e.target.value)}
                       className="filter-select"
                     >
-                      <option value="all">Tous les rôles</option>
-                      <option value="Patient">Patient</option>
+                      <option value="all">Tous les rôles professionnels</option>
                       <option value="Doctor">Médecin</option>
                       <option value="Labs">Laboratoire</option>
                       <option value="Hospital">Hôpital</option>
@@ -488,13 +538,18 @@ const AdminDashboard = () => {
                     <div className="sort-controls">
                       <select
                         value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value)}
+                        onChange={(e) => {
+                          setSortBy(e.target.value);
+                          if (e.target.value === "createdAt") {
+                            setSortOrder("desc");
+                          }
+                        }}
                         className="filter-select"
                       >
+                        <option value="createdAt">Date d'inscription (plus récents)</option>
                         <option value="email">Email</option>
                         <option value="name">Nom</option>
                         <option value="role">Rôle</option>
-                        <option value="createdAt">Date d'inscription</option>
                       </select>
                       <button
                         onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
@@ -509,12 +564,16 @@ const AdminDashboard = () => {
 
                 <div className="results-info">
                   <span className="results-count">
-                    {getFilteredAndSortedUsers().length} utilisateur(s) trouvé(s)
+                    {getFilteredAndSortedUsers().length} utilisateur(s) professionnel(s) trouvé(s)
                   </span>
+                  {sortBy === "createdAt" && (
+                    <span className="sort-info">
+                      - Triés par date d'inscription ({sortOrder === "desc" ? "plus récents en premier" : "plus anciens en premier"})
+                    </span>
+                  )}
                 </div>
               </div>
 
-              {/* Table des utilisateurs */}
               <div className="users-table-container">
                 <table>
                   <thead>
@@ -523,6 +582,7 @@ const AdminDashboard = () => {
                       <th>Email</th>
                       <th>Rôle</th>
                       <th>Statut</th>
+                      <th>Date d'inscription</th>
                       <th>Document</th>
                       <th>Actions</th>
                     </tr>
@@ -548,7 +608,6 @@ const AdminDashboard = () => {
                               onChange={(e) => updateUserRole(user._id, e.target.value)}
                               className="role-select"
                             >
-                              <option value="Patient">Patient</option>
                               <option value="Doctor">Doctor</option>
                               <option value="Labs">Labs</option>
                               <option value="Hospital">Hospital</option>
@@ -564,10 +623,22 @@ const AdminDashboard = () => {
                           </span>
                         </td>
                         <td>
+                          <span className="registration-date">
+                            {user.createdAt ? 
+                              new Date(user.createdAt).toLocaleDateString('fr-FR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                              }) : 
+                              'Non disponible'
+                            }
+                          </span>
+                        </td>
+                        <td>
                           {user.email === 'admin2@healthapp.com' ? (
                             <span className="no-document">-</span>
                           ) : (
-                            user.roles[0].toLowerCase() !== 'patient' && (user.diploma || user.photo) ? (
+                            (user.diploma || user.photo) ? (
                               <a
                                 href={`http://localhost:5001${user.diploma || user.photo}`}
                                 target="_blank"
@@ -602,7 +673,7 @@ const AdminDashboard = () => {
 
                 {getFilteredAndSortedUsers().length === 0 && (
                   <div className="no-results">
-                    <p>Aucun utilisateur ne correspond aux critères de recherche.</p>
+                    <p>Aucun utilisateur professionnel ne correspond aux critères de recherche.</p>
                   </div>
                 )}
               </div>

@@ -235,6 +235,12 @@ body {
     justify-content: center;
   line-height: 1;
   animation: pulse 2s infinite;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.unread-badge.fade-out {
+  opacity: 0;
+  transform: scale(0.8);
 }
 
 /* Scrollbar styling for sidebar */
@@ -1636,7 +1642,6 @@ form[data-type="hospital"] .submit-btn:hover {
 }
 
 .category-title h3 {
-  color: white;
   font-size: 1rem;
   font-weight: 700;
   margin: 0;
@@ -1813,11 +1818,17 @@ form[data-type="hospital"] .submit-btn:hover {
   border-radius: 10px;
   min-width: 18px;
   height: 18px;
-  display: flex;
+    display: flex;
   align-items: center;
-  justify-content: center;
+    justify-content: center;
   line-height: 1;
   animation: pulse 2s infinite;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.unread-badge.fade-out {
+  opacity: 0;
+  transform: scale(0.8);
 }
 
 .message-time {
@@ -2036,7 +2047,23 @@ form[data-type="hospital"] .submit-btn:hover {
   animation: pulse 2s infinite;
   box-shadow: 0 0 4px rgba(239, 68, 68, 0.5);
   opacity: 1;
-  transition: all 0.3s ease;
+  transition: opacity 0.3s ease;
+}
+
+.unread-indicator.fade-out {
+  opacity: 0;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
 }
 
 /* Animation de disparition pour les indicateurs de messages non lus */
@@ -2657,8 +2684,6 @@ form[data-type="hospital"] .submit-btn:hover {
   background: #0f766e;
   border-color: #0f766e;
   color: white;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(15, 118, 110, 0.2);
 }
 
 .notifications-container .pagination-btn:disabled {
