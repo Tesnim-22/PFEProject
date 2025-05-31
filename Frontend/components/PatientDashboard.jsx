@@ -561,8 +561,8 @@ const PatientDashboard = () => {
     if (activeSection === 'new-appointment') {
       // Charger les médecins si le type de rendez-vous est médical
       if (appointmentType === 'medical') {
-        console.log("🏥 Section rendez-vous médecin active, chargement des médecins...");
-        fetchDoctors();
+        console.log("🏥 Section rendez-vous médecin active, chargement des médecins validés...");
+        fetchValidatedDoctors();
       }
       // Charger les laboratoires si le type de rendez-vous est laboratoire
       else if (appointmentType === 'laboratory') {
@@ -636,27 +636,30 @@ const PatientDashboard = () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/api/notifications/${id}`);
       
-      // Récupérer les notifications lues depuis localStorage
+      // Récupérer les notifications lues depuis localStorage (seulement comme fallback)
       const readNotifications = JSON.parse(localStorage.getItem(`readNotifications_${id}`) || '[]');
-      console.log("🔍 Notifications lues depuis localStorage:", readNotifications);
+      console.log("🔍 Notifications lues depuis localStorage (fallback):", readNotifications);
       
       // S'assurer que chaque notification a un ID unique et un statut isRead
       const formattedNotifications = res.data.map((notif, index) => {
         const notificationId = notif.id || notif._id || `notification-${index}`;
-        const isReadFromStorage = readNotifications.includes(notificationId);
         const isReadFromServer = notif.isRead || notif.read || false;
+        const isReadFromStorage = readNotifications.includes(notificationId);
+        
+        // Privilégier l'état du serveur, utiliser localStorage seulement en fallback
+        const finalIsRead = isReadFromServer || isReadFromStorage;
         
         console.log(`📋 Notification ${notificationId}:`, {
-          isReadFromStorage,
           isReadFromServer,
-          finalIsRead: isReadFromStorage || isReadFromServer
+          isReadFromStorage,
+          finalIsRead
         });
         
         return {
           ...notif,
           id: notificationId,
-          isRead: isReadFromStorage || isReadFromServer,
-          read: isReadFromStorage || isReadFromServer // Assurer la cohérence
+          isRead: finalIsRead,
+          read: finalIsRead // Assurer la cohérence
         };
       });
       
@@ -1200,6 +1203,15 @@ const PatientDashboard = () => {
 
   const fetchDoctors = async () => {
     try {
+      const response = await axios.get(`${API_BASE_URL}/api/doctors`);
+      setDoctors(response.data);
+    } catch (error) {
+      console.error('Erreur récupération docteurs:', error);
+    }
+  };
+
+  const fetchValidatedDoctors = async () => {
+    try {
       console.log("🔍 Récupération des médecins...");
       const response = await axios.get(`${API_BASE_URL}/api/medecins-valides`);
       console.log("✅ Médecins reçus:", response.data);
@@ -1209,10 +1221,32 @@ const PatientDashboard = () => {
         user.isValidated !== false
       ));
     } catch (error) {
-      console.error("❌ Erreur lors de la récupération des médecins:", error);
-      setMessage("Erreur lors de la récupération de la liste des médecins.");
+      console.error('Erreur récupération médecins validés:', error);
     }
   };
+
+  // FONCTION SIMPLIFIÉE - Copie exacte de la logique DoctorDashboard
+  const fetchTotalUnreadMessages = async () => {
+    try {
+      if (!userId) return;
+      
+      // Utiliser une API similaire à DoctorDashboard mais pour les patients
+      const response = await axios.get(`${API_BASE_URL}/api/messages/total-unread-patient/${userId}`);
+      setTotalUnreadMessages(response.data.total || 0);
+    } catch (error) {
+      console.error('Erreur récupération total messages non lus:', error);
+    }
+  };
+
+  // USEEFFECT SIMPLIFIÉ - Copie exacte de DoctorDashboard
+  useEffect(() => {
+    if (userId) {
+      fetchTotalUnreadMessages();
+      // Actualiser toutes les 10 secondes pour détecter rapidement les nouveaux messages
+      const interval = setInterval(fetchTotalUnreadMessages, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [userId]);
 
   const checkUnreadMessages = async () => {
     if (!userId) {
@@ -1315,19 +1349,6 @@ const PatientDashboard = () => {
     setUnreadMessages(unreadByContact);
     updateTotalUnreadMessages(unreadByContact);
   };
-
-  // Remplacer l'useEffect existant par celui-ci
-  useEffect(() => {
-    if (userId) {
-      // Vérification initiale
-      fetchTotalUnreadMessages();
-      
-      // Vérification périodique toutes les 10 secondes
-      const interval = setInterval(fetchTotalUnreadMessages, 10000);
-      
-      return () => clearInterval(interval);
-    }
-  }, [userId]);
 
   // Garder aussi cet useEffect pour les vérifications détaillées quand on accède aux messages
   useEffect(() => {
@@ -1588,6 +1609,22 @@ const PatientDashboard = () => {
       const currentReadNotifications = JSON.parse(localStorage.getItem(`readNotifications_${userId}`) || '[]');
       console.log("📖 Notifications déjà lues avant modification:", currentReadNotifications);
       
+      // Trouver la notification pour déterminer si c'est une notification admin
+      const notification = notifications.find(n => n.id === notificationId || n._id === notificationId);
+      const isAdminNotification = notification?.isAdminNotification || false;
+      
+      // NOUVEAU: Appel API pour marquer comme lue côté serveur (comme DoctorDashboard)
+      try {
+        await axios.put(`${API_BASE_URL}/api/notifications/${notificationId}/read`, {
+          userId: userId,
+          isAdminNotification: isAdminNotification
+        });
+        console.log("✅ Notification marquée comme lue côté serveur");
+      } catch (apiError) {
+        console.error("❌ Erreur API lors du marquage:", apiError);
+        // Continuer même si l'API échoue, on garde le localStorage comme fallback
+      }
+      
       // Mettre à jour localement en utilisant l'ID de la notification
       setNotifications(prev => 
         prev.map(notif => {
@@ -1599,7 +1636,7 @@ const PatientDashboard = () => {
         })
       );
       
-      // Sauvegarder dans localStorage pour persister l'état
+      // Sauvegarder dans localStorage pour persister l'état (fallback)
       const updatedReadNotifications = [...currentReadNotifications];
       if (!updatedReadNotifications.includes(notificationId)) {
         updatedReadNotifications.push(notificationId);
@@ -1639,12 +1676,32 @@ const PatientDashboard = () => {
 
       console.log("🔄 Marquage de toutes les notifications comme lues:", unreadNotifications.length);
 
+      // NOUVEAU: Appels API pour marquer toutes les notifications comme lues côté serveur
+      const apiPromises = unreadNotifications.map(async (notif) => {
+        const notificationId = notif.id || notif._id;
+        const isAdminNotification = notif.isAdminNotification || false;
+        
+        try {
+          await axios.put(`${API_BASE_URL}/api/notifications/${notificationId}/read`, {
+            userId: userId,
+            isAdminNotification: isAdminNotification
+          });
+          console.log(`✅ Notification ${notificationId} marquée comme lue côté serveur`);
+        } catch (apiError) {
+          console.error(`❌ Erreur API pour notification ${notificationId}:`, apiError);
+        }
+      });
+      
+      // Attendre que tous les appels API se terminent
+      await Promise.all(apiPromises);
+      console.log("✅ Toutes les notifications marquées comme lues côté serveur");
+
       // Mettre à jour localement
       setNotifications(prev => 
         prev.map(notif => ({ ...notif, isRead: true, read: true }))
       );
       
-      // Sauvegarder dans localStorage
+      // Sauvegarder dans localStorage (fallback)
       const readNotifications = JSON.parse(localStorage.getItem(`readNotifications_${userId}`) || '[]');
       const newReadNotifications = [...readNotifications];
       
@@ -1721,140 +1778,6 @@ const PatientDashboard = () => {
           setMessage("");
         }, 3000);
       }
-    }
-  }, [activeSection, userId]);
-
-  // Ajouter cette fonction après checkUnreadMessages
-  const fetchTotalUnreadMessages = async () => {
-    try {
-      if (!userId) return;
-      
-      console.log("🔍 Vérification des messages non lus...");
-      let totalUnread = 0;
-      const unreadByContact = {};
-
-      // Vérifier les messages des médecins
-      if (appointments.length > 0) {
-        const doctorGroups = appointments
-          .filter(apt => {
-            const doctorId = apt.doctorId?._id || apt.doctorId;
-            const doctorName = apt.doctorName || apt.doctorId?.nom || 'Médecin';
-            return doctorId && 
-                   apt.type !== 'hospital' &&
-                   !apt.hospitalId &&
-                   !doctorName.toLowerCase().includes('hôpital') &&
-                   !doctorName.toLowerCase().includes('hopital');
-          })
-          .reduce((groups, apt) => {
-            const doctorId = apt.doctorId?._id || apt.doctorId;
-            if (!groups[doctorId]) {
-              groups[doctorId] = [];
-            }
-            groups[doctorId].push(apt);
-            return groups;
-          }, {});
-
-        for (const [doctorId, doctorAppointments] of Object.entries(doctorGroups)) {
-          let doctorUnreadCount = 0;
-          
-          for (const apt of doctorAppointments) {
-            try {
-              const response = await axios.get(`${API_BASE_URL}/api/messages/${apt._id}?userId=${userId}`);
-              const messages = response.data || [];
-              const unreadCount = messages.filter(msg => msg.receiverId === userId && !msg.isRead).length;
-              doctorUnreadCount += unreadCount;
-            } catch (error) {
-              console.error(`❌ Erreur pour le rendez-vous ${apt._id}:`, error);
-            }
-          }
-          
-          if (doctorUnreadCount > 0) {
-            unreadByContact[doctorId] = doctorUnreadCount;
-            totalUnread += doctorUnreadCount;
-          }
-        }
-      }
-
-      // Vérifier les messages des laboratoires
-      if (labAppointments.length > 0) {
-        const labGroups = labAppointments
-          .filter(apt => apt.lab && apt.lab._id)
-          .reduce((groups, apt) => {
-            const labId = apt.lab._id;
-            if (!groups[labId]) {
-              groups[labId] = apt.lab;
-            }
-            return groups;
-          }, {});
-        
-        for (const [labId, lab] of Object.entries(labGroups)) {
-          try {
-            const labMessagesResponse = await axios.get(`${API_BASE_URL}/api/lab-patient-messages/${labId}/${userId}`);
-            if (labMessagesResponse.data && Array.isArray(labMessagesResponse.data)) {
-              const unreadCount = labMessagesResponse.data.filter(msg => !msg.isRead && msg.receiverId === userId).length;
-              if (unreadCount > 0) {
-                unreadByContact[labId] = unreadCount;
-                totalUnread += unreadCount;
-              }
-            }
-          } catch (labError) {
-            console.error(`❌ Erreur pour le laboratoire ${labId}:`, labError);
-          }
-        }
-      }
-
-      console.log("📊 Total messages non lus:", totalUnread);
-      console.log("📊 Messages non lus par contact:", unreadByContact);
-      
-      // Mettre à jour l'état seulement si les valeurs ont réellement changé
-      setUnreadMessages(prev => {
-        const hasChanged = JSON.stringify(prev) !== JSON.stringify(unreadByContact);
-        if (hasChanged) {
-          console.log("🔄 Mise à jour des messages non lus");
-          return unreadByContact;
-        }
-        return prev;
-      });
-      
-      setTotalUnreadMessages(totalUnread);
-      
-    } catch (error) {
-      console.error('❌ Erreur récupération total messages non lus:', error);
-    }
-  };
-
-  // 3. Améliorer les useEffect pour une meilleure gestion
-  useEffect(() => {
-    if (userId) {
-      // Vérification initiale
-      fetchTotalUnreadMessages();
-      
-      // Vérification périodique plus fréquente (toutes les 5 secondes)
-      const interval = setInterval(() => {
-        // Seulement si on n'est pas en train de lire des messages
-        if (activeSection !== 'messages' || !selectedAppointment) {
-          fetchTotalUnreadMessages();
-        }
-      }, 5000);
-      
-      return () => clearInterval(interval);
-    }
-  }, [userId, appointments, labAppointments]);
-
-  // 4. UseEffect spécialisé pour la section messages
-  useEffect(() => {
-    if (activeSection === 'messages' && userId) {
-      console.log("📨 Entrée dans la section messages, vérification des messages...");
-      fetchTotalUnreadMessages();
-      
-      // Vérification moins fréquente quand on est dans les messages (toutes les 15 secondes)
-      const messagesInterval = setInterval(() => {
-        if (!selectedAppointment) {
-          fetchTotalUnreadMessages();
-        }
-      }, 15000);
-      
-      return () => clearInterval(messagesInterval);
     }
   }, [activeSection, userId]);
 

@@ -23,12 +23,15 @@ import {
   FaTimes,
   FaCheck,
   FaHourglassHalf,
-  FaBan
+  FaBan,
+  FaBell
 } from 'react-icons/fa';
 
 const CabinetDashboard = () => {
   const navigate = useNavigate();
   const [activeRoute, setActiveRoute] = useState('');
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const cabinetId = localStorage.getItem('userId');
 
   const handleLogout = () => {
     localStorage.clear();
@@ -39,6 +42,26 @@ const CabinetDashboard = () => {
     setActiveRoute(route);
     navigate(route);
   };
+
+  // Fonction pour récupérer le nombre de notifications non lues
+  const fetchUnreadNotifications = async () => {
+    try {
+      const response = await axios.get(`http://localhost:5001/api/notifications/cabinet/${cabinetId}/unread-count`);
+      setUnreadNotifications(response.data.total || 0);
+    } catch (error) {
+      console.error('Erreur récupération notifications non lues:', error);
+    }
+  };
+
+  // Récupérer le nombre de notifications non lues au chargement
+  useEffect(() => {
+    if (cabinetId) {
+      fetchUnreadNotifications();
+      // Actualiser toutes les 30 secondes pour détecter les nouvelles notifications
+      const interval = setInterval(fetchUnreadNotifications, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [cabinetId]);
 
   return (
     <div className="dashboard-container">
@@ -95,6 +118,40 @@ const CabinetDashboard = () => {
               <span className="nav-text">Historique</span>
             </button>
           </div>
+
+          <div className="nav-section">
+            <span className="nav-section-title">COMMUNICATION</span>
+            <button 
+              className={`nav-item ${activeRoute === 'notifications' ? 'active' : ''}`}
+              onClick={() => handleNavigation('notifications')}
+              style={{ position: 'relative' }}
+            >
+              <FaBell className="nav-icon" />
+              <span className="nav-text">Notifications</span>
+              {unreadNotifications > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: '8px',
+                  right: '12px',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  fontSize: '0.7rem',
+                  fontWeight: '600',
+                  padding: '2px 6px',
+                  borderRadius: '10px',
+                  minWidth: '18px',
+                  height: '18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  lineHeight: '1',
+                  animation: 'pulse 2s infinite'
+                }}>
+                  {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                </span>
+              )}
+            </button>
+          </div>
         </nav>
 
         <div className="sidebar-footer">
@@ -111,6 +168,7 @@ const CabinetDashboard = () => {
           <Route path="upcoming-appointments" element={<UpcomingAppointmentsView />} />
           <Route path="pending-appointments" element={<PendingAppointmentsView />} />
           <Route path="past-appointments" element={<PastAppointmentsView />} />
+          <Route path="notifications" element={<NotificationsView onNotificationRead={fetchUnreadNotifications} />} />
         </Routes>
       </main>
     </div>
@@ -563,6 +621,17 @@ const PendingAppointmentsView = () => {
     });
   };
 
+  // Fonction pour obtenir la date/heure minimale (maintenant)
+  const getMinDateTime = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   if (loading) {
     return <div className="cabinet-loading">Chargement...</div>;
   }
@@ -708,6 +777,7 @@ const PendingAppointmentsView = () => {
                   type="datetime-local"
                   value={appointmentDate}
                   onChange={(e) => setAppointmentDate(e.target.value)}
+                  min={getMinDateTime()}
                   required
                 />
               </div>
@@ -1637,6 +1707,278 @@ const PastAppointmentsView = () => {
           </>
       )}
       </div>
+    </div>
+  );
+};
+
+const NotificationsView = ({ onNotificationRead }) => {
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [notificationsPerPage] = useState(10);
+  const cabinetId = localStorage.getItem('userId');
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await axios.get(`http://localhost:5001/api/notifications/cabinet/${cabinetId}`);
+      
+      // Dédupliquer les notifications par _id côté frontend pour plus de sécurité
+      const uniqueNotifications = response.data.filter((notif, index, self) => 
+        index === self.findIndex(n => n._id === notif._id)
+      );
+      
+      console.log(`📱 Notifications reçues pour le cabinet:`, {
+        total: response.data.length,
+        unique: uniqueNotifications.length,
+        duplicatesRemoved: response.data.length - uniqueNotifications.length
+      });
+      
+      setNotifications(uniqueNotifications);
+    } catch (error) {
+      console.error('Erreur récupération notifications:', error);
+      setError('Erreur lors du chargement des notifications');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const markAsRead = async (notificationId, isAdminNotification = false) => {
+    try {
+      await axios.put(`http://localhost:5001/api/notifications/${notificationId}/read`, {
+        userId: cabinetId,
+        isAdminNotification: isAdminNotification
+      });
+      
+      // Mettre à jour l'état local des notifications
+      setNotifications(prev => 
+        prev.map(notif => 
+          notif._id === notificationId 
+            ? { ...notif, isRead: true }
+            : notif
+        )
+      );
+      
+      // Mettre à jour le compteur de notifications non lues dans la sidebar
+      if (onNotificationRead) {
+        onNotificationRead();
+      }
+    } catch (error) {
+      console.error('Erreur marquage notification comme lue:', error);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 1) {
+      return "Aujourd'hui";
+    } else if (diffDays === 2) {
+      return "Hier";
+    } else if (diffDays <= 7) {
+      return `Il y a ${diffDays - 1} jours`;
+    } else {
+      return date.toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+  };
+
+  const getPriorityClass = (priority) => {
+    switch (priority) {
+      case 'high':
+        return 'notification-priority-high';
+      case 'medium':
+        return 'notification-priority-medium';
+      case 'low':
+        return 'notification-priority-low';
+      default:
+        return 'notification-priority-normal';
+    }
+  };
+
+  const getTypeIcon = (type) => {
+    switch (type) {
+      case 'info':
+        return '📢';
+      case 'warning':
+        return '⚠️';
+      case 'success':
+        return '✅';
+      case 'error':
+        return '❌';
+      default:
+        return '📢';
+    }
+  };
+
+  // Pagination
+  const indexOfLastNotification = currentPage * notificationsPerPage;
+  const indexOfFirstNotification = indexOfLastNotification - notificationsPerPage;
+  const currentNotifications = notifications.slice(indexOfFirstNotification, indexOfLastNotification);
+  const totalPages = Math.ceil(notifications.length / notificationsPerPage);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  if (loading) {
+    return (
+      <div className="notifications-container">
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Chargement des notifications...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="notifications-container">
+      <div className="notifications-header">
+        <div className="header-content">
+          <div className="header-title">
+            <FaBell className="header-icon" />
+            <div>
+              <h1>Notifications</h1>
+              <p>Gestion des notifications du cabinet</p>
+            </div>
+          </div>
+          <div className="header-stats">
+            <div className="stat-badge">
+              <span className="stat-number">{notifications.length}</span>
+              <span className="stat-label">Total</span>
+            </div>
+            <div className="stat-badge unread">
+              <span className="stat-number">{notifications.filter(n => !n.isRead).length}</span>
+              <span className="stat-label">Non lues</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {error && (
+        <div className="error-container">
+          <FaBan className="error-icon" />
+          <h3>Erreur</h3>
+          <p>{error}</p>
+          <button onClick={fetchNotifications} className="retry-btn">
+            Réessayer
+          </button>
+        </div>
+      )}
+
+      {notifications.length === 0 && !loading && !error ? (
+        <div className="empty-state">
+          <div className="empty-icon">
+            <FaBell />
+          </div>
+          <h3>Aucune notification</h3>
+          <p>Vous n'avez reçu aucune notification pour le moment.</p>
+        </div>
+      ) : (
+        <>
+          <div className="notifications-list">
+            {currentNotifications.map((notification) => (
+              <div
+                key={notification._id}
+                className={`notification-item ${!notification.isRead ? 'unread' : ''} ${getPriorityClass(notification.priority)}`}
+                onClick={() => !notification.isRead && markAsRead(notification._id, notification.source === 'admin')}
+              >
+                <div className="notification-content">
+                  <div className="notification-header">
+                    <div className="notification-type">
+                      <span className="type-icon">{getTypeIcon(notification.type)}</span>
+                      <span className="notification-title">{notification.title}</span>
+                    </div>
+                    <div className="notification-meta">
+                      <span className="notification-date">{formatDate(notification.createdAt)}</span>
+                      {!notification.isRead && <span className="unread-indicator">•</span>}
+                    </div>
+                  </div>
+                  <div className="notification-message">
+                    {notification.message}
+                  </div>
+                  {notification.priority && notification.priority !== 'normal' && (
+                    <div className="notification-priority">
+                      Priorité: {notification.priority === 'high' ? 'Haute' : notification.priority === 'medium' ? 'Moyenne' : 'Basse'}
+                    </div>
+                  )}
+                  {notification.sentBy && (
+                    <div className="notification-sender">
+                      Envoyé par: {notification.sentBy.prenom} {notification.sentBy.nom}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="pagination-controls" style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '0.5rem',
+              marginTop: '1rem',
+              padding: '1rem'
+            }}>
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                style={{
+                  padding: '0.5rem 1rem',
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '6px',
+                  background: currentPage === 1 ? '#f5f5f5' : '#ffffff',
+                  color: currentPage === 1 ? '#999' : '#333',
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                  fontSize: '0.9rem'
+                }}
+              >
+                ← Précédent
+              </button>
+              
+              <span style={{
+                padding: '0.5rem 1rem',
+                color: '#666',
+                fontSize: '0.9rem'
+              }}>
+                Page {currentPage} sur {totalPages}
+              </span>
+              
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                style={{
+                  padding: '0.5rem 1rem',
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '6px',
+                  background: currentPage === totalPages ? '#f5f5f5' : '#ffffff',
+                  color: currentPage === totalPages ? '#999' : '#333',
+                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                  fontSize: '0.9rem'
+                }}
+              >
+                Suivant →
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 };

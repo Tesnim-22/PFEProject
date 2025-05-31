@@ -13,6 +13,9 @@ const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const { generateToken } = require('./config/jwt');
 const auth = require('./middlewares/auth');
 
+// Import des routes
+const notificationRoutes = require('./routes/notificationRoutes');
+
 // ❗ Correction ici
 const Appointment = require('./models/Appointment');
 const Notification = require('./models/Notification');
@@ -44,6 +47,9 @@ app.options('*', cors({
 
 // middlewares
 app.use(express.json());
+
+// Montage des routes
+app.use('/api/notifications', notificationRoutes);
 
 // Configurer les dossiers statiques
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -274,30 +280,25 @@ app.post('/api/patient/medical-documents/:userId', uploadMedicalDoc.single('docu
         let patient = await Patient.findOne({ userId });
 
         if (!patient) {
-            // Si le patient n'existe pas, on le crée
-            const user = await User.findById(userId);
-            if (!user) {
-                return res.status(404).json({ message: "Utilisateur non trouvé." });
-            }
-
             patient = new Patient({
-                userId: user._id,
+                userId,
                 medicalDocuments: []
             });
         }
 
-        patient.medicalDocuments.push({
-            fileName: req.file.originalname,
+        const newDocument = {            fileName: req.file.originalname,
             fileType: req.file.mimetype,
             filePath: req.file.path,
-            description
-        });
+            description: description || ''
+
+        };
+        patient.medicalDocuments.push(newDocument);
 
         await patient.save();
 
         res.status(200).json({
             message: "Document médical téléchargé avec succès",
-            document: patient.medicalDocuments[patient.medicalDocuments.length - 1]
+            document: newDocument
         });
 
     } catch (error) {
@@ -2306,6 +2307,94 @@ app.get('/api/messages/total-unread/:doctorId', async (req, res) => {
   }
 });
 
+// Route pour récupérer le total des messages non lus pour un patient
+app.get('/api/messages/total-unread-patient/:patientId', async (req, res) => {
+  try {
+    const { patientId } = req.params;
+
+    // Compter les messages non lus des médecins
+    const doctorUnreadCount = await Message.countDocuments({
+      receiverId: patientId,
+      isRead: false
+    });
+
+    // Compter les messages non lus des laboratoires
+    const labUnreadCount = await LabPatientMessage.countDocuments({
+      receiverId: patientId,
+      isRead: false
+    });
+
+    const total = doctorUnreadCount + labUnreadCount;
+
+    res.status(200).json({ total });
+  } catch (error) {
+    console.error('❌ Erreur récupération total messages non lus patient:', error);
+    res.status(500).json({ message: 'Erreur serveur.' });
+  }
+});
+
+// Route pour récupérer le total des messages non lus pour un laboratoire
+app.get('/api/messages/total-unread-lab/:labId', async (req, res) => {
+  try {
+    const { labId } = req.params;
+
+    // Compter les messages non lus des médecins
+    const doctorUnreadCount = await LabDoctorMessage.countDocuments({
+      receiverId: labId,
+      isRead: false
+    });
+
+    // Compter les messages non lus des patients
+    const patientUnreadCount = await LabPatientMessage.countDocuments({
+      receiverId: labId,
+      isRead: false
+    });
+
+    const total = doctorUnreadCount + patientUnreadCount;
+
+    res.status(200).json({ total });
+  } catch (error) {
+    console.error('❌ Erreur récupération total messages non lus laboratoire:', error);
+    res.status(500).json({ message: 'Erreur serveur.' });
+  }
+});
+
+// Route pour récupérer le total des messages non lus des médecins pour un laboratoire
+app.get('/api/messages/total-unread-lab-doctors/:labId', async (req, res) => {
+  try {
+    const { labId } = req.params;
+
+    // Compter seulement les messages non lus des médecins
+    const doctorUnreadCount = await LabDoctorMessage.countDocuments({
+      receiverId: labId,
+      isRead: false
+    });
+
+    res.status(200).json({ total: doctorUnreadCount });
+  } catch (error) {
+    console.error('❌ Erreur récupération total messages non lus médecins:', error);
+    res.status(500).json({ message: 'Erreur serveur.' });
+  }
+});
+
+// Route pour récupérer le total des messages non lus des patients pour un laboratoire
+app.get('/api/messages/total-unread-lab-patients/:labId', async (req, res) => {
+  try {
+    const { labId } = req.params;
+
+    // Compter seulement les messages non lus des patients
+    const patientUnreadCount = await LabPatientMessage.countDocuments({
+      receiverId: labId,
+      isRead: false
+    });
+
+    res.status(200).json({ total: patientUnreadCount });
+  } catch (error) {
+    console.error('❌ Erreur récupération total messages non lus patients:', error);
+    res.status(500).json({ message: 'Erreur serveur.' });
+  }
+});
+
 // Routes pour les rendez-vous d'hôpital
 app.post('/api/hospital-appointments', async (req, res) => {
     try {
@@ -3243,16 +3332,31 @@ app.post('/api/lab-patient-messages', async (req, res) => {
 
 app.put('/api/lab-patient-messages/read', async (req, res) => {
   try {
-    const { senderId, receiverId } = req.body;
+    const { messageIds, senderId, receiverId } = req.body;
     
-    await LabPatientMessage.updateMany(
-      { senderId, receiverId, isRead: false },
-      { isRead: true }
-    );
+    if (messageIds && messageIds.length > 0) {
+      // Nouveau format : marquer des messages spécifiques par leur ID
+      await LabPatientMessage.updateMany(
+        { _id: { $in: messageIds } },
+        { $set: { isRead: true } }
+      );
+      console.log(`✅ ${messageIds.length} messages laboratoire-patient marqués comme lus par ID`);
+    } else if (senderId && receiverId) {
+      // Ancien format : marquer tous les messages entre deux utilisateurs
+      await LabPatientMessage.updateMany(
+        { senderId, receiverId, isRead: false },
+        { $set: { isRead: true } }
+      );
+      console.log(`✅ Messages laboratoire-patient marqués comme lus entre ${senderId} et ${receiverId}`);
+    } else {
+      return res.status(400).json({ 
+        message: 'Paramètres manquants : messageIds ou (senderId et receiverId) requis' 
+      });
+    }
     
     res.json({ message: 'Messages marqués comme lus' });
   } catch (error) {
-    console.error('Erreur lors de la mise à jour des messages:', error);
+    console.error('❌ Erreur lors de la mise à jour des messages laboratoire-patient:', error);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 });

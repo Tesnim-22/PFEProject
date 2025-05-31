@@ -3,7 +3,7 @@ import axios from 'axios';
 import '../styles/LabsDashboard.css';
 import '../styles/DoctorDashboard.css';
 import LabResultModal from './LabResultModal';
-import { FaUser, FaCalendarAlt, FaFlask, FaComments, FaSignOutAlt, FaUserCircle, FaEdit, FaCheck, FaTimes } from "react-icons/fa";
+import { FaUser, FaCalendarAlt, FaFlask, FaComments, FaSignOutAlt, FaUserCircle, FaEdit, FaCheck, FaTimes, FaBell } from "react-icons/fa";
 
 const API_BASE_URL = 'http://localhost:5001';
 
@@ -47,6 +47,47 @@ const LabsDashboard = () => {
   const [patientMessages, setPatientMessages] = useState([]);
   const [newPatientMessage, setNewPatientMessage] = useState('');
 
+  // États pour les messages non lus séparés
+  const [unreadDoctorMessages, setUnreadDoctorMessages] = useState(0);
+  const [unreadPatientMessages, setUnreadPatientMessages] = useState(0);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  // Fonction pour récupérer les messages non lus des médecins
+  const fetchUnreadDoctorMessages = async () => {
+    try {
+      if (!currentLabId) return;
+      
+      const response = await axios.get(`${API_BASE_URL}/api/messages/total-unread-lab-doctors/${currentLabId}`);
+      setUnreadDoctorMessages(response.data.total || 0);
+    } catch (error) {
+      console.error('❌ Erreur récupération messages non lus médecins:', error);
+    }
+  };
+
+  // Fonction pour récupérer les messages non lus des patients
+  const fetchUnreadPatientMessages = async () => {
+    try {
+      if (!currentLabId) return;
+      
+      const response = await axios.get(`${API_BASE_URL}/api/messages/total-unread-lab-patients/${currentLabId}`);
+      setUnreadPatientMessages(response.data.total || 0);
+    } catch (error) {
+      console.error('❌ Erreur récupération messages non lus patients:', error);
+    }
+  };
+
+  // Fonction pour récupérer les notifications non lues
+  const fetchUnreadNotifications = async () => {
+    try {
+      if (!currentLabId) return;
+      
+      const response = await axios.get(`${API_BASE_URL}/api/notifications/lab/${currentLabId}/unread-count`);
+      setUnreadNotifications(response.data.total || 0);
+    } catch (error) {
+      console.error('❌ Erreur récupération notifications non lues:', error);
+    }
+  };
+
   useEffect(() => {
     const labId = localStorage.getItem('userId');
     if (!labId) {
@@ -61,6 +102,22 @@ const LabsDashboard = () => {
     fetchLabs();
     fetchPatients(labId);
   }, []);
+
+  // AJOUT: useEffect pour gérer les messages non lus
+  useEffect(() => {
+    if (currentLabId) {
+      fetchUnreadDoctorMessages();
+      fetchUnreadPatientMessages();
+      fetchUnreadNotifications();
+      // Actualiser toutes les 10 secondes pour détecter rapidement les nouveaux messages
+      const interval = setInterval(() => {
+        fetchUnreadDoctorMessages();
+        fetchUnreadPatientMessages();
+        fetchUnreadNotifications();
+      }, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [currentLabId]);
 
   const fetchLabProfile = async (labId) => {
     try {
@@ -224,6 +281,11 @@ const LabsDashboard = () => {
         receiverId: currentLabId,
         senderId: doctorId
       });
+      
+      // AJOUT: Rafraîchir le compteur de messages non lus après marquage
+      setTimeout(() => {
+        fetchUnreadDoctorMessages();
+      }, 500);
     } catch (error) {
       console.error('❌ Erreur récupération messages:', error);
       setError('Impossible de charger les messages.');
@@ -259,6 +321,11 @@ const LabsDashboard = () => {
       
       // Rafraîchir les messages après l'envoi
       fetchMessages(selectedDoctor._id);
+      
+      // AJOUT: Rafraîchir le compteur de messages non lus
+      setTimeout(() => {
+        fetchUnreadDoctorMessages();
+      }, 1000);
     } catch (error) {
       console.error('❌ Erreur envoi message:', error);
       setError('Impossible d\'envoyer le message.');
@@ -383,6 +450,11 @@ const LabsDashboard = () => {
         receiverId: currentLabId,
         senderId: patientId
       });
+      
+      // AJOUT: Rafraîchir le compteur de messages non lus après marquage
+      setTimeout(() => {
+        fetchUnreadPatientMessages();
+      }, 500);
     } catch (error) {
       console.error('Erreur lors de la récupération des messages:', error);
       setError('Impossible de charger les messages.');
@@ -404,6 +476,11 @@ const LabsDashboard = () => {
 
       setPatientMessages(prev => [...prev, response.data]);
       setNewPatientMessage('');
+      
+      // AJOUT: Rafraîchir le compteur de messages non lus
+      setTimeout(() => {
+        fetchUnreadPatientMessages();
+      }, 1000);
     } catch (error) {
       console.error('❌ Erreur envoi message:', error);
       setError('Impossible d\'envoyer le message.');
@@ -535,9 +612,34 @@ const LabsDashboard = () => {
             <button 
               className={`nav-item ${activeSection === 'chat' ? 'active' : ''}`}
               onClick={() => setActiveSection('chat')}
+              style={{ position: 'relative' }}
             >
               <FaComments className="nav-icon" />
               <span className="nav-text">Discussion Médecins</span>
+              {unreadDoctorMessages > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: '8px',
+                  right: '12px',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  fontSize: '0.7rem',
+                  fontWeight: '600',
+                  padding: '2px 6px',
+                  borderRadius: '10px',
+                  minWidth: '18px',
+                  height: '18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  lineHeight: '1',
+                  animation: 'pulse 2s infinite',
+                  boxShadow: '0 2px 4px rgba(239, 68, 68, 0.3)',
+                  zIndex: 10
+                }}>
+                  {unreadDoctorMessages > 99 ? '99+' : unreadDoctorMessages}
+                </span>
+              )}
             </button>
             <button 
               className={`nav-item ${activeSection === 'patient-chat' ? 'active' : ''}`}
@@ -545,9 +647,63 @@ const LabsDashboard = () => {
               setActiveSection('patient-chat');
               fetchPatients(currentLabId);
               }}
+              style={{ position: 'relative' }}
             >
               <FaComments className="nav-icon" />
               <span className="nav-text">Discussion Patients</span>
+              {unreadPatientMessages > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: '8px',
+                  right: '8px',
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  borderRadius: '50%',
+                  width: '20px',
+                  height: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                  lineHeight: '1',
+                  animation: 'pulse 2s infinite',
+                  boxShadow: '0 2px 4px rgba(220, 53, 69, 0.4)',
+                  zIndex: 10
+                }}>
+                  {unreadPatientMessages > 99 ? '99+' : unreadPatientMessages}
+                </span>
+              )}
+            </button>
+            <button 
+              className={`nav-item ${activeSection === 'notifications' ? 'active' : ''}`}
+              onClick={() => setActiveSection('notifications')}
+              style={{ position: 'relative' }}
+            >
+              <FaBell className="nav-icon" />
+              <span className="nav-text">Notifications</span>
+              {unreadNotifications > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: '8px',
+                  right: '12px',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  fontSize: '0.7rem',
+                  fontWeight: '600',
+                  padding: '2px 6px',
+                  borderRadius: '10px',
+                  minWidth: '18px',
+                  height: '18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  lineHeight: '1',
+                  animation: 'pulse 2s infinite'
+                }}>
+                  {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                </span>
+              )}
             </button>
           </div>
         </nav>
@@ -695,7 +851,7 @@ const LabsDashboard = () => {
                 <div className="form-actions-simple">
                   <button type="submit" className="save-btn-simple">
                     <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" style={{marginRight: '0.5rem'}}>
-                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
                     </svg>
                     Enregistrer
                     </button>
@@ -1089,6 +1245,33 @@ const LabsDashboard = () => {
           </div>
         )}
 
+        {activeSection === 'notifications' && (
+          <div className="notifications-container">
+            <div className="notifications-header">
+              <div className="header-content">
+                <div className="header-title">
+                  <FaBell className="header-icon" />
+                  <div>
+                    <h1>Notifications</h1>
+                    <p>Gestion des notifications du laboratoire</p>
+                  </div>
+                </div>
+                <div className="header-stats">
+                  <div className="stat-badge">
+                    <span className="stat-number">{unreadNotifications}</span>
+                    <span className="stat-label">Non lues</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <NotificationsContent 
+              labId={currentLabId} 
+              onNotificationRead={fetchUnreadNotifications} 
+            />
+          </div>
+        )}
+
         {showPlanningForm && selectedAppointment && (
           <div className="planning-form-overlay" style={{
             position: 'fixed',
@@ -1164,6 +1347,257 @@ const LabsDashboard = () => {
           labId={currentLabId}
         />
       </main>
+    </div>
+  );
+};
+
+// Composant pour le contenu des notifications
+const NotificationsContent = ({ labId, onNotificationRead }) => {
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [notificationsPerPage] = useState(10);
+
+  useEffect(() => {
+    if (labId) {
+      fetchNotifications();
+    }
+  }, [labId]);
+
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await axios.get(`${API_BASE_URL}/api/notifications/lab/${labId}`);
+      
+      // Dédupliquer les notifications par _id côté frontend pour plus de sécurité
+      const uniqueNotifications = response.data.filter((notif, index, self) => 
+        index === self.findIndex(n => n._id === notif._id)
+      );
+      
+      console.log(`📱 Notifications reçues pour le lab:`, {
+        total: response.data.length,
+        unique: uniqueNotifications.length,
+        duplicatesRemoved: response.data.length - uniqueNotifications.length
+      });
+      
+      setNotifications(uniqueNotifications);
+    } catch (error) {
+      console.error('Erreur récupération notifications:', error);
+      setError('Erreur lors du chargement des notifications');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const markAsRead = async (notificationId, isAdminNotification = false) => {
+    try {
+      await axios.put(`${API_BASE_URL}/api/notifications/${notificationId}/read`, {
+        userId: labId,
+        isAdminNotification: isAdminNotification
+      });
+      
+      // Mettre à jour l'état local des notifications
+      setNotifications(prev => 
+        prev.map(notif => 
+          notif._id === notificationId 
+            ? { ...notif, isRead: true }
+            : notif
+        )
+      );
+      
+      // Mettre à jour le compteur de notifications non lues dans la sidebar
+      if (onNotificationRead) {
+        onNotificationRead();
+      }
+    } catch (error) {
+      console.error('Erreur marquage notification comme lue:', error);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 1) {
+      return "Aujourd'hui";
+    } else if (diffDays === 2) {
+      return "Hier";
+    } else if (diffDays <= 7) {
+      return `Il y a ${diffDays - 1} jours`;
+    } else {
+      return date.toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+  };
+
+  const getPriorityClass = (priority) => {
+    switch (priority) {
+      case 'high':
+        return 'notification-priority-high';
+      case 'medium':
+        return 'notification-priority-medium';
+      case 'low':
+        return 'notification-priority-low';
+      default:
+        return 'notification-priority-normal';
+    }
+  };
+
+  const getTypeIcon = (type) => {
+    switch (type) {
+      case 'info':
+        return '📢';
+      case 'warning':
+        return '⚠️';
+      case 'success':
+        return '✅';
+      case 'error':
+        return '❌';
+      default:
+        return '📢';
+    }
+  };
+
+  // Pagination
+  const indexOfLastNotification = currentPage * notificationsPerPage;
+  const indexOfFirstNotification = indexOfLastNotification - notificationsPerPage;
+  const currentNotifications = notifications.slice(indexOfFirstNotification, indexOfLastNotification);
+  const totalPages = Math.ceil(notifications.length / notificationsPerPage);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Chargement des notifications...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="error-container">
+        <h3>Erreur</h3>
+        <p>{error}</p>
+        <button onClick={fetchNotifications} className="retry-btn">
+          Réessayer
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="notifications-content">
+      {notifications.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-icon">
+            <FaBell />
+          </div>
+          <h3>Aucune notification</h3>
+          <p>Vous n'avez reçu aucune notification pour le moment.</p>
+        </div>
+      ) : (
+        <>
+          <div className="notifications-list">
+            {currentNotifications.map((notification) => (
+              <div
+                key={notification._id}
+                className={`notification-item ${!notification.isRead ? 'unread' : ''} ${getPriorityClass(notification.priority)}`}
+                onClick={() => !notification.isRead && markAsRead(notification._id, notification.source === 'admin')}
+              >
+                <div className="notification-content">
+                  <div className="notification-header">
+                    <div className="notification-type">
+                      <span className="type-icon">{getTypeIcon(notification.type)}</span>
+                      <span className="notification-title">{notification.title}</span>
+                    </div>
+                    <div className="notification-meta">
+                      <span className="notification-date">{formatDate(notification.createdAt)}</span>
+                      {!notification.isRead && <span className="unread-indicator">•</span>}
+                    </div>
+                  </div>
+                  <div className="notification-message">
+                    {notification.message}
+                  </div>
+                  {notification.priority && notification.priority !== 'normal' && (
+                    <div className="notification-priority">
+                      Priorité: {notification.priority === 'high' ? 'Haute' : notification.priority === 'medium' ? 'Moyenne' : 'Basse'}
+                    </div>
+                  )}
+                  {notification.sentBy && (
+                    <div className="notification-sender">
+                      Envoyé par: {notification.sentBy.prenom} {notification.sentBy.nom}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="pagination-controls" style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '0.5rem',
+              marginTop: '1rem',
+              padding: '1rem'
+            }}>
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                style={{
+                  padding: '0.5rem 1rem',
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '6px',
+                  background: currentPage === 1 ? '#f5f5f5' : '#ffffff',
+                  color: currentPage === 1 ? '#999' : '#333',
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                  fontSize: '0.9rem'
+                }}
+              >
+                ← Précédent
+              </button>
+              
+              <span style={{
+                padding: '0.5rem 1rem',
+                color: '#666',
+                fontSize: '0.9rem'
+              }}>
+                Page {currentPage} sur {totalPages}
+              </span>
+              
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                style={{
+                  padding: '0.5rem 1rem',
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '6px',
+                  background: currentPage === totalPages ? '#f5f5f5' : '#ffffff',
+                  color: currentPage === totalPages ? '#999' : '#333',
+                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                  fontSize: '0.9rem'
+                }}
+              >
+                Suivant →
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 };

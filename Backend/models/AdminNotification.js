@@ -15,7 +15,7 @@ const adminNotificationSchema = new mongoose.Schema({
     },
     recipientType: {
         type: String,
-        enum: ['all', 'doctors', 'patients', 'labs', 'specific'],
+        enum: ['all', 'doctors', 'patients', 'labs', 'hospitals', 'cabinets', 'specific'],
         required: true
     },
     recipients: [{

@@ -428,53 +428,152 @@ const AdminDashboard = () => {
 
         <section className="content">
           {activeSection === "dashboard" && overview && (
-            <>
+            <div className="dashboard-container">
+              {/* Dashboard Header */}
+              <div className="dashboard-header">
+                <div className="welcome-section">
+                  <h2>👋 Bienvenue dans votre tableau de bord</h2>
+                  <p>Gérez efficacement les utilisateurs et surveillez l'activité de la plateforme PatientPath</p>
+                </div>
+                <div className="last-update">
+                  <span>Dernière mise à jour : {new Date().toLocaleString('fr-FR')}</span>
+                </div>
+              </div>
+
+              {/* Enhanced Stats Grid */}
               <div className="stats-grid">
-                <div className="stat-card blue" onClick={() => filterUsers("all")}>
-                  <div className="stat-icon">👥</div>
+                <div className="stat-card blue enhanced" onClick={() => filterUsers("all")}>
+                  <div className="stat-content">
+                    <div className="stat-icon">
+                      <span>👥</span>
+                    </div>
                   <div className="stat-info">
                     <h3>{overview.totalUsers}</h3>
                     <p>Utilisateurs inscrits</p>
+                      <div className="stat-trend positive">
+                        <span>↗️ +12% ce mois</span>
                   </div>
                 </div>
-                <div className="stat-card green" onClick={() => filterUsers("validated")}>
-                  <div className="stat-icon">✅</div>
+                  </div>
+                  <div className="stat-action">
+                    <span>Voir tous →</span>
+                  </div>
+                </div>
+
+                <div className="stat-card green enhanced" onClick={() => filterUsers("validated")}>
+                  <div className="stat-content">
+                    <div className="stat-icon">
+                      <span>✅</span>
+                    </div>
                   <div className="stat-info">
                     <h3>{overview.validatedUsers}</h3>
                     <p>Comptes professionnels validés</p>
+                      <div className="stat-trend positive">
+                        <span>↗️ +5% cette semaine</span>
                   </div>
                 </div>
-                <div className="stat-card red" onClick={() => filterUsers("pending")}>
-                  <div className="stat-icon">📄</div>
+                  </div>
+                  <div className="stat-action">
+                    <span>Gérer →</span>
+                  </div>
+                </div>
+
+                <div className="stat-card red enhanced" onClick={() => filterUsers("pending")}>
+                  <div className="stat-content">
+                    <div className="stat-icon">
+                      <span>📄</span>
+                    </div>
                   <div className="stat-info">
                     <h3>{getCalculatedOverview()?.docsToValidate || 0}</h3>
-                    <p>Profils professionnels à valider</p>
+                      <p>Profils à valider</p>
+                      {getCalculatedOverview()?.docsToValidate > 0 && (
+                        <div className="stat-trend urgent">
+                          <span>⚠️ Action requise</span>
+                  </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="stat-action">
+                    <span>Valider →</span>
+                </div>
+              </div>
+
+                <div className="stat-card purple enhanced">
+                  <div className="stat-content">
+                    <div className="stat-icon">
+                      <span>📊</span>
+                    </div>
+                    <div className="stat-info">
+                      <h3>{notificationHistory.length}</h3>
+                      <p>Notifications envoyées</p>
+                      <div className="stat-trend neutral">
+                        <span>📈 Ce mois</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="stat-action">
+                    <span>Historique →</span>
                   </div>
                 </div>
               </div>
 
-              <div className="recent-users">
-                <h2>Derniers Inscrits</h2>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Nom</th>
-                      <th>Email</th>
-                      <th>Rôle</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {overview.recentUsers.map((user, idx) => (
-                      <tr key={idx}>
-                        <td>{user.nom} {user.prenom}</td>
-                        <td>{user.email}</td>
-                        <td>{user.roles.join(", ")}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              {/* Quick Actions */}
+              <div className="quick-actions">
+                <h3>🚀 Actions rapides</h3>
+                <div className="action-cards">
+                  <div className="action-card" onClick={() => setActiveSection("users")}>
+                    <div className="action-icon">👥</div>
+                    <div className="action-content">
+                      <h4>Gérer les utilisateurs</h4>
+                      <p>Valider, modifier ou supprimer des comptes</p>
+                    </div>
+                  </div>
+                  <div className="action-card" onClick={() => setActiveSection("alerts")}>
+                    <div className="action-icon">📢</div>
+                    <div className="action-content">
+                      <h4>Envoyer une alerte</h4>
+                      <p>Notifier les utilisateurs importantes</p>
+                    </div>
+                  </div>
+                  <div className="action-card">
+                    <div className="action-icon">📈</div>
+                    <div className="action-content">
+                      <h4>Voir les statistiques</h4>
+                      <p>Analyser l'activité de la plateforme</p>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </>
+
+              {/* Enhanced Recent Users */}
+              <div className="recent-users enhanced">
+                <div className="section-header">
+                  <h3>📋 Derniers utilisateurs inscrits</h3>
+                  <button className="view-all-btn" onClick={() => setActiveSection("users")}>
+                    Voir tous les utilisateurs
+                  </button>
+                </div>
+                <div className="recent-users-grid">
+                  {overview.recentUsers.slice(0, 6).map((user, idx) => (
+                    <div key={idx} className="user-card">
+                      <div className="user-avatar">
+                        <span>{user.nom?.charAt(0) || user.email.charAt(0)}</span>
+                      </div>
+                      <div className="user-details">
+                        <h4>{user.nom} {user.prenom}</h4>
+                        <p className="user-email">{user.email}</p>
+                        <div className="user-role-badge">
+                          {user.roles.join(", ")}
+                        </div>
+                      </div>
+                      <div className={`user-status ${user.isValidated ? 'validated' : 'pending'}`}>
+                        {user.isValidated ? '✅' : '⏳'}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+              </div>
+            </div>
           )}
 
           {activeSection === "users" && (
@@ -681,79 +780,136 @@ const AdminDashboard = () => {
           )}
 
           {activeSection === "alerts" && (
-            <div className="alerts-section">
-              <h2>Envoyer une Notification</h2>
-              <div className="notification-form">
-                <div className="notification-header">
-                  <div className="form-group">
-                    <label>Titre de la notification</label>
+            <div className="alerts-section enhanced">
+              <div className="alerts-header">
+                <div className="header-content">
+                  <h2>📢 Centre de notifications</h2>
+                  <p>Envoyez des alertes et gérez les communications avec vos utilisateurs</p>
+                </div>
+                <div className="alerts-stats">
+                  <div className="alert-stat">
+                    <span className="stat-number">{notificationHistory.length}</span>
+                    <span className="stat-label">Notifications envoyées</span>
+                  </div>
+                  <div className="alert-stat">
+                    <span className="stat-number">{notificationHistory.filter(n => new Date(n.timestamp) > new Date(Date.now() - 24*60*60*1000)).length}</span>
+                    <span className="stat-label">Dernières 24h</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="notification-composer">
+                <div className="composer-header">
+                  <h3>✍️ Créer une nouvelle notification</h3>
+                  <div className="composer-tips">
+                    <span className="tip">💡 Conseil : Utilisez des titres clairs et des messages concis</span>
+                  </div>
+                </div>
+
+                <div className="notification-form enhanced">
+                  <div className="form-row">
+                    <div className="form-group title-group">
+                      <label>📝 Titre de la notification</label>
                     <input
                       type="text"
                       value={notificationTitle}
                       onChange={(e) => setNotificationTitle(e.target.value)}
-                      placeholder="Titre de la notification"
+                        placeholder="Ex: Maintenance programmée du système"
                       className="notification-title-input"
+                        maxLength={100}
                     />
+                      <span className="char-counter">{notificationTitle.length}/100</span>
                   </div>
-                  <div className="notification-settings">
+                  </div>
+
+                  <div className="form-row">
                     <div className="form-group">
-                      <label>Type</label>
-                      <select 
-                        value={notificationType}
-                        onChange={(e) => setNotificationType(e.target.value)}
-                        className="notification-type-select"
-                      >
-                        <option value="info">Information</option>
-                        <option value="warning">Avertissement</option>
-                        <option value="urgent">Urgent</option>
-                      </select>
+                      <label>🏷️ Type de notification</label>
+                      <div className="type-selector">
+                        {['info', 'warning', 'urgent'].map(type => (
+                          <button
+                            key={type}
+                            type="button"
+                            className={`type-btn ${notificationType === type ? 'active' : ''} ${type}`}
+                            onClick={() => setNotificationType(type)}
+                          >
+                            <span className="type-icon">
+                              {type === 'info' ? 'ℹ️' : type === 'warning' ? '⚠️' : '🚨'}
+                            </span>
+                            <span className="type-label">
+                              {type === 'info' ? 'Information' : type === 'warning' ? 'Avertissement' : 'Urgent'}
+                            </span>
+                          </button>
+                        ))}
                     </div>
+                    </div>
+
                     <div className="form-group">
-                      <label>Priorité</label>
-                      <select 
-                        value={notificationPriority}
-                        onChange={(e) => setNotificationPriority(e.target.value)}
-                        className="notification-priority-select"
-                      >
-                        <option value="low">Basse</option>
-                        <option value="normal">Normale</option>
-                        <option value="high">Haute</option>
-                      </select>
+                      <label>⭐ Niveau de priorité</label>
+                      <div className="priority-selector">
+                        {['low', 'normal', 'high'].map(priority => (
+                          <button
+                            key={priority}
+                            type="button"
+                            className={`priority-btn ${notificationPriority === priority ? 'active' : ''} ${priority}`}
+                            onClick={() => setNotificationPriority(priority)}
+                          >
+                            <span className="priority-dots">
+                              {priority === 'low' ? '●○○' : priority === 'normal' ? '●●○' : '●●●'}
+                            </span>
+                            <span className="priority-label">
+                              {priority === 'low' ? 'Basse' : priority === 'normal' ? 'Normale' : 'Haute'}
+                            </span>
+                          </button>
+                        ))}
                     </div>
                   </div>
                 </div>
 
-                <div className="recipient-selection">
-                  <label>Destinataires :</label>
-                  <select 
-                    value={selectedRecipients} 
-                    onChange={(e) => {
-                      setSelectedRecipients(e.target.value);
+                  <div className="form-row">
+                    <div className="form-group recipients-group">
+                      <label>👥 Destinataires</label>
+                      <div className="recipients-selector">
+                        {[
+                          { value: 'doctors', label: 'Tous les médecins', icon: '👨‍⚕️' },
+                          { value: 'patients', label: 'Tous les patients', icon: '🏥' },
+                          { value: 'labs', label: 'Tous les laboratoires', icon: '🔬' },
+                          { value: 'specific', label: 'Utilisateurs spécifiques', icon: '🎯' }
+                        ].map(option => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            className={`recipient-btn ${selectedRecipients === option.value ? 'active' : ''}`}
+                            onClick={() => {
+                              setSelectedRecipients(option.value);
                       setSelectedUsers([]);
                     }}
-                    className="recipient-select"
-                  >
-                    <option value="doctors">Tous les médecins</option>
-                    <option value="patients">Tous les patients</option>
-                    <option value="labs">Tous les laboratoires</option>
-                    <option value="specific">Utilisateurs spécifiques</option>
-                  </select>
+                          >
+                            <span className="recipient-icon">{option.icon}</span>
+                            <span className="recipient-label">{option.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                 </div>
 
                 {selectedRecipients === "specific" && (
-                  <div className="specific-users">
-                    <div className="search-users">
+                    <div className="specific-users enhanced">
+                      <div className="users-search">
                       <input
                         type="text"
-                        placeholder="Rechercher des utilisateurs..."
+                          placeholder="🔍 Rechercher des utilisateurs par nom ou email..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="search-input"
                       />
                     </div>
+                      <div className="selected-count">
+                        {selectedUsers.length} utilisateur(s) sélectionné(s)
+                      </div>
                     <div className="users-list">
                       {filteredUsersForNotification.map(user => (
-                        <div key={user._id} className="user-checkbox">
+                          <div key={user._id} className="user-checkbox enhanced">
                           <label>
                             <input
                               type="checkbox"
@@ -766,12 +922,19 @@ const AdminDashboard = () => {
                                 }
                               }}
                             />
-                            <span className="user-info">
+                              <div className="user-info">
+                                <div className="user-avatar small">
+                                  {(user.nom?.charAt(0) || user.email.charAt(0)).toUpperCase()}
+                                </div>
+                                <div className="user-details">
+                                  <span className="user-name">
                               {user.nom && user.prenom 
                                 ? `${user.nom} ${user.prenom}`
                                 : user.email}
-                              <span className="user-email">({user.email})</span>
                             </span>
+                                  <span className="user-email">({user.email})</span>
+                                </div>
+                              </div>
                           </label>
                         </div>
                       ))}
@@ -779,35 +942,95 @@ const AdminDashboard = () => {
                   </div>
                 )}
 
-                <div className="message-input">
+                  <div className="form-row">
+                    <div className="form-group message-group">
+                      <label>💬 Message</label>
                   <textarea
-                    placeholder="Votre message..."
+                        placeholder="Rédigez votre message ici... Soyez clair et concis pour maximiser l'impact."
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    rows="4"
+                        rows="5"
+                        className="message-textarea"
+                        maxLength={500}
                   />
+                      <span className="char-counter">{message.length}/500</span>
+                    </div>
                 </div>
 
+                  <div className="form-actions">
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        setMessage("");
+                        setNotificationTitle("");
+                        setSelectedUsers([]);
+                        setSelectedRecipients("doctors");
+                        setNotificationType("info");
+                        setNotificationPriority("normal");
+                      }}
+                      className="reset-btn"
+                    >
+                      🔄 Réinitialiser
+                    </button>
                 <button 
                   onClick={sendNotification}
                   disabled={isSending || !message.trim() || !notificationTitle.trim() || 
                     (selectedRecipients === "specific" && selectedUsers.length === 0)}
-                  className={`send-button ${isSending ? 'loading' : ''}`}
-                >
-                  {isSending ? 'Envoi en cours...' : 'Envoyer la notification'}
+                      className={`send-button enhanced ${isSending ? 'loading' : ''}`}
+                    >
+                      {isSending ? (
+                        <>
+                          <span className="spinner"></span>
+                          Envoi en cours...
+                        </>
+                      ) : (
+                        <>
+                          <span>📤</span>
+                          Envoyer la notification
+                        </>
+                      )}
                 </button>
+                  </div>
+                </div>
               </div>
 
-              <div className="notification-history">
-                <h3>Historique des notifications</h3>
-                <div className="history-list">
+              <div className="notification-history enhanced">
+                <div className="history-header">
+                  <h3>📚 Historique des notifications</h3>
+                  <div className="history-filters">
+                    <select className="filter-select small">
+                      <option value="all">Toutes les notifications</option>
+                      <option value="info">Informations</option>
+                      <option value="warning">Avertissements</option>
+                      <option value="urgent">Urgentes</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="history-list enhanced">
                   {notificationHistory && notificationHistory.length > 0 ? (
                     notificationHistory.map((notif) => (
-                      <div key={notif._id || notif.id} className={`notification-item ${notif.type} ${notif.priority}`}>
+                      <div key={notif._id || notif.id} className={`notification-item enhanced ${notif.type} ${notif.priority}`}>
+                        <div className="notification-indicator">
+                          <div className={`indicator-dot ${notif.type}`}></div>
+                        </div>
+                        <div className="notification-content">
                         <div className="notification-item-header">
                           <h4>{notif.title}</h4>
-                          <span className="notification-meta">
-                            {new Date(notif.timestamp).toLocaleString('fr-FR', {
+                            <div className="notification-badges">
+                              <span className={`type-badge ${notif.type}`}>
+                                {notif.type === 'info' ? 'ℹ️ Info' : 
+                                 notif.type === 'warning' ? '⚠️ Alerte' : '🚨 Urgent'}
+                              </span>
+                              <span className={`priority-badge ${notif.priority}`}>
+                                {notif.priority === 'low' ? 'Basse' :
+                                 notif.priority === 'normal' ? 'Normale' : 'Haute'}
+                              </span>
+                            </div>
+                          </div>
+                          <p className="notification-message">{notif.message}</p>
+                          <div className="notification-meta">
+                            <span className="timestamp">
+                              🕒 {new Date(notif.timestamp).toLocaleString('fr-FR', {
                               day: '2-digit',
                               month: '2-digit',
                               year: 'numeric',
@@ -815,23 +1038,18 @@ const AdminDashboard = () => {
                               minute: '2-digit'
                             })}
                           </span>
-                        </div>
-                        <p>{notif.message}</p>
-                        <div className="notification-tags">
-                          <span className={`type-tag ${notif.type}`}>
-                            {notif.type === 'info' ? 'Information' : 
-                             notif.type === 'warning' ? 'Avertissement' : 'Urgent'}
+                            <span className="status-indicator">
+                              ✅ Envoyée
                           </span>
-                          <span className={`priority-tag ${notif.priority}`}>
-                            {notif.priority === 'low' ? 'Basse' :
-                             notif.priority === 'normal' ? 'Normale' : 'Haute'}
-                          </span>
+                          </div>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <div className="no-notifications">
-                      <p>Aucune notification envoyée</p>
+                    <div className="no-notifications enhanced">
+                      <div className="empty-icon">📭</div>
+                      <h4>Aucune notification envoyée</h4>
+                      <p>Créez votre première notification pour commencer à communiquer avec vos utilisateurs.</p>
                     </div>
                   )}
                 </div>
