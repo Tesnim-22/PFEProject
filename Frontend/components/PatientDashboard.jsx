@@ -742,29 +742,106 @@ const PatientDashboard = () => {
   const fetchAllAppointments = async (patientId) => {
     try {
       console.log("🔄 Chargement des rendez-vous pour le patient:", patientId);
+      
+      // Vérifier que le patientId est valide
+      if (!patientId || patientId === 'undefined' || patientId === 'null') {
+        console.error("❌ PatientId invalide:", patientId);
+        setMessage("Erreur: ID patient invalide. Veuillez vous reconnecter.");
+        return;
+      }
+
+      console.log("📡 Appel API médical...");
       const medicalRes = await axios.get(`${API_BASE_URL}/api/appointments?patientId=${patientId}`);
       console.log("✅ Rendez-vous médicaux reçus:", medicalRes.data);
       
       // S'assurer que tous les rendez-vous ont les informations nécessaires
-      const formattedAppointments = medicalRes.data.map(apt => ({
-        ...apt,
-        doctorName: apt.doctorId?.nom ? `Dr. ${apt.doctorId.nom} ${apt.doctorId.prenom}` : apt.doctorEmail,
-        doctorEmail: apt.doctorId?.email || '',
-        doctorId: apt.doctorId?._id || apt.doctorId
-      }));
+      const formattedAppointments = medicalRes.data.map(apt => {
+        let doctorName = 'Médecin non spécifié';
+        
+        // Vérifier différentes structures possibles pour les données du docteur
+        if (apt.doctorId && typeof apt.doctorId === 'object') {
+          // Si doctorId est un objet avec les données du docteur
+          if (apt.doctorId.nom && apt.doctorId.prenom) {
+            doctorName = `Dr. ${apt.doctorId.nom} ${apt.doctorId.prenom}`;
+          } else if (apt.doctorId.nom) {
+            doctorName = `Dr. ${apt.doctorId.nom}`;
+          }
+        } else if (apt.doctorName) {
+          // Si on a déjà un nom formaté
+          doctorName = apt.doctorName;
+        } else if (apt.doctorEmail) {
+          // En dernier recours, utiliser l'email
+          doctorName = apt.doctorEmail;
+        }
+        
+        return {
+          ...apt,
+          doctorName: doctorName,
+          doctorEmail: apt.doctorEmail || apt.doctorId?.email || '',
+          doctorId: apt.doctorId?._id || apt.doctorId || null
+        };
+      });
       
       setAppointments(formattedAppointments);
       
       // Charger les rendez-vous de laboratoire
-      const labRes = await axios.get(`${API_BASE_URL}/api/lab-appointments/patient/${patientId}`);
-      setLabAppointments(labRes.data);
+      try {
+        console.log("📡 Appel API laboratoire...");
+        const labRes = await axios.get(`${API_BASE_URL}/api/lab-appointments/patient/${patientId}`);
+        console.log("✅ Rendez-vous laboratoire reçus:", labRes.data);
+        setLabAppointments(labRes.data);
+      } catch (labError) {
+        console.error("⚠️ Erreur chargement rendez-vous laboratoire:", labError);
+        if (labError.response?.status !== 404) {
+          console.error("❌ Erreur inattendue laboratoire:", labError.response?.data);
+        }
+        setLabAppointments([]);
+      }
 
       // Charger les rendez-vous d'hôpital
-      const hospitalRes = await axios.get(`${API_BASE_URL}/api/hospital-appointments/patient/${patientId}`);
-      setHospitalAppointments(hospitalRes.data);
+      try {
+        console.log("📡 Appel API hôpital...");
+        const hospitalRes = await axios.get(`${API_BASE_URL}/api/hospital-appointments/patient/${patientId}`);
+        console.log("✅ Rendez-vous hôpital reçus:", hospitalRes.data);
+        setHospitalAppointments(hospitalRes.data);
+      } catch (hospitalError) {
+        console.error("⚠️ Erreur chargement rendez-vous hôpital:", hospitalError);
+        if (hospitalError.response?.status !== 404) {
+          console.error("❌ Erreur inattendue hôpital:", hospitalError.response?.data);
+        }
+        setHospitalAppointments([]);
+      }
+
     } catch (error) {
       console.error('❌ Error fetching appointments:', error);
-      setMessage("Erreur lors de la récupération des rendez-vous.");
+      
+      // Messages d'erreur plus spécifiques
+      if (error.response) {
+        const status = error.response.status;
+        const errorData = error.response.data;
+        
+        switch (status) {
+          case 400:
+            setMessage(`❌ Erreur de données: ${errorData.message || 'Paramètres invalides'}`);
+            break;
+          case 404:
+            setMessage("ℹ️ Aucun rendez-vous trouvé.");
+            setAppointments([]);
+            break;
+          case 500:
+            setMessage(`❌ Erreur serveur: ${errorData.message || 'Problème technique temporaire'}. Veuillez réessayer dans quelques instants.`);
+            console.error("🔍 Détails erreur serveur:", errorData);
+            break;
+          default:
+            setMessage(`❌ Erreur ${status}: ${errorData.message || 'Erreur inconnue'}`);
+        }
+      } else if (error.request) {
+        setMessage("❌ Impossible de contacter le serveur. Vérifiez votre connexion internet.");
+        console.error("🌐 Erreur réseau:", error.request);
+      } else {
+        setMessage(`❌ Erreur inattendue: ${error.message}`);
+        console.error("🚫 Erreur configuration:", error.message);
+      }
     }
   };
 
@@ -1781,6 +1858,76 @@ const PatientDashboard = () => {
     }
   }, [activeSection, userId]);
 
+  // Fonction de diagnostic pour débugger les problèmes
+  const runDiagnostic = async () => {
+    try {
+      setMessage("🔍 Diagnostic en cours...");
+      console.log("🔧 Lancement du diagnostic pour userId:", userId);
+      
+      const response = await axios.get(`${API_BASE_URL}/api/debug/appointments/${userId}`);
+      console.log("📊 Résultats du diagnostic:", response.data);
+      
+      const diagnostics = response.data;
+      
+      // Analyser les résultats
+      let diagnosticMessage = "🔍 **DIAGNOSTIC COMPLET** 🔍\n\n";
+      
+      diagnosticMessage += `👤 **Patient ID**: ${diagnostics.patientId}\n`;
+      diagnosticMessage += `✅ **ID valide**: ${diagnostics.isValidObjectId ? 'Oui' : 'Non'}\n`;
+      diagnosticMessage += `👤 **Patient existe**: ${diagnostics.checks.patientExists ? 'Oui' : 'Non'}\n`;
+      
+      if (diagnostics.checks.patientInfo) {
+        diagnosticMessage += `📝 **Nom**: ${diagnostics.checks.patientInfo.nom} ${diagnostics.checks.patientInfo.prenom}\n`;
+        diagnosticMessage += `📧 **Email**: ${diagnostics.checks.patientInfo.email}\n`;
+        diagnosticMessage += `🏷️ **Rôles**: ${diagnostics.checks.patientInfo.roles.join(', ')}\n`;
+      }
+      
+      diagnosticMessage += `📅 **Nombre de RDV**: ${diagnostics.checks.appointmentCount}\n\n`;
+      
+      if (diagnostics.checks.rawAppointments && diagnostics.checks.rawAppointments.length > 0) {
+        diagnosticMessage += `📋 **Rendez-vous trouvés**:\n`;
+        diagnostics.checks.rawAppointments.forEach((apt, index) => {
+          diagnosticMessage += `  ${index + 1}. ID: ${apt._id}\n`;
+          diagnosticMessage += `     Médecin ID: ${apt.doctorId}\n`;
+          diagnosticMessage += `     Date: ${apt.date ? new Date(apt.date).toLocaleDateString() : 'Non définie'}\n`;
+          diagnosticMessage += `     Statut: ${apt.status}\n`;
+          diagnosticMessage += `     Type: ${apt.type || 'Non défini'}\n\n`;
+        });
+        
+        if (diagnostics.checks.doctors) {
+          diagnosticMessage += `👨‍⚕️ **État des médecins**:\n`;
+          diagnostics.checks.doctors.forEach(doctor => {
+            diagnosticMessage += `  ID: ${doctor.doctorId}\n`;
+            diagnosticMessage += `  Existe: ${doctor.exists ? 'Oui' : 'Non'}\n`;
+            if (doctor.info) {
+              diagnosticMessage += `  Nom: Dr. ${doctor.info.prenom} ${doctor.info.nom}\n`;
+              diagnosticMessage += `  Email: ${doctor.info.email}\n`;
+            }
+            diagnosticMessage += `\n`;
+          });
+        }
+      } else {
+        diagnosticMessage += `❌ **Aucun rendez-vous trouvé**\n`;
+      }
+      
+      // Afficher dans la console pour une analyse détaillée
+      console.log(diagnosticMessage);
+      
+      // Message simple pour l'utilisateur
+      if (!diagnostics.checks.patientExists) {
+        setMessage("❌ Problème détecté: Votre compte patient n'existe pas dans la base de données.");
+      } else if (diagnostics.checks.appointmentCount === 0) {
+        setMessage("ℹ️ Diagnostic: Aucun rendez-vous trouvé. C'est normal si vous n'en avez pas encore pris.");
+      } else {
+        setMessage(`✅ Diagnostic terminé: ${diagnostics.checks.appointmentCount} rendez-vous trouvé(s). Consultez la console pour les détails.`);
+      }
+      
+    } catch (error) {
+      console.error("❌ Erreur lors du diagnostic:", error);
+      setMessage("❌ Erreur lors du diagnostic. Consultez la console pour plus de détails.");
+    }
+  };
+
   return (
     <div className="dashboard-container">
       <aside className="medical-sidebar">
@@ -2026,16 +2173,25 @@ const PatientDashboard = () => {
                       </>
                     ) : (
                       <>
-                        <p><strong>Nom :</strong> {profile.nom || '-'}</p>
-                        <p><strong>Prénom :</strong> {profile.prenom || '-'}</p>
-                        <p><strong>Email :</strong> {profile.email || '-'}</p>
-                        <p><strong>Téléphone :</strong> {profile.telephone || '-'}</p>
-                        <p><strong>Adresse :</strong> {profile.adresse || '-'}</p>
-                        <p><strong>CIN :</strong> {profile.cin || '-'}</p>
-                        <p><strong>Contact d'urgence :</strong> {profile.emergencyPhone || '-'}</p>
-                        <p><strong>Groupe sanguin :</strong> {profile.bloodType || '-'}</p>
-                        <p><strong>Maladies chroniques :</strong> {profile.chronicDiseases || '-'}</p>
-                        <div className="profile-actions">                          <button onClick={handleEditProfile} className="edit-profile-btn">                            ✏️ Modifier le profil                          </button>                          {profile.needsPatientProfileCompletion && (                            <div className="completion-notice" style={styles.completionNotice}>                              <p>💡 <strong>Conseil :</strong> Complétez votre profil patient pour une meilleure expérience (téléphone d'urgence, groupe sanguin, etc.)</p>                            </div>                          )}                        </div>
+                        <p><strong>Nom :</strong> <span>{profile.nom || 'Non renseigné'}</span></p>
+                        <p><strong>Prénom :</strong> <span>{profile.prenom || 'Non renseigné'}</span></p>
+                        <p><strong>Email :</strong> <span>{profile.email || 'Non renseigné'}</span></p>
+                        <p><strong>Téléphone :</strong> <span>{profile.telephone || 'Non renseigné'}</span></p>
+                        <p><strong>Adresse :</strong> <span>{profile.adresse || 'Non renseignée'}</span></p>
+                        <p><strong>CIN :</strong> <span>{profile.cin || 'Non renseigné'}</span></p>
+                        <p><strong>Contact d'urgence :</strong> <span>{profile.emergencyPhone || 'Non renseigné'}</span></p>
+                        <p><strong>Groupe sanguin :</strong> <span>{profile.bloodType || 'Non renseigné'}</span></p>
+                        <p><strong>Maladies chroniques :</strong> <span>{profile.chronicDiseases || 'Aucune'}</span></p>
+                        <div className="profile-actions">
+                          <button onClick={handleEditProfile} className="edit-profile-btn">
+                            ✏️ Modifier le profil
+                          </button>
+                          {profile.needsPatientProfileCompletion && (
+                            <div className="completion-notice" style={styles.completionNotice}>
+                              <p>💡 <strong>Conseil :</strong> Complétez votre profil patient pour une meilleure expérience (téléphone d'urgence, groupe sanguin, etc.)</p>
+                            </div>
+                          )}
+                        </div>
               </>
             )}
                   </div>
@@ -2440,41 +2596,6 @@ const PatientDashboard = () => {
                         Tout marquer comme lu
                       </button>
                     )}
-                    <button 
-                      onClick={debugNotificationsState}
-                      style={{
-                        marginLeft: '0.5rem',
-                        padding: '0.25rem 0.5rem',
-                        backgroundColor: '#10b981',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '0.8rem'
-                      }}
-                    >
-                      🔍 Debug: État
-                    </button>
-                    <button 
-                      onClick={() => {
-                        console.log("🧹 Nettoyage du localStorage...");
-                        localStorage.removeItem(`readNotifications_${userId}`);
-                        console.log("✅ localStorage nettoyé, rechargement des notifications...");
-                        fetchNotifications(userId);
-                      }}
-                      style={{
-                        marginLeft: '0.5rem',
-                        padding: '0.25rem 0.5rem',
-                        backgroundColor: '#ff9800',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '0.8rem'
-                      }}
-                    >
-                      🧹 Debug: Reset
-                    </button>
                   </div>
                 </div>
 
@@ -2575,27 +2696,15 @@ const PatientDashboard = () => {
                           disabled={currentPages.notifications === 1}
                           className="pagination-btn"
                         >
-                          Précédent
+                          ←
                         </button>
-                        
-                        <div className="pagination-numbers">
-                          {Array.from({ length: getTotalPages(notifications, 'notifications') }, (_, i) => i + 1).map(page => (
-                            <button
-                              key={page}
-                              onClick={() => handlePageChange('notifications', page)}
-                              className={`pagination-number ${currentPages.notifications === page ? 'active' : ''}`}
-                            >
-                              {page}
-                            </button>
-                          ))}
-                        </div>
                         
                         <button
                           onClick={() => handlePageChange('notifications', currentPages.notifications + 1)}
                           disabled={currentPages.notifications === getTotalPages(notifications, 'notifications')}
                           className="pagination-btn"
                         >
-                          Suivant
+                          →
                         </button>
                       </div>
                     )}
@@ -3327,6 +3436,25 @@ const PatientDashboard = () => {
                     </svg>
                     Mes Rendez-vous
                   </h1>
+                  {/* Bouton de diagnostic en cas de problème */}
+                  {(message && message.includes('❌')) && (
+                    <button 
+                      onClick={runDiagnostic}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: '#f59e0b',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem',
+                        marginLeft: '1rem'
+                      }}
+                      title="Lancer un diagnostic pour identifier le problème"
+                    >
+                      🔧 Diagnostic
+                    </button>
+                  )}
                 </div>
 
                 {/* Section Médecins */}

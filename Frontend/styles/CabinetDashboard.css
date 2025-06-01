@@ -379,7 +379,7 @@ body {
 
 .stats-card {
   background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
-  color: white;
+  color: rgb(0, 0, 0) !important;
   border: none !important;
 }
 
@@ -388,7 +388,7 @@ body {
 }
 
 .stats-card h4 {
-  color: white;
+  color: rgb(17, 15, 15) !important;
 }
 
 .stats-grid {
@@ -415,13 +415,13 @@ body {
   display: block;
   font-size: 1.5rem;
   font-weight: 700;
-  color: white;
+  color: #000000 !important;
   margin-bottom: 0.25rem;
 }
 
 .stat-label {
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.9);
+  color: #000000 !important;
   font-weight: 500;
 }
 
@@ -1419,13 +1419,13 @@ body {
 .stat-number {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #1f2937;
+  color: #000000 !important;
   line-height: 1;
 }
 
 .stat-label {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: #000000 !important;
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -2078,13 +2078,13 @@ body {
 .stat-number {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #064e3b;
+  color: #000000;
   line-height: 1;
 }
 
 .stat-label {
   font-size: 0.7rem;
-  color: #047857;
+  color: #000000;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -2721,13 +2721,13 @@ body {
 .pending-stat-number {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #78350f;
+  color: #000000;
   line-height: 1;
 }
 
 .pending-stat-label {
   font-size: 0.7rem;
-  color: #d97706;
+  color: #000000;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -3159,13 +3159,13 @@ body {
   display: block;
   font-size: 1.5rem;
   font-weight: 700;
-  color: white;
+  color: #000000;
   margin-bottom: 0.25rem;
 }
 
 .stat-label {
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.9);
+  color: #000000;
   font-weight: 500;
 }
 
@@ -4163,13 +4163,13 @@ body {
 .stat-number {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #1f2937;
+  color: #000000;
   line-height: 1;
 }
 
 .stat-label {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: #000000;
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -4826,13 +4826,13 @@ body {
 .stat-number {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #064e3b;
+  color: #000000;
   line-height: 1;
 }
 
 .stat-label {
   font-size: 0.7rem;
-  color: #047857;
+  color: #000000;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -5469,13 +5469,13 @@ body {
 .pending-stat-number {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #78350f;
+  color: #000000;
   line-height: 1;
 }
 
 .pending-stat-label {
   font-size: 0.7rem;
-  color: #d97706;
+  color: #000000;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -5899,13 +5899,13 @@ body {
   display: block;
   font-size: 1.5rem;
   font-weight: 700;
-  color: white;
+  color: #000000;
   margin-bottom: 0.25rem;
 }
 
 .stat-label {
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.9);
+  color: #000000;
   font-weight: 500;
 }
 
@@ -6903,13 +6903,13 @@ body {
 .stat-number {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #1f2937;
+  color: #000000;
   line-height: 1;
 }
 
 .stat-label {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: #000000;
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -7730,13 +7730,13 @@ body {
 .stat-number {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #064e3b;
+  color: #000000;
   line-height: 1;
 }
 
 .stat-label {
   font-size: 0.7rem;
-  color: #047857;
+  color: #000000;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -7897,13 +7897,13 @@ body {
 .time {
   font-size: 0.8rem;
   font-weight: 700;
-  color: #064e3b;
+  color: #000000;
   line-height: 1;
 }
 
 .date {
   font-size: 0.65rem;
-  color: #047857;
+  color: #000000;
   font-weight: 500;
   text-transform: capitalize;
 }
@@ -8373,13 +8373,13 @@ body {
 .pending-stat-number {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #78350f;
+  color: #000000;
   line-height: 1;
 }
 
 .pending-stat-label {
   font-size: 0.7rem;
-  color: #d97706;
+  color: #000000;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -8655,13 +8655,13 @@ body {
 .history-stat-number {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #1e293b;
+  color: #000000;
   line-height: 1;
 }
 
 .history-stat-label {
   font-size: 0.7rem;
-  color: #64748b;
+  color: #000000;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;

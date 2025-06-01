@@ -3180,8 +3180,8 @@ const ArticlesView = () => {
           <>
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: '1rem',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+              gap: '1.5rem',
               marginBottom: '2rem'
             }}>
               {currentArticles.map((article) => (
@@ -3191,54 +3191,87 @@ const ArticlesView = () => {
                     backgroundColor: 'white',
                     borderRadius: '12px',
                     overflow: 'hidden',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                    transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                    border: '1px solid #f0f0f0'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = 'translateY(-2px)';
+                    e.target.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = 'translateY(0)';
+                    e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
                   }}
                 >
-              {article.imageUrl && (
-                    <img 
-                      src={article.imageUrl} 
-                      alt={article.title} 
-                      style={{
-                        width: '100%',
-                        height: '120px',
-                        objectFit: 'cover'
-                      }}
-                    />
-              )}
-                  <div style={{ padding: '0.75rem' }}>
-                    <div style={{
-                      display: 'inline-block',
-                      backgroundColor: '#e0f2f1',
-                      color: '#00796b',
-                      padding: '0.2rem 0.6rem',
-                      borderRadius: '15px',
-                      fontSize: '0.7rem',
-                      fontWeight: '500',
-                      marginBottom: '0.75rem'
-                    }}>
-                  {article.category}
-                </div>
+                  {article.imageUrl && (
+                    <div style={{ position: 'relative', overflow: 'hidden' }}>
+                      <img 
+                        src={article.imageUrl} 
+                        alt={article.title} 
+                        style={{
+                          width: '100%',
+                          height: '180px',
+                          objectFit: 'cover',
+                          transition: 'transform 0.3s ease'
+                        }}
+                      />
+                      <div style={{
+                        position: 'absolute',
+                        top: '12px',
+                        left: '12px',
+                        backgroundColor: 'rgba(0, 121, 107, 0.9)',
+                        color: 'white',
+                        padding: '0.4rem 0.8rem',
+                        borderRadius: '20px',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        backdropFilter: 'blur(4px)'
+                      }}>
+                        {article.category}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div style={{ padding: '1.5rem' }}>
+                    {!article.imageUrl && (
+                      <div style={{
+                        display: 'inline-block',
+                        backgroundColor: '#e8f5e8',
+                        color: '#00796b',
+                        padding: '0.4rem 0.8rem',
+                        borderRadius: '20px',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        marginBottom: '1rem'
+                      }}>
+                        {article.category}
+                      </div>
+                    )}
                     
                     <h3 style={{
-                      fontSize: '1rem',
-                      fontWeight: '600',
-                      color: '#333',
-                      marginBottom: '0.5rem',
-                      lineHeight: '1.3'
+                      fontSize: '1.2rem',
+                      fontWeight: '700',
+                      color: '#2c3e50',
+                      marginBottom: '0.8rem',
+                      lineHeight: '1.4',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden'
                     }}>
                       {article.title}
                     </h3>
                     
                     <p style={{
-                      color: '#666',
-                      lineHeight: '1.5',
-                      marginBottom: '0.75rem',
-                      fontSize: '0.9rem'
+                      color: '#64748b',
+                      lineHeight: '1.6',
+                      marginBottom: '1rem',
+                      fontSize: '0.95rem'
                     }}>
                       {expandedArticles.has(article._id) 
                         ? article.content 
-                        : truncateContent(article.content)
+                        : truncateContent(article.content, 120)
                       }
                     </p>
 
@@ -3246,38 +3279,70 @@ const ArticlesView = () => {
                       <div style={{
                         display: 'flex',
                         flexWrap: 'wrap',
-                        gap: '0.3rem',
-                        marginBottom: '0.75rem'
+                        gap: '0.5rem',
+                        marginBottom: '1rem'
                       }}>
-                    {article.tags.map((tag, index) => (
+                        {article.tags.slice(0, 3).map((tag, index) => (
                           <span 
                             key={index} 
                             style={{
-                              backgroundColor: '#f5f5f5',
-                              color: '#666',
-                              padding: '0.2rem 0.4rem',
-                              borderRadius: '10px',
-                              fontSize: '0.7rem'
+                              backgroundColor: '#f1f5f9',
+                              color: '#475569',
+                              padding: '0.3rem 0.6rem',
+                              borderRadius: '12px',
+                              fontSize: '0.75rem',
+                              fontWeight: '500'
                             }}
                           >
-                            {tag}
+                            #{tag}
                           </span>
-                    ))}
-                  </div>
+                        ))}
+                        {article.tags.length > 3 && (
+                          <span style={{
+                            color: '#94a3b8',
+                            fontSize: '0.75rem',
+                            fontWeight: '500',
+                            padding: '0.3rem 0'
+                          }}>
+                            +{article.tags.length - 3} autres
+                          </span>
+                        )}
+                      </div>
                     )}
 
                     <div style={{
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      paddingTop: '0.75rem',
-                      borderTop: '1px solid #f0f0f0'
+                      paddingTop: '1rem',
+                      borderTop: '1px solid #f1f5f9'
                     }}>
-                      <small style={{ color: '#999', fontSize: '0.8rem' }}>
-                        {new Date(article.createdAt).toLocaleDateString('fr-FR')}
-                      </small>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}>
+                        <div style={{
+                          width: '8px',
+                          height: '8px',
+                          backgroundColor: '#10b981',
+                          borderRadius: '50%'
+                        }}></div>
+                        <small style={{ 
+                          color: '#64748b', 
+                          fontSize: '0.8rem',
+                          fontWeight: '500'
+                        }}>
+                          {new Date(article.createdAt).toLocaleDateString('fr-FR', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric'
+                          })}
+                        </small>
+                      </div>
+                      
                       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                        {article.content.length > 100 && (
+                        {article.content.length > 120 && (
                           <button
                             onClick={() => toggleArticleExpansion(article._id)}
                             style={{
@@ -3286,30 +3351,44 @@ const ArticlesView = () => {
                               color: '#00796b',
                               cursor: 'pointer',
                               fontSize: '0.8rem',
-                              fontWeight: '500'
+                              fontWeight: '600',
+                              padding: '0.4rem 0.8rem',
+                              borderRadius: '6px',
+                              transition: 'background-color 0.2s ease'
                             }}
+                            onMouseEnter={(e) => e.target.style.backgroundColor = '#f0fdfa'}
+                            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                           >
-                            {expandedArticles.has(article._id) ? 'Lire moins' : 'Lire la suite'}
+                            {expandedArticles.has(article._id) ? '↑ Réduire' : '↓ Lire plus'}
                           </button>
                         )}
                         <button 
                           onClick={() => handleDeleteArticle(article._id)}
                           style={{
                             padding: '0.4rem 0.8rem',
-                            backgroundColor: '#ffebee',
-                            color: '#c62828',
-                            border: 'none',
-                            borderRadius: '5px',
+                            backgroundColor: '#fef2f2',
+                            color: '#dc2626',
+                            border: '1px solid #fecaca',
+                            borderRadius: '6px',
                             cursor: 'pointer',
                             fontSize: '0.8rem',
-                            fontWeight: '500'
+                            fontWeight: '600',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.backgroundColor = '#fee2e2';
+                            e.target.style.borderColor = '#fca5a5';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.backgroundColor = '#fef2f2';
+                            e.target.style.borderColor = '#fecaca';
                           }}
                         >
-                    Supprimer
-                  </button>
-                </div>
-              </div>
-            </div>
+                          🗑️ Supprimer
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -3320,48 +3399,62 @@ const ArticlesView = () => {
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                gap: '0.5rem',
+                gap: '0.75rem',
                 marginTop: '2rem',
-                padding: '1rem'
+                padding: '1.5rem'
               }}>
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
                   style={{
-                    padding: '0.5rem 1rem',
-                    backgroundColor: currentPage === 1 ? '#f5f5f5' : '#00796b',
-                    color: currentPage === 1 ? '#999' : 'white',
-                    border: 'none',
-                    borderRadius: '4px',
+                    padding: '0.6rem 1.2rem',
+                    backgroundColor: currentPage === 1 ? '#f8fafc' : '#00796b',
+                    color: currentPage === 1 ? '#94a3b8' : 'white',
+                    border: currentPage === 1 ? '1px solid #e2e8f0' : 'none',
+                    borderRadius: '8px',
                     cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                    fontSize: '0.9rem'
+                    fontSize: '0.9rem',
+                    fontWeight: '600',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
                   }}
                 >
-                  Précédent
+                  ← Précédent
                 </button>
 
-                <span style={{
-                  padding: '0.5rem 1rem',
-                  color: '#666',
-                  fontSize: '0.9rem'
+                <div style={{
+                  padding: '0.6rem 1.2rem',
+                  backgroundColor: '#f1f5f9',
+                  color: '#475569',
+                  borderRadius: '8px',
+                  fontSize: '0.9rem',
+                  fontWeight: '600',
+                  border: '1px solid #e2e8f0'
                 }}>
-                  Page {currentPage} sur {totalPages}
-                </span>
+                  {currentPage} / {totalPages}
+                </div>
 
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
                   style={{
-                    padding: '0.5rem 1rem',
-                    backgroundColor: currentPage === totalPages ? '#f5f5f5' : '#00796b',
-                    color: currentPage === totalPages ? '#999' : 'white',
-                    border: 'none',
-                    borderRadius: '4px',
+                    padding: '0.6rem 1.2rem',
+                    backgroundColor: currentPage === totalPages ? '#f8fafc' : '#00796b',
+                    color: currentPage === totalPages ? '#94a3b8' : 'white',
+                    border: currentPage === totalPages ? '1px solid #e2e8f0' : 'none',
+                    borderRadius: '8px',
                     cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                    fontSize: '0.9rem'
+                    fontSize: '0.9rem',
+                    fontWeight: '600',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
                   }}
                 >
-                  Suivant
+                  Suivant →
                 </button>
               </div>
             )}

@@ -1,7 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import '../styles/HospitalDashboard.css';
-import { FaUserCircle, FaCalendarAlt, FaHospital, FaSignOutAlt, FaBell } from 'react-icons/fa';
+import { 
+  FaUserCircle, 
+  FaCalendarAlt, 
+  FaHospital, 
+  FaSignOutAlt, 
+  FaBell,
+  FaUser,
+  FaPhone,
+  FaCalendarCheck,
+  FaCalendarPlus,
+  FaHeart,
+  FaBaby,
+  FaMicroscope,
+  FaBrain,
+  FaEye,
+  FaBone,
+  FaUserMd,
+  FaXRay,
+  FaAmbulance,
+  FaMedkit,
+  FaStethoscope,
+  FaCheck,
+  FaTimes,
+  FaClock
+} from 'react-icons/fa';
 
 const API_BASE_URL = 'http://localhost:5001';
 
@@ -171,25 +195,25 @@ const HospitalDashboard = () => {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'confirmed': return '✅';
-      case 'cancelled': return '❌';
-      default: return '⏳';
+      case 'confirmed': return <FaCheck />;
+      case 'cancelled': return <FaTimes />;
+      default: return <FaClock />;
     }
   };
 
   const getSpecialtyIcon = (specialty) => {
     const icons = {
-      'Cardiologie': '❤️',
-      'Pédiatrie': '👶',
-      'Dermatologie': '🔬',
-      'Neurologie': '🧠',
-      'Ophtalmologie': '👁️',
-      'Orthopédie': '🦴',
-      'Psychiatrie': '🧑‍⚕️',
-      'Radiologie': '📷',
-      'Urgences': '🚑',
+      'Cardiologie': <FaHeart />,
+      'Pédiatrie': <FaBaby />,
+      'Dermatologie': <FaMicroscope />,
+      'Neurologie': <FaBrain />,
+      'Ophtalmologie': <FaEye />,
+      'Orthopédie': <FaBone />,
+      'Psychiatrie': <FaUserMd />,
+      'Radiologie': <FaXRay />,
+      'Urgences': <FaAmbulance />,
     };
-    return icons[specialty] || '🏥';
+    return icons[specialty] || <FaStethoscope />;
   };
 
   return (
@@ -300,6 +324,8 @@ const HospitalDashboard = () => {
           </div>
         )}
 
+        {activeSection === 'appointments' && (
+          <>
         <div className="profile-header-content">
           <div className="profile-title">
             <h1>
@@ -309,13 +335,13 @@ const HospitalDashboard = () => {
             {!loading && appointments.length > 0 && (
               <div className="stats-summary">
                 <span className="stat-item pending">
-                  ⏳ {appointments.filter(apt => apt.status === 'pending').length} en attente
+                  <FaClock /> {appointments.filter(apt => apt.status === 'pending').length} en attente
                 </span>
                 <span className="stat-item confirmed">
-                  ✅ {appointments.filter(apt => apt.status === 'confirmed').length} confirmés
+                  <FaCheck /> {appointments.filter(apt => apt.status === 'confirmed').length} confirmés
                 </span>
                 <span className="stat-item cancelled">
-                  ❌ {appointments.filter(apt => apt.status === 'cancelled').length} annulés
+                  <FaTimes /> {appointments.filter(apt => apt.status === 'cancelled').length} annulés
                 </span>
               </div>
             )}
@@ -324,12 +350,14 @@ const HospitalDashboard = () => {
             <input
               type="text"
               className="search-input"
-              placeholder="🔍 Rechercher un patient ou une spécialité..."
+              placeholder="Rechercher un patient ou une spécialité..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
         </div>
+          </>
+        )}
 
         {showPlanningForm && selectedAppointment && (
           <div className="planning-form-overlay">
@@ -409,14 +437,14 @@ const HospitalDashboard = () => {
         {activeSection === 'appointments' && (
           loading ? (
             <div className="loading">
-              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⌛</div>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}><FaClock /></div>
               <div>Chargement des rendez-vous...</div>
             </div>
           ) : (
             <div className="appointments-container">
               {Object.keys(groupedAppointments).length === 0 ? (
                 <div className="no-appointments">
-                  <h3>📭 Aucun rendez-vous trouvé</h3>
+                  <h3><FaMedkit /> Aucun rendez-vous trouvé</h3>
                   <p>
                     {activeFilter !== 'all' 
                       ? `Aucun rendez-vous ${getStatusText(activeFilter).toLowerCase()} pour le moment.`
@@ -463,63 +491,52 @@ const HospitalDashboard = () => {
                             return (
                           <div 
                             key={appointment._id} 
-                            className={`appointment-card ${isUrgent ? 'urgent' : isRecent ? 'recent' : ''}`}
+                            className={`appointment-item ${appointment.status} ${isUrgent ? 'urgent' : isRecent ? 'recent' : ''}`}
                           >
                             <div className="appointment-info">
-                              <h3>
-                                {getSpecialtyIcon(appointment.specialty)} {appointment.specialty}
-                              </h3>
-                              <div className="patient-details">
-                                <p>
-                                  <strong>👤</strong>
+                              <div className="patient-name">
+                                <FaUser className="icon" />
                                   <span>{appointment.patientId?.nom || 'N/A'} {appointment.patientId?.prenom || ''}</span>
-                                </p>
-                                <p>
-                                  <strong>📧</strong>
-                                  <span>{appointment.patientId?.email || 'Non renseigné'}</span>
-                                </p>
-                                <p>
-                                  <strong>📞</strong>
-                                  <span>{appointment.patientId?.telephone || 'Non renseigné'}</span>
-                                </p>
-                                <p className="appointment-date">
-                                  <strong>📅</strong>
-                                  <span>{new Date(appointment.createdAt).toLocaleDateString('fr-FR')}</span>
-                                </p>
-                                {appointment.appointmentDate && (
-                                  <p className="appointment-date">
-                                    <strong>🗓️</strong>
-                                    <span>{new Date(appointment.appointmentDate).toLocaleDateString('fr-FR')} à {new Date(appointment.appointmentDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
-                                </p>
-                              )}
                               </div>
+                              <div className="patient-phone">
+                                <FaPhone className="icon" />
+                                  <span>{appointment.patientId?.telephone || 'Non renseigné'}</span>
+                              </div>
+                              <div className="request-date">
+                                <FaCalendarPlus className="icon" />
+                                <span>Demande: {new Date(appointment.createdAt).toLocaleDateString('fr-FR')}</span>
+                              </div>
+                              {appointment.appointmentDate && (
+                                <div className="scheduled-date">
+                                  <FaCalendarCheck className="icon" />
+                                  <span>RDV: {new Date(appointment.appointmentDate).toLocaleDateString('fr-FR')} à {new Date(appointment.appointmentDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                </div>
+                              )}
                             </div>
 
-                            {appointment.status === 'pending' && (
-                              <div className="appointment-actions">
-                                <button
-                                  className="confirm-btn"
-                                  onClick={() => handleStatusChange(appointment._id, 'confirmed')}
-                                  title="Confirmer et planifier le rendez-vous"
-                                >
-                                  ✅ Confirmer
-                                </button>
-                                <button
-                                  className="cancel-btn"
-                                  onClick={() => handleStatusChange(appointment._id, 'cancelled')}
-                                  title="Refuser le rendez-vous"
-                                >
-                                  ❌ Refuser
-                                </button>
-                              </div>
-                            )}
-
                             <div className="appointment-status">
-                              <span 
-                                className={`status-badge ${appointment.status}`}
-                              >
+                              <span className={`status ${appointment.status}`}>
                                 {getStatusIcon(appointment.status)} {getStatusText(appointment.status)}
                               </span>
+                            </div>
+
+                            <div className="appointment-actions">
+                              {appointment.status === 'pending' && (
+                                <>
+                                  <button
+                                    className="btn-confirm"
+                                    onClick={() => handleStatusChange(appointment._id, 'confirmed')}
+                                  >
+                                    <FaCheck /> Confirmer
+                                  </button>
+                                  <button
+                                    className="btn-cancel"
+                                    onClick={() => handleStatusChange(appointment._id, 'cancelled')}
+                                  >
+                                    <FaTimes /> Refuser
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </div>
                             );
@@ -569,6 +586,15 @@ const NotificationsContent = ({ hospitalId, onNotificationRead }) => {
         duplicatesRemoved: response.data.length - uniqueNotifications.length
       });
       
+      // Log pour examiner la structure des notifications
+      console.log('📋 Structure des notifications:', uniqueNotifications.slice(0, 2).map(n => ({
+        id: n._id,
+        title: n.title,
+        isRead: n.isRead,
+        source: n.source,
+        type: typeof n.isRead
+      })));
+      
       setNotifications(uniqueNotifications);
     } catch (error) {
       console.error('Erreur récupération notifications:', error);
@@ -580,10 +606,14 @@ const NotificationsContent = ({ hospitalId, onNotificationRead }) => {
 
   const markAsRead = async (notificationId, isAdminNotification = false) => {
     try {
-      await axios.put(`${API_BASE_URL}/api/notifications/${notificationId}/read`, {
+      console.log('🔄 Tentative de marquage comme lu:', { notificationId, isAdminNotification, hospitalId });
+      
+      const response = await axios.put(`${API_BASE_URL}/api/notifications/${notificationId}/read`, {
         userId: hospitalId,
         isAdminNotification: isAdminNotification
       });
+      
+      console.log('✅ Réponse API marquage comme lu:', response.data);
       
       // Mettre à jour l'état local des notifications
       setNotifications(prev => 
@@ -594,12 +624,15 @@ const NotificationsContent = ({ hospitalId, onNotificationRead }) => {
         )
       );
       
+      console.log('📝 Notification mise à jour localement');
+      
       // Mettre à jour le compteur de notifications non lues dans la sidebar
       if (onNotificationRead) {
         onNotificationRead();
       }
     } catch (error) {
-      console.error('Erreur marquage notification comme lue:', error);
+      console.error('❌ Erreur marquage notification comme lue:', error);
+      console.error('Détails erreur:', error.response?.data);
     }
   };
 
@@ -702,7 +735,6 @@ const NotificationsContent = ({ hospitalId, onNotificationRead }) => {
               <div
                 key={notification._id}
                 className={`notification-item ${!notification.isRead ? 'unread' : ''} ${getPriorityClass(notification.priority)}`}
-                onClick={() => !notification.isRead && markAsRead(notification._id, notification.source === 'admin')}
               >
                 <div className="notification-content">
                   <div className="notification-header">
@@ -726,6 +758,25 @@ const NotificationsContent = ({ hospitalId, onNotificationRead }) => {
                   {notification.sentBy && (
                     <div className="notification-sender">
                       Envoyé par: {notification.sentBy.prenom} {notification.sentBy.nom}
+                    </div>
+                  )}
+                  
+                  {!notification.isRead && (
+                    <div className="notification-actions">
+                      <button
+                        className="mark-as-read-icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          console.log('🖱️ Clic sur icône "Marquer comme lu":', { 
+                            id: notification._id, 
+                            title: notification.title 
+                          });
+                          markAsRead(notification._id, notification.source === 'admin');
+                        }}
+                        title="Marquer comme lu"
+                      >
+                        <FaCheck />
+                      </button>
                     </div>
                   )}
                 </div>

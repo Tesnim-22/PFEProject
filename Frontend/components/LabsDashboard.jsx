@@ -728,28 +728,21 @@ const LabsDashboard = () => {
               </div>
             )}
 
-            <div className="profile-header">
-              <div className="profile-avatar">
-                <img 
-                  src={profile.photo ? `http://localhost:5001${profile.photo}` : '../assets/images/default-avatar.png'}
-                  alt="Avatar"
-                  className="avatar-image"
-                  onError={(e) => { e.target.src = '../assets/images/default-avatar.png'; }}
-                  style={{
-                    width: '80px',
-                    height: '80px',
-                    borderRadius: '50%',
-                    objectFit: 'cover'
-                  }}
-                />
-              </div>
-              <div className="profile-title">
-                <h1>Mon Profil Laboratoire</h1>
-              </div>
+            {/* Titre principal en haut */}
+            <div className="profile-main-header" style={{ 
+              width: '100%', 
+              marginBottom: '2rem',
+              textAlign: 'left'
+            }}>
+              <h1 style={{ margin: '0', fontSize: '2rem', fontWeight: 'bold' }}>Mon Profil Laboratoire</h1>
             </div>
 
             {!isEditing ? (
-              <div className="profile-info-simple">
+              <div className="profile-info-simple" style={{ 
+                width: '100%',
+                maxWidth: '800px',
+                margin: '0 auto'
+              }}>
                 <div className="info-section-simple">
                   <h3>Informations du laboratoire</h3>
                   <div className="info-grid-simple">
@@ -788,7 +781,11 @@ const LabsDashboard = () => {
                 </button>
               </div>
             ) : (
-              <form className="edit-form-simple" onSubmit={(e) => { e.preventDefault(); handleProfileSave(); }}>
+              <form className="edit-form-simple" onSubmit={(e) => { e.preventDefault(); handleProfileSave(); }} style={{ 
+                width: '100%',
+                maxWidth: '800px',
+                margin: '0 auto'
+              }}>
                 <div className="form-section-simple">
                   <h3>Modifier les informations</h3>
                   
@@ -854,7 +851,7 @@ const LabsDashboard = () => {
                       <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
                     </svg>
                     Enregistrer
-                    </button>
+                  </button>
                   <button 
                     type="button" 
                     className="cancel-btn-simple"
@@ -864,14 +861,14 @@ const LabsDashboard = () => {
                       <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
                     </svg>
                     Annuler
-                    </button>
-                  </div>
+                  </button>
+                </div>
               </form>
             )}
-                  </div>
+          </div>
         )}
 
-                {activeSection === 'appointments' && (
+        {activeSection === 'appointments' && (
           <div className="appointments-medical-view">
             <div className="medical-header">
               <div className="header-info">

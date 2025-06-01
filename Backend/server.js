@@ -1849,6 +1849,12 @@ app.get('/api/appointments', async (req, res) => {
     console.log('❌ No patientId provided');
     return res.status(400).json({ message: "patientId requis" });
   }
+
+  // Vérifier que patientId est un ObjectId valide
+  if (!mongoose.Types.ObjectId.isValid(patientId)) {
+    console.log('❌ Invalid patientId format:', patientId);
+    return res.status(400).json({ message: "Format patientId invalide" });
+  }
   
   try {
     console.log('🔍 Searching for appointments...');
@@ -1859,29 +1865,90 @@ app.get('/api/appointments', async (req, res) => {
         { type: { $exists: false } }      // Pour les anciens rendez-vous sans type
       ]
     })
-    .populate('doctorId', 'nom prenom email')
-    .sort({ date: -1 });
+    .populate({
+      path: 'doctorId',
+      select: 'nom prenom email',
+      options: { lean: true }
+    })
+    .sort({ date: -1 })
+    .lean();
     
     console.log('📊 Found appointments:', appointments.length);
     
     const formatted = appointments.map(apt => {
-      const formattedApt = {
-        ...apt.toObject(),
-        doctorName: apt.doctorId?.nom && apt.doctorId?.prenom
-          ? `Dr. ${apt.doctorId.prenom} ${apt.doctorId.nom}`
-          : apt.doctorId?.email || '',
-        doctorEmail: apt.doctorId?.email || '',
-        doctorId: apt.doctorId?._id || apt.doctorId,
-        type: apt.type || 'medical'  // Par défaut, c'est un rendez-vous médical
-      };
-      return formattedApt;
+      try {
+        // Vérifier si doctorId existe et est populé
+        let doctorName = '';
+        let doctorEmail = '';
+        let doctorId = null;
+        
+        if (apt.doctorId) {
+          if (typeof apt.doctorId === 'object' && apt.doctorId._id) {
+            // doctorId est populé
+            doctorName = apt.doctorId.nom && apt.doctorId.prenom
+              ? `Dr. ${apt.doctorId.prenom} ${apt.doctorId.nom}`
+              : apt.doctorId.email || 'Médecin non spécifié';
+            doctorEmail = apt.doctorId.email || '';
+            doctorId = apt.doctorId._id;
+          } else {
+            // doctorId n'est qu'un ID
+            doctorName = 'Médecin non spécifié';
+            doctorId = apt.doctorId;
+          }
+        } else {
+          console.log('⚠️ Appointment without doctorId:', apt._id);
+          doctorName = 'Médecin non spécifié';
+        }
+
+        return {
+          _id: apt._id,
+          patientId: apt.patientId,
+          doctorId: doctorId,
+          doctorName: doctorName,
+          doctorEmail: doctorEmail,
+          date: apt.date,
+          reason: apt.reason || '',
+          status: apt.status || 'pending',
+          type: apt.type || 'medical',
+          requiredDocuments: apt.requiredDocuments || '',
+          createdAt: apt.createdAt,
+          updatedAt: apt.updatedAt
+        };
+      } catch (formatError) {
+        console.error('❌ Error formatting appointment:', apt._id, formatError);
+        // Retourner un objet par défaut en cas d'erreur de formatage
+        return {
+          _id: apt._id,
+          patientId: apt.patientId,
+          doctorId: apt.doctorId,
+          doctorName: 'Médecin non spécifié',
+          doctorEmail: '',
+          date: apt.date,
+          reason: apt.reason || '',
+          status: apt.status || 'pending',
+          type: apt.type || 'medical',
+          requiredDocuments: apt.requiredDocuments || '',
+          createdAt: apt.createdAt,
+          updatedAt: apt.updatedAt
+        };
+      }
     });
     
     console.log('✅ Sending formatted appointments');
     res.status(200).json(formatted);
   } catch (error) {
     console.error('❌ Error fetching appointments:', error);
-    res.status(500).json({ message: "Erreur serveur" });
+    console.error('❌ Full error details:', error.stack);
+    
+    // Envoyer une réponse d'erreur plus détaillée en développement
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    res.status(500).json({ 
+      message: "Erreur serveur lors de la récupération des rendez-vous",
+      ...(isDevelopment && { 
+        error: error.message,
+        stack: error.stack 
+      })
+    });
   }
 });
 
@@ -3620,6 +3687,77 @@ app.get('/api/cabinet/stats/:cabinetId', async (req, res) => {
 // Exemple d'utilisation sur une route protégée
 app.get('/protected-route', auth, (req, res) => {
     // Votre logique de route ici
+});
+
+// Route de diagnostic pour débugger les problèmes d'appointments
+app.get('/api/debug/appointments/:patientId', async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    
+    // Vérifications de base
+    const diagnostics = {
+      patientId: patientId,
+      isValidObjectId: mongoose.Types.ObjectId.isValid(patientId),
+      timestamp: new Date().toISOString(),
+      checks: {}
+    };
+
+    // 1. Vérifier que le patient existe
+    const patient = await User.findById(patientId);
+    diagnostics.checks.patientExists = !!patient;
+    diagnostics.checks.patientInfo = patient ? {
+      nom: patient.nom,
+      prenom: patient.prenom,
+      email: patient.email,
+      roles: patient.roles
+    } : null;
+
+    // 2. Compter les appointments
+    const appointmentCount = await Appointment.countDocuments({ patientId });
+    diagnostics.checks.appointmentCount = appointmentCount;
+
+    // 3. Récupérer quelques appointments sans populate pour détecter les problèmes
+    const rawAppointments = await Appointment.find({ patientId }).limit(5).lean();
+    diagnostics.checks.rawAppointments = rawAppointments.map(apt => ({
+      _id: apt._id,
+      doctorId: apt.doctorId,
+      date: apt.date,
+      status: apt.status,
+      type: apt.type
+    }));
+
+    // 4. Vérifier l'état des doctorId
+    if (rawAppointments.length > 0) {
+      const doctorIds = rawAppointments.map(apt => apt.doctorId).filter(Boolean);
+      const uniqueDoctorIds = [...new Set(doctorIds.map(id => id.toString()))];
+      
+      const doctorChecks = await Promise.all(
+        uniqueDoctorIds.map(async (doctorId) => {
+          const doctor = await User.findById(doctorId);
+          return {
+            doctorId,
+            exists: !!doctor,
+            info: doctor ? {
+              nom: doctor.nom,
+              prenom: doctor.prenom,
+              email: doctor.email,
+              roles: doctor.roles
+            } : null
+          };
+        })
+      );
+      
+      diagnostics.checks.doctors = doctorChecks;
+    }
+
+    res.json(diagnostics);
+  } catch (error) {
+    res.status(500).json({
+      error: 'Diagnostic failed',
+      message: error.message,
+      stack: error.stack
+    });
+  }
 });
 
 
